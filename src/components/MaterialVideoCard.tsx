@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { MaterialCard } from './MaterialCard';
 import { MaterialButton } from './MaterialButton';
 import { MaterialTag } from './MaterialTag';
 import { Play, Twitter, Linkedin, Instagram, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type MaterialVideoCardProps = {
   idea: {
