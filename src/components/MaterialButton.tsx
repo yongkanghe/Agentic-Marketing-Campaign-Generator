@@ -21,15 +21,15 @@ const MaterialButton = React.forwardRef<HTMLButtonElement, MaterialButtonProps>(
     const getVariantClasses = () => {
       switch(variant) {
         case 'primary':
-          return 'bg-material-primary hover:bg-material-primary-dark text-white';
+          return 'bg-primary hover:bg-primary/90 text-primary-foreground';
         case 'secondary':
-          return 'bg-material-secondary hover:bg-material-secondary-dark text-white';
+          return 'bg-secondary hover:bg-secondary/80 text-secondary-foreground';
         case 'outline':
-          return 'bg-transparent border border-material-primary text-material-primary hover:bg-material-primary/10';
+          return 'border border-input bg-background hover:bg-accent hover:text-accent-foreground';
         case 'text':
-          return 'bg-transparent text-material-primary hover:bg-material-primary/10 shadow-none';
+          return 'bg-transparent hover:bg-accent hover:text-accent-foreground shadow-none';
         default:
-          return 'bg-material-primary hover:bg-material-primary-dark text-white';
+          return 'bg-primary hover:bg-primary/90 text-primary-foreground';
       }
     };
 
