@@ -42,6 +42,7 @@ const MaterialButton = React.forwardRef<HTMLButtonElement, MaterialButtonProps>(
           variant !== 'text' && elevation >= 0 && elevation < elevationClasses.length && elevationClasses[elevation],
           className
         )}
+        variant="ghost"
         {...props}
       >
         {children}
