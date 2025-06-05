@@ -235,10 +235,12 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const generateVideos = async () => {
     // In a real implementation, this would call Gemini's Veo3 API
     const ideasWithVideos = mockGenerateVideos(selectedIdeas.length > 0 ? selectedIdeas : generatedIdeas.slice(0, 1));
-    setGeneratedIdeas(generatedIdeas.map(idea => {
+    const updatedIdeas = generatedIdeas.map(idea => {
       const updatedIdea = ideasWithVideos.find(i => i.id === idea.id);
       return updatedIdea || idea;
-    }));
+    });
+    setGeneratedIdeas(updatedIdeas);
+    updateCurrentCampaign({ generatedIdeas: updatedIdeas });
   };
 
   const saveCampaign = () => {
