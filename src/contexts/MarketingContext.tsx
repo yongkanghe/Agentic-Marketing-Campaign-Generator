@@ -117,7 +117,7 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const savedCampaigns = JSON.parse(localStorage.getItem('marketingCampaigns') || '[]');
       const campaign = savedCampaigns.find((c: Campaign) => c.id === currentCampaignId);
       if (campaign) {
-        setCurrentCampaign(campaign);
+        setCurrentCampaignState(campaign);
       }
     }
   }, []);
