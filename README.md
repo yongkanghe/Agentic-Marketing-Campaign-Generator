@@ -71,3 +71,18 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Running the ADK marketing agent
+
+This repository includes a simple [Google ADK](https://github.com/google/adk-python) agent implementation in `backend/marketing_agent.py`.
+The agent uses a `SequentialAgent` to create campaign summaries, generate ideas and produce short social posts. To try it locally:
+
+```bash
+# Install Python dependencies
+pip install -r backend/requirements.txt
+
+# Run the agent with the ADK CLI
+python -m google.adk.cli run backend.marketing_agent --query "<your campaign details>"
+```
+
+The `root_agent` object defined in `marketing_agent.py` orchestrates the workflow and can be integrated into other services or runners.
