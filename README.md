@@ -86,3 +86,7 @@ python -m google.adk.cli run backend.marketing_agent --query "<your campaign det
 ```
 
 The `root_agent` object defined in `marketing_agent.py` orchestrates the workflow and can be integrated into other services or runners.
+
+## Project Architecture
+
+An overview of the current architecture, including high level and low level design diagrams, can be found in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
