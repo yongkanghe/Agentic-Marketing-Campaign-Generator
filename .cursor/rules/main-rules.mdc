@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+use makefiles for application operations, running, testing and similar
+
+always review the documentation first and evaluate the solution maturity and completeness. 
+
+assess if the functionality and features have been implemented sucessfully by running the appropriate, relevant tests. 
+
+Mark the TODO/EPIC activities as done once relevant features/functioanltiy has been implemented
+
+Commit and push once the testing and documentation  update tasks are performed

@@ -1,0 +1,49 @@
+# Backend Dockerfile - Video Venture Launch
+# Author: JP + 2024-12-19
+# Multi-stage build for development and production
+
+# Base stage with Python
+FROM python:3.9-slim AS base
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Development stage
+FROM base AS development
+# Install development dependencies
+RUN pip install --no-cache-dir pytest pytest-asyncio httpx
+
+COPY backend/ .
+EXPOSE 8000
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Production stage
+FROM base AS production
+COPY backend/ .
+
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Test stage
+FROM development AS test
+CMD ["python", "-m", "pytest", "-v"] 
