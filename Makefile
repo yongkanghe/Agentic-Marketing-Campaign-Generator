@@ -412,7 +412,7 @@ docker-test: ## Run tests in Docker containers
 	@echo "Running tests in Docker containers..."
 	@if [ "$(DOCKER_COMPOSE_AVAILABLE)" ]; then \
 		docker-compose run --rm frontend npm test -- --run; \
-		docker-compose run --rm backend python -m pytest; \
+		docker-compose run --rm backend python3 -m pytest; \
 	else \
 		echo "Error: Docker Compose not available. Please install Docker Compose."; \
 		exit 1; \
