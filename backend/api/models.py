@@ -122,6 +122,8 @@ class URLAnalysisResponse(BaseModel):
     url_insights: Dict[str, Dict[str, Any]]
     processing_time: float
     confidence_score: float
+    business_intelligence: Optional[Dict[str, Any]] = None
+    analysis_metadata: Optional[Dict[str, Any]] = None
 
 class ContentGenerationResponse(BaseModel):
     """Content generation response."""
