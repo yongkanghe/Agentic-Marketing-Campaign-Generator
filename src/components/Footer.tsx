@@ -1,103 +1,156 @@
 /**
  * FILENAME: Footer.tsx
- * DESCRIPTION/PURPOSE: Footer component with attribution, disclaimer, and licensing information
+ * DESCRIPTION/PURPOSE: Footer component with VVL design system styling and consistent branding
  * Author: JP + 2024-12-19
  */
 
 import React from 'react';
-import { MaterialCard } from './MaterialCard';
+import { Github, Twitter, Linkedin, Mail, ExternalLink, Heart } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  const currentYear = new Date().getFullYear();
+
+  const socialLinks = [
+    {
+      name: 'GitHub',
+      icon: <Github className="w-5 h-5" />,
+      href: 'https://github.com/video-venture-launch',
+      color: 'hover:text-gray-300'
+    },
+    {
+      name: 'Twitter',
+      icon: <Twitter className="w-5 h-5" />,
+      href: 'https://twitter.com/videventurelaunch',
+      color: 'hover:text-blue-400'
+    },
+    {
+      name: 'LinkedIn',
+      icon: <Linkedin className="w-5 h-5" />,
+      href: 'https://linkedin.com/company/video-venture-launch',
+      color: 'hover:text-blue-500'
+    },
+    {
+      name: 'Email',
+      icon: <Mail className="w-5 h-5" />,
+      href: 'mailto:hello@videoventurelaunch.com',
+      color: 'hover:text-green-400'
+    }
+  ];
+
+  const footerLinks = [
+    {
+      title: 'Product',
+      links: [
+        { name: 'Features', href: '/features' },
+        { name: 'Pricing', href: '/pricing' },
+        { name: 'API Documentation', href: '/docs' },
+        { name: 'Integrations', href: '/integrations' }
+      ]
+    },
+    {
+      title: 'Company',
+      links: [
+        { name: 'About Us', href: '/about' },
+        { name: 'Blog', href: '/blog' },
+        { name: 'Careers', href: '/careers' },
+        { name: 'Contact', href: '/contact' }
+      ]
+    },
+    {
+      title: 'Resources',
+      links: [
+        { name: 'Help Center', href: '/help' },
+        { name: 'Community', href: '/community' },
+        { name: 'Tutorials', href: '/tutorials' },
+        { name: 'Status', href: '/status' }
+      ]
+    },
+    {
+      title: 'Legal',
+      links: [
+        { name: 'Privacy Policy', href: '/privacy' },
+        { name: 'Terms of Service', href: '/terms' },
+        { name: 'Cookie Policy', href: '/cookies' },
+        { name: 'GDPR', href: '/gdpr' }
+      ]
+    }
+  ];
+
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 mt-auto">
-      <div className="container mx-auto px-4 py-8">
-        <MaterialCard className="p-6">
-          <div className="text-center space-y-4">
-            {/* Attribution */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Video Venture Launch - Agentic AI Marketing Campaign Manager
-              </h3>
-              <p className="text-gray-600">
-                Authored by{' '}
-                <a 
-                  href="https://www.linkedin.com/in/johas" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="font-bold text-blue-600 hover:text-blue-800 underline"
-                >
-                  Jaroslav Pantsjoha
-                </a>{' '}
-                for the <strong>Agentic AI Solution Hackathon</strong>
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Powered by Google's Agent Development Kit (ADK) and Gemini AI
-              </p>
-            </div>
-
-            {/* Disclaimer */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="font-medium text-gray-700 mb-2">Disclaimer</h4>
-              <p className="text-xs text-gray-500 max-w-4xl mx-auto leading-relaxed">
-                This software is provided "as is", without warranty of any kind, express or implied, 
-                including but not limited to the warranties of merchantability, fitness for a particular 
-                purpose and noninfringement. In no event shall the authors or copyright holders be liable 
-                for any claim, damages or other liability, whether in an action of contract, tort or 
-                otherwise, arising from, out of or in connection with the software or the use or other 
-                dealings in the software.
-              </p>
-            </div>
-
-            {/* License */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="font-medium text-gray-700 mb-2">License</h4>
-              <p className="text-xs text-gray-500 mb-2">
-                Licensed under the Apache License, Version 2.0 (the "License")
-              </p>
-              <div className="text-xs text-gray-400 space-y-1">
-                <p>
-                  You may not use this file except in compliance with the License. 
-                  You may obtain a copy of the License at:
-                </p>
-                <a 
-                  href="http://www.apache.org/licenses/LICENSE-2.0" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline"
-                >
-                  http://www.apache.org/licenses/LICENSE-2.0
-                </a>
-                <p>
-                  Unless required by applicable law or agreed to in writing, software 
-                  distributed under the License is distributed on an "AS IS" BASIS, 
-                  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-                  See the License for the specific language governing permissions and 
-                  limitations under the License.
-                </p>
+    <footer className="bg-slate-900/80 backdrop-blur-md border-t border-white/10">
+      <div className="container mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
+          {/* Brand Section */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">VVL</span>
               </div>
+              <h3 className="text-xl font-bold vvl-text-primary">Video Venture Launch</h3>
             </div>
-
-            {/* Additional Info */}
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-400">
-                <span>© 2024 Jaroslav Pantsjoha</span>
-                <span>•</span>
-                <span>Built with React, TypeScript & Google ADK</span>
-                <span>•</span>
-                <span>MVP Grade Solution</span>
-                <span>•</span>
-                <a 
-                  href="https://github.com/google/adk" 
-                  target="_blank" 
+            <p className="vvl-text-secondary text-sm leading-relaxed mb-6">
+              AI-powered marketing campaigns that transform your business. Create, optimize, and publish 
+              compelling content across all social media platforms with intelligent automation.
+            </p>
+            
+            {/* Social Links */}
+            <div className="flex items-center space-x-4">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline"
+                  className={`vvl-text-secondary transition-colors duration-200 ${social.color}`}
+                  aria-label={social.name}
                 >
-                  Google ADK Framework
+                  {social.icon}
                 </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer Links */}
+          {footerLinks.map((section) => (
+            <div key={section.title}>
+              <h4 className="font-semibold vvl-text-primary mb-4">{section.title}</h4>
+              <ul className="space-y-2">
+                {section.links.map((link) => (
+                  <li key={link.name}>
+                    <a
+                      href={link.href}
+                      className="vvl-text-secondary text-sm hover:text-blue-400 transition-colors duration-200 flex items-center gap-1"
+                    >
+                      {link.name}
+                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom Section */}
+        <div className="border-t border-white/10 mt-12 pt-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-sm vvl-text-secondary">
+              <span>© {currentYear} Video Venture Launch. All rights reserved.</span>
+              <span className="hidden md:inline">•</span>
+              <span className="flex items-center gap-1">
+                Made with <Heart className="w-4 h-4 text-red-400" /> using Google ADK & Gemini AI
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-4 text-sm">
+              <span className="vvl-text-secondary">Version 0.8.0-beta</span>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-green-400">All systems operational</span>
               </div>
             </div>
           </div>
-        </MaterialCard>
+        </div>
       </div>
     </footer>
   );

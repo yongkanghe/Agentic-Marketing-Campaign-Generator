@@ -1,176 +1,174 @@
 /**
  * FILENAME: LandingPage.tsx
- * DESCRIPTION/PURPOSE: Professional SaaS landing page for Video Venture Launch - Agentic AI Marketing Campaign Manager
+ * DESCRIPTION/PURPOSE: Main landing page with VVL design system styling and consistent branding
  * Author: JP + 2024-12-19
  */
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MaterialCard } from '@/components/MaterialCard';
-import { MaterialButton } from '@/components/MaterialButton';
+// Removed Material components - using VVL design system
+import Footer from '@/components/Footer';
 import { 
-  Sparkles, 
+  Rocket, 
   Zap, 
   Target, 
-  Clock, 
-  TrendingUp, 
-  Users, 
   BarChart3, 
-  Rocket,
-  CheckCircle,
-  ArrowRight,
-  Play,
-  Globe,
-  MessageSquare,
-  Video,
-  Image as ImageIcon,
+  Users, 
+  Clock, 
+  Sparkles, 
+  Brain, 
+  Palette, 
   Calendar,
-  Bot
+  Play,
+  ArrowRight,
+  CheckCircle,
+  TrendingUp,
+  Globe,
+  Briefcase,
+  ShoppingBag,
+  Heart,
+  Megaphone,
+  Building
 } from 'lucide-react';
-import Footer from '@/components/Footer';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const features = [
+  const benefits = [
     {
-      icon: <Bot className="w-8 h-8" />,
-      title: "AI-Powered Campaign Creation",
-      description: "Advanced AI agents analyze your business context and generate targeted marketing campaigns in minutes, not hours."
+      icon: <Zap className="w-8 h-8 text-blue-400" />,
+      title: "10x Faster",
+      description: "Campaign Creation"
     },
     {
-      icon: <Globe className="w-8 h-8" />,
-      title: "Multi-Platform Content Generation",
-      description: "Create optimized content for LinkedIn, Twitter, Instagram, Facebook, and TikTok with platform-specific adaptations."
+      icon: <Target className="w-8 h-8 text-green-400" />,
+      title: "AI-Optimized",
+      description: "Content Strategy"
     },
     {
-      icon: <Video className="w-8 h-8" />,
-      title: "AI Video & Image Creation",
-      description: "Generate professional videos with Google's Veo API and stunning images tailored to your brand and message."
+      icon: <BarChart3 className="w-8 h-8 text-purple-400" />,
+      title: "Data-Driven",
+      description: "Performance Insights"
     },
     {
-      icon: <Calendar className="w-8 h-8" />,
-      title: "Automated Scheduling",
-      description: "Smart scheduling optimization ensures your content reaches audiences at peak engagement times across all platforms."
-    },
-    {
-      icon: <BarChart3 className="w-8 h-8" />,
-      title: "Performance Analytics",
-      description: "Real-time monitoring and analytics help you track campaign performance and optimize for better results."
-    },
-    {
-      icon: <Zap className="w-8 h-8" />,
-      title: "Lightning Fast Deployment",
-      description: "From business analysis to published content in under 10 minutes. Scale your marketing efforts instantly."
+      icon: <Users className="w-8 h-8 text-orange-400" />,
+      title: "Multi-Platform",
+      description: "Social Reach"
     }
   ];
 
-  const benefits = [
+  const features = [
     {
-      icon: <Clock className="w-6 h-6 text-blue-500" />,
-      title: "90% Time Savings",
-      description: "Reduce campaign creation time from days to minutes"
+      icon: <Brain className="w-12 h-12" />,
+      title: "Intelligent Business Analysis",
+      description: "Upload your website, documents, or describe your business. Our AI extracts key insights, understands your value proposition, and identifies your target audience automatically."
     },
     {
-      icon: <TrendingUp className="w-6 h-6 text-green-500" />,
-      title: "3x Better Engagement",
-      description: "AI-optimized content performs significantly better"
+      icon: <Palette className="w-12 h-12" />,
+      title: "Multi-Format Content Creation",
+      description: "Generate optimized text posts, eye-catching images, and engaging videos tailored for each social media platform. All content aligns with your brand voice and marketing objectives."
     },
     {
-      icon: <Users className="w-6 h-6 text-purple-500" />,
-      title: "Multi-Platform Reach",
-      description: "Expand your audience across 5+ social platforms"
+      icon: <Calendar className="w-12 h-12" />,
+      title: "Smart Scheduling & Publishing",
+      description: "Automated posting at optimal times for maximum engagement. Monitor performance, track metrics, and adjust strategies in real-time across all your social media channels."
     },
     {
-      icon: <Target className="w-6 h-6 text-orange-500" />,
-      title: "Precision Targeting",
-      description: "AI analyzes your audience for maximum impact"
+      icon: <Target className="w-12 h-12" />,
+      title: "Campaign Optimization",
+      description: "Continuous learning from performance data to improve future campaigns. A/B testing, audience insights, and conversion tracking built right in."
+    },
+    {
+      icon: <Sparkles className="w-12 h-12" />,
+      title: "Creative Ideation Engine",
+      description: "Never run out of content ideas. Our AI generates fresh, relevant concepts based on trending topics, seasonal events, and your industry insights."
+    },
+    {
+      icon: <BarChart3 className="w-12 h-12" />,
+      title: "Performance Analytics",
+      description: "Comprehensive reporting and analytics dashboard. Track ROI, engagement rates, conversion metrics, and get actionable insights to grow your business."
     }
   ];
 
   const useCases = [
     {
+      icon: <Rocket className="w-12 h-12 text-blue-400" />,
       title: "Product Launches",
-      description: "Generate buzz and drive sales with AI-crafted launch campaigns",
-      icon: <Rocket className="w-12 h-12 text-blue-500" />
+      description: "Generate buzz and drive sales for new product releases with targeted campaigns across all platforms."
     },
     {
+      icon: <Building className="w-12 h-12 text-green-400" />,
       title: "Brand Awareness",
-      description: "Build consistent brand presence across all social platforms",
-      icon: <Sparkles className="w-12 h-12 text-purple-500" />
+      description: "Build recognition and establish your brand presence with consistent, engaging content strategies."
     },
     {
+      icon: <Briefcase className="w-12 h-12 text-purple-400" />,
       title: "Service Promotion",
-      description: "Showcase your services with compelling, conversion-focused content",
-      icon: <MessageSquare className="w-12 h-12 text-green-500" />
+      description: "Showcase your expertise and attract new clients with professional service-focused campaigns."
     },
     {
-      title: "Event Marketing",
-      description: "Drive attendance and engagement for your events and webinars",
-      icon: <Calendar className="w-12 h-12 text-orange-500" />
+      icon: <ShoppingBag className="w-12 h-12 text-orange-400" />,
+      title: "E-commerce Growth",
+      description: "Drive traffic and boost online sales with conversion-optimized social media marketing."
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen vvl-gradient-bg">
       {/* Header */}
-      <header className="relative z-10">
-        <div className="container mx-auto px-4 py-6">
+      <header className="vvl-header-blur">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">VVL</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Video Venture Launch</h1>
-                <p className="text-xs text-gray-400">Agentic AI Marketing</p>
-              </div>
+              <h1 className="text-xl font-bold vvl-text-primary">Video Venture Launch</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <nav className="flex items-center space-x-4">
               <button 
-                className="vvl-button-secondary"
                 onClick={() => navigate('/about')}
+                className="vvl-button-secondary text-sm"
               >
                 About
               </button>
               <button 
-                className="vvl-button-secondary"
                 onClick={() => navigate('/campaigns')}
+                className="vvl-button-secondary text-sm"
               >
                 View Campaigns
               </button>
               <button 
-                className="vvl-button-primary"
                 onClick={() => navigate('/new-campaign')}
+                className="vvl-button-primary text-sm"
               >
                 Create Your Campaign
               </button>
-            </div>
+            </nav>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 px-4 py-2 rounded-full text-sm mb-8">
-              <Sparkles className="w-4 h-4" />
-              Powered by Google's ADK & Gemini AI
+      <section className="pt-20 pb-32">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="flex justify-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-white" />
+              </div>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-              The Modern
-              <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"> AI Marketing </span>
-              Platform
+            <h1 className="text-5xl md:text-7xl font-bold vvl-text-primary mb-6 leading-tight">
+              AI-Powered Marketing
+              <span className="block vvl-text-accent">That Actually Works</span>
             </h1>
             
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Transform your marketing workflow with AI agents that create, optimize, and publish 
-              campaigns across all social platforms. Get your "Aha!" moment in under 60 seconds.
+            <p className="text-xl md:text-2xl vvl-text-secondary mb-12 leading-relaxed max-w-3xl mx-auto">
+              Transform your business with intelligent marketing campaigns. Our agentic AI analyzes your business, 
+              creates compelling content, and manages your entire social media presence automatically.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <button 
                 className="vvl-button-primary text-lg px-8 py-4 flex items-center gap-2"
@@ -220,7 +218,7 @@ const LandingPage: React.FC = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <MaterialCard key={index} className="p-6 bg-slate-700/50 border-slate-600 hover:bg-slate-700/70 transition-all duration-300">
+              <div key={index} className="vvl-card vvl-card-hover p-6">
                 <div className="text-blue-400 mb-4">
                   {feature.icon}
                 </div>
@@ -230,7 +228,7 @@ const LandingPage: React.FC = () => {
                 <p className="text-gray-300 leading-relaxed">
                   {feature.description}
                 </p>
-              </MaterialCard>
+              </div>
             ))}
           </div>
         </div>
@@ -251,8 +249,8 @@ const LandingPage: React.FC = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {useCases.map((useCase, index) => (
-              <MaterialCard key={index} className="p-6 bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 text-center hover:scale-105 transition-transform duration-300">
-                <div className="flex justify-center mb-4">
+              <div key={index} className="vvl-card vvl-card-hover p-6 text-center group">
+                <div className="flex justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
                   {useCase.icon}
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-3">
@@ -261,7 +259,7 @@ const LandingPage: React.FC = () => {
                 <p className="text-gray-300 text-sm leading-relaxed">
                   {useCase.description}
                 </p>
-              </MaterialCard>
+              </div>
             ))}
           </div>
         </div>
@@ -326,24 +324,21 @@ const LandingPage: React.FC = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <MaterialButton 
-              size="lg"
-              className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4 font-semibold"
+            <button 
+              className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4 font-semibold rounded-lg transition-all duration-200 flex items-center gap-2"
               onClick={() => navigate('/new-campaign')}
             >
-              <Rocket className="w-5 h-5 mr-2" />
+              <Rocket className="w-5 h-5" />
               Create Your First Campaign
-            </MaterialButton>
+            </button>
             
-            <MaterialButton 
-              variant="outline" 
-              size="lg"
-              className="text-white border-white/30 hover:border-white hover:bg-white/10 text-lg px-8 py-4"
+            <button 
+              className="text-white border border-white/30 hover:border-white hover:bg-white/10 text-lg px-8 py-4 rounded-lg transition-all duration-200 flex items-center gap-2"
               onClick={() => navigate('/campaigns')}
             >
               Explore Features
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </MaterialButton>
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="mt-8 text-blue-100 text-sm">

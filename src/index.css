@@ -171,6 +171,16 @@
     @apply bg-slate-800 text-white;
   }
 
+  /* Textarea specific styling for consistency */
+  .vvl-textarea {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 text-white placeholder-gray-300 rounded-lg px-4 py-3 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200 resize-none;
+  }
+
+  /* Ensure all textarea elements use VVL styling */
+  textarea.vvl-input {
+    @apply resize-none;
+  }
+
   .vvl-text-primary {
     @apply text-white;
   }

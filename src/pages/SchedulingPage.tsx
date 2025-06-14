@@ -1,9 +1,12 @@
+/**
+ * FILENAME: SchedulingPage.tsx
+ * DESCRIPTION/PURPOSE: Social media scheduling page with VVL design system styling
+ * Author: JP + 2024-12-19
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
-import { MaterialCard } from '@/components/MaterialCard';
-import { MaterialButton } from '@/components/MaterialButton';
-import { MaterialAppBar } from '@/components/MaterialAppBar';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +24,9 @@ import {
   RotateCcw,
   CheckCircle,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Home,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -176,295 +181,220 @@ const SchedulingPage: React.FC = () => {
   if (!currentCampaign) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <MaterialAppBar title="Schedule & Publish">
-        <MaterialButton 
-          variant="outline" 
-          className="mr-2 flex items-center gap-1"
-          onClick={() => navigate('/ideation')}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Posts</span>
-        </MaterialButton>
-        
-        <MaterialButton
-          variant="outline"
-          onClick={() => setShowScheduledPanel(!showScheduledPanel)}
-          className="flex items-center gap-1"
-        >
-          <Calendar size={16} />
-          <span>Scheduled ({scheduledPosts.length})</span>
-          {showScheduledPanel ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </MaterialButton>
-      </MaterialAppBar>
-      
-      <div className="flex flex-1">
-        {/* Main Content */}
-        <div className={`flex-1 transition-all duration-300 ${showScheduledPanel ? 'mr-80' : ''}`}>
-          <div className="container py-8">
-            <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen vvl-gradient-bg flex flex-col">
+      {/* Header */}
+      <header className="vvl-header-blur">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="text-blue-400" size={24} />
+                <h1 className="text-xl font-bold vvl-text-primary">Schedule & Publish</h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => navigate('/')}
+                className="vvl-button-secondary text-sm flex items-center gap-2"
+              >
+                <Home size={16} />
+                Dashboard
+              </button>
+              <button 
+                onClick={() => navigate('/ideation')}
+                className="vvl-button-secondary text-sm flex items-center gap-2"
+              >
+                <ArrowLeft size={16} />
+                Back to Posts
+              </button>
               
-              {/* Campaign Summary */}
-              <MaterialCard className="p-6">
-                <h2 className="text-xl font-medium mb-4">{currentCampaign.name} - Ready to Schedule</h2>
-                <div className="grid md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Selected Posts:</span> {selectedPosts.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Campaign Type:</span> {currentCampaign.campaignType}
-                  </div>
-                  <div>
-                    <span className="font-medium">Objective:</span> {currentCampaign.objective}
-                  </div>
-                </div>
-              </MaterialCard>
+              <button
+                onClick={() => setShowScheduledPanel(!showScheduledPanel)}
+                className="vvl-button-secondary text-sm flex items-center gap-2"
+              >
+                <Calendar size={16} />
+                Scheduled ({scheduledPosts.length})
+                {showScheduledPanel ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-6 py-12 flex-grow">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold vvl-text-primary mb-4">{currentCampaign.name}</h2>
+            <p className="text-lg vvl-text-secondary">Schedule your AI-generated content across social media platforms</p>
+          </div>
 
-              {/* Social Media Platform Selection */}
-              <MaterialCard className="p-6">
-                <h3 className="text-lg font-medium mb-4">Select Social Media Platforms</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {platforms.map(platform => (
-                    <div
-                      key={platform.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        selectedPlatforms.includes(platform.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      } ${!platform.connected ? 'opacity-50' : ''}`}
-                      onClick={() => platform.connected && togglePlatform(platform.id)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <PlatformIcon platform={platform.id} />
-                          <span className="font-medium">{platform.name}</span>
-                        </div>
-                        {platform.connected ? (
-                          <CheckCircle size={16} className="text-green-600" />
-                        ) : (
-                          <AlertCircle size={16} className="text-orange-600" />
-                        )}
-                      </div>
-                      
-                      {!platform.connected ? (
-                        <MaterialButton
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleConnectPlatform(platform.id);
-                          }}
-                          className="w-full"
-                        >
-                          Connect Account
-                        </MaterialButton>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          {selectedPlatforms.includes(platform.id) ? 'Selected for posting' : 'Click to select'}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </MaterialCard>
-
-              {/* Scheduling Configuration */}
-              <MaterialCard className="p-6">
-                <h3 className="text-lg font-medium mb-4">Scheduling Settings</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Main Scheduling Panel */}
+            <div className="lg:col-span-8">
+              {/* Scheduling Controls */}
+              <div className="vvl-card p-6 mb-8">
+                <h3 className="text-xl font-semibold vvl-text-primary mb-6">Scheduling Settings</h3>
                 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="start-time">Start Time</Label>
-                      <Input
-                        id="start-time"
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label>Posting Interval: {schedulingInterval[0]} hours</Label>
-                      <div className="mt-2 px-2">
-                        <Slider
-                          value={schedulingInterval}
-                          onValueChange={setSchedulingInterval}
-                          max={24}
-                          min={1}
-                          step={1}
-                          className="w-full"
-                        />
+                {/* Platform Selection */}
+                <div className="mb-6">
+                  <Label className="text-sm font-medium vvl-text-primary mb-3 block">Select Platforms</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {platforms.map(platform => (
+                      <div key={platform.id} className="relative">
+                        <button
+                          onClick={() => platform.connected ? togglePlatform(platform.id) : handleConnectPlatform(platform.id)}
+                          className={`w-full p-3 rounded-lg border transition-all duration-200 flex items-center gap-3 ${
+                            selectedPlatforms.includes(platform.id)
+                              ? 'bg-blue-500/20 border-blue-400 text-blue-400'
+                              : platform.connected
+                              ? 'bg-white/5 border-white/20 vvl-text-secondary hover:bg-white/10'
+                              : 'bg-white/5 border-white/10 vvl-text-secondary opacity-50'
+                          }`}
+                        >
+                          <PlatformIcon platform={platform.id} />
+                          <span className="text-sm font-medium">{platform.name}</span>
+                          {!platform.connected && (
+                            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded ml-auto">
+                              Connect
+                            </span>
+                          )}
+                        </button>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>1 hour</span>
-                        <span>24 hours</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timing Controls */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <Label className="text-sm font-medium vvl-text-primary mb-2 block">Posting Interval (hours)</Label>
+                    <div className="space-y-2">
+                      <Slider
+                        value={schedulingInterval}
+                        onValueChange={setSchedulingInterval}
+                        max={24}
+                        min={1}
+                        step={1}
+                        className="w-full"
+                      />
+                      <div className="text-sm vvl-text-secondary">
+                        Post every {schedulingInterval[0]} hour{schedulingInterval[0] !== 1 ? 's' : ''}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">Scheduling Preview</h4>
-                      <div className="text-sm text-blue-700 space-y-1">
-                        <p>📅 Start: Today at {startTime}</p>
-                        <p>⏱️ Interval: Every {schedulingInterval[0]} hours</p>
-                        <p>📱 Platforms: {selectedPlatforms.length} selected</p>
-                        <p>📝 Posts: {selectedPosts.length} ready</p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground">
-                      ⚠️ Keep this page open to maintain active scheduling session
-                    </div>
+                  <div>
+                    <Label className="text-sm font-medium vvl-text-primary mb-2 block">Start Time</Label>
+                    <Input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="vvl-input"
+                    />
                   </div>
                 </div>
-              </MaterialCard>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  {!isSchedulingActive ? (
+                    <button
+                      onClick={handleStartScheduling}
+                      className="vvl-button-primary flex items-center gap-2"
+                    >
+                      <Play size={16} />
+                      Start Scheduling
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStopScheduling}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-3 rounded-lg transition-all duration-200 flex items-center gap-2"
+                    >
+                      <Pause size={16} />
+                      Pause Scheduling
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={exportCampaignTemplate}
+                    className="vvl-button-secondary flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    Export Template
+                  </button>
+                </div>
+              </div>
 
               {/* Selected Posts Preview */}
-              <MaterialCard className="p-6">
-                <h3 className="text-lg font-medium mb-4">Posts Ready for Scheduling</h3>
+              <div className="vvl-card p-6">
+                <h3 className="text-xl font-semibold vvl-text-primary mb-6">Posts to Schedule ({selectedPosts.length})</h3>
                 <div className="space-y-4">
                   {selectedPosts.map((post, index) => (
-                    <div key={post.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">#{index + 1}</span>
-                          <PlatformIcon platform={post.platform} />
-                          <span className="text-sm text-muted-foreground">{post.type}</span>
+                    <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                          {index + 1}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          Will post in {(index + 1) * schedulingInterval[0]} hours
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <PlatformIcon platform={post.platform} />
+                            <span className="text-sm font-medium vvl-text-primary capitalize">{post.platform}</span>
+                            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">{post.type}</span>
+                          </div>
+                          <p className="vvl-text-secondary text-sm mb-2">{post.content.text}</p>
+                          {post.content.hashtags && (
+                            <div className="flex flex-wrap gap-1">
+                              {post.content.hashtags.map((tag, idx) => (
+                                <span key={idx} className="text-xs text-blue-400">#{tag.replace('#', '')}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      
-                      <p className="text-sm mb-2">{post.content.text}</p>
-                      
-                      {post.content.imageUrl && (
-                        <img 
-                          src={post.content.imageUrl} 
-                          alt="Post preview" 
-                          className="w-32 h-24 object-cover rounded mb-2"
-                        />
-                      )}
-                      
-                      {post.content.productUrl && (
-                        <div className="text-xs text-blue-600 mb-2">
-                          🔗 {post.content.productUrl}
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-1">
-                        {post.content.hashtags.map(tag => (
-                          <span key={tag} className="text-xs text-blue-600">{tag}</span>
-                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
-              </MaterialCard>
+              </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center">
-                <div className="flex gap-4">
-                  <MaterialButton
-                    variant="outline"
-                    onClick={exportCampaignTemplate}
-                    className="flex items-center gap-2"
-                  >
-                    <Download size={16} />
-                    <span>Export Template</span>
-                  </MaterialButton>
+            {/* Scheduled Posts Panel */}
+            <div className={`lg:col-span-4 transition-all duration-300 ${showScheduledPanel ? 'block' : 'hidden lg:block'}`}>
+              <div className="vvl-card sticky top-4">
+                <div className="p-6 border-b border-white/20">
+                  <h3 className="font-semibold vvl-text-primary flex items-center gap-2">
+                    <Calendar size={20} />
+                    Scheduled Posts
+                  </h3>
+                  <p className="text-sm vvl-text-secondary mt-1">{scheduledPosts.length} posts in queue</p>
                 </div>
-                
-                <div className="flex gap-4">
-                  {isSchedulingActive ? (
-                    <MaterialButton
-                      variant="outline"
-                      onClick={handleStopScheduling}
-                      className="flex items-center gap-2"
-                    >
-                      <Pause size={16} />
-                      <span>Pause Scheduling</span>
-                    </MaterialButton>
-                  ) : (
-                    <MaterialButton
-                      onClick={handleStartScheduling}
-                      disabled={selectedPlatforms.length === 0}
-                      className="flex items-center gap-2"
-                    >
-                      <Play size={16} />
-                      <span>Start Scheduling</span>
-                    </MaterialButton>
-                  )}
+                <div className="p-6 max-h-96 overflow-y-auto">
+                  <div className="space-y-4">
+                    {scheduledPosts.map((scheduledPost) => (
+                      <div key={scheduledPost.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <PlatformIcon platform={scheduledPost.platform} />
+                          <span className="text-sm font-medium vvl-text-primary capitalize">{scheduledPost.platform}</span>
+                          {scheduledPost.status === 'posted' ? (
+                            <CheckCircle size={14} className="text-green-400" />
+                          ) : (
+                            <Clock size={14} className="text-orange-400" />
+                          )}
+                        </div>
+                        <p className="text-xs vvl-text-secondary mb-2 line-clamp-2">
+                          {scheduledPost.post.content.text}
+                        </p>
+                        <div className="text-xs vvl-text-secondary">
+                          {scheduledPost.status === 'posted' ? 'Posted' : 'Scheduled for'}: {' '}
+                          {new Date(scheduledPost.scheduledTime).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Scheduled Posts Slide-out Panel */}
-        {showScheduledPanel && (
-          <div className="fixed right-0 top-0 h-full w-80 bg-white border-l shadow-lg z-50 overflow-y-auto">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">Scheduled Posts</h3>
-                <MaterialButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowScheduledPanel(false)}
-                >
-                  <ChevronRight size={16} />
-                </MaterialButton>
-              </div>
-            </div>
-            
-            <div className="p-4 space-y-4">
-              {scheduledPosts.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <Calendar size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>No posts scheduled yet</p>
-                </div>
-              ) : (
-                scheduledPosts.map(scheduled => (
-                  <div key={scheduled.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <PlatformIcon platform={scheduled.platform} />
-                        <span className="text-sm font-medium">{scheduled.platform}</span>
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded ${
-                        scheduled.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        scheduled.status === 'posted' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {scheduled.status}
-                      </div>
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {new Date(scheduled.scheduledTime).toLocaleString()}
-                    </p>
-                    
-                    <p className="text-sm">{scheduled.post.content.text.slice(0, 100)}...</p>
-                    
-                    {scheduled.status === 'posted' && (
-                      <MaterialButton
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full flex items-center gap-1"
-                      >
-                        <ExternalLink size={12} />
-                        <span>View Post</span>
-                      </MaterialButton>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

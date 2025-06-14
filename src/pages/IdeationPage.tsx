@@ -1,12 +1,15 @@
+/**
+ * FILENAME: IdeationPage.tsx
+ * DESCRIPTION/PURPOSE: Social media post ideation and generation page with VVL design system styling
+ * Author: JP + 2024-12-19
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
-import { MaterialCard } from '@/components/MaterialCard';
-import { MaterialButton } from '@/components/MaterialButton';
-import { MaterialTag } from '@/components/MaterialTag';
-import { MaterialAppBar } from '@/components/MaterialAppBar';
+import { MaterialVideoCard } from '@/components/MaterialVideoCard';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const IdeationPage: React.FC = () => {
@@ -179,210 +182,246 @@ const IdeationPage: React.FC = () => {
   if (!currentCampaign) return null;
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <MaterialAppBar title="Social Media Post Generator">
-        <MaterialButton 
-          variant="outline" 
-          className="mr-2 flex items-center gap-1"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft size={16} />
-          <span>Back</span>
-        </MaterialButton>
-      </MaterialAppBar>
+    <div className="min-h-screen vvl-gradient-bg flex flex-col">
+      {/* Header */}
+      <header className="vvl-header-blur">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-3">
+                <Wand2 className="text-blue-400" size={24} />
+                <h1 className="text-xl font-bold vvl-text-primary">Social Media Post Generator</h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => navigate('/')}
+                className="vvl-button-secondary text-sm flex items-center gap-2"
+              >
+                <Home size={16} />
+                Dashboard
+              </button>
+              <button 
+                onClick={() => navigate('/')}
+                className="vvl-button-secondary text-sm flex items-center gap-2"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
       
-      <div className="container py-8">
+      <div className="container mx-auto px-6 py-12 flex-grow">
         <div className="max-w-7xl mx-auto">
           {/* Campaign Summary */}
-          <MaterialCard className="mb-6 p-6">
-            <div className="flex items-center gap-2 text-material-primary mb-4">
-              <Sparkles size={20} />
-              <h2 className="text-lg font-medium">AI Campaign Summary</h2>
+          <div className="vvl-card p-6 mb-8">
+            <div className="flex items-center gap-3 vvl-text-primary mb-4">
+              <Sparkles size={24} className="text-blue-400" />
+              <h2 className="text-2xl font-bold">AI Campaign Summary</h2>
             </div>
-            <div className="bg-material-primary/5 p-4 rounded-md mb-4">
-              <p className="text-sm">{aiSummary || "AI will generate a summary based on your business description and objective."}</p>
-            </div>
-            
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="font-medium mb-2">Campaign: {currentCampaign.name}</h3>
-                <p className="text-sm text-muted-foreground">{currentCampaign.objective}</p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-2">Selected Themes</h3>
-                <div className="flex flex-wrap gap-1">
-                  {selectedThemes.map(theme => (
-                    <span key={theme} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                      {theme}
-                    </span>
-                  ))}
+                <h3 className="text-lg font-semibold vvl-text-primary mb-2">{currentCampaign.name}</h3>
+                <p className="vvl-text-secondary mb-4">{currentCampaign.objective}</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">
+                    {currentCampaign.campaignType}
+                  </span>
+                  <span className="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full">
+                    Creativity: {currentCampaign.creativityLevel}/10
+                  </span>
                 </div>
               </div>
               <div>
-                <h3 className="font-medium mb-2">Selected Tags</h3>
-                <div className="flex flex-wrap gap-1">
-                  {selectedTags.map(tag => (
-                    <span key={tag} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                <h4 className="text-sm font-semibold vvl-text-primary mb-2">AI Analysis</h4>
+                <p className="text-sm vvl-text-secondary">
+                  {aiSummary || "AI is analyzing your campaign requirements to generate targeted content that resonates with your audience and achieves your marketing objectives."}
+                </p>
               </div>
             </div>
-          </MaterialCard>
+          </div>
 
-          {/* Quick Hashtag Selection */}
-          <MaterialCard className="mb-6 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Hash size={20} />
-              <h2 className="text-lg font-medium">Suggested Hashtags</h2>
+          {/* Theme and Tag Selection */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="vvl-card p-6">
+              <h3 className="text-lg font-semibold vvl-text-primary mb-4">Suggested Themes</h3>
+              <div className="flex flex-wrap gap-2">
+                {suggestedThemes.map(theme => (
+                  <button
+                    key={theme}
+                    onClick={() => selectedThemes.includes(theme) ? unselectTheme(theme) : selectTheme(theme)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      selectedThemes.includes(theme)
+                        ? 'bg-blue-500/30 text-blue-400 border border-blue-400'
+                        : 'bg-white/5 text-gray-300 border border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    {theme}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {suggestedHashtags.map(hashtag => (
-                <MaterialTag
-                  key={hashtag}
-                  label={hashtag}
-                  selected={true}
-                  onClick={() => {}}
-                />
-              ))}
+
+            <div className="vvl-card p-6">
+              <h3 className="text-lg font-semibold vvl-text-primary mb-4">Suggested Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {suggestedTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => selectedTags.includes(tag) ? unselectTag(tag) : selectTag(tag)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      selectedTags.includes(tag)
+                        ? 'bg-purple-500/30 text-purple-400 border border-purple-400'
+                        : 'bg-white/5 text-gray-300 border border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
             </div>
-          </MaterialCard>
+          </div>
+
+          {/* Design Preferences */}
+          <div className="vvl-card p-6 mb-8">
+            <h3 className="text-lg font-semibold vvl-text-primary mb-4">Design Preferences (Optional)</h3>
+            <Textarea
+              placeholder="Describe your preferred visual style, colors, mood, or any specific design requirements..."
+              value={preferredDesign}
+              onChange={(e) => setPreferredDesign(e.target.value)}
+              className="vvl-input min-h-[100px] resize-none"
+            />
+          </div>
 
           {/* Social Media Post Columns */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid lg:grid-cols-3 gap-8 mb-8">
             {socialMediaColumns.map(column => (
-              <div key={column.id} className="space-y-4">
-                <MaterialCard className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium">{column.title}</h3>
-                    <MaterialButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => generateColumnPosts(column.id)}
-                      disabled={column.isGenerating}
-                      className="flex items-center gap-1"
-                    >
-                      <RefreshCw size={14} className={column.isGenerating ? 'animate-spin' : ''} />
-                      <span>Regenerate</span>
-                    </MaterialButton>
+              <div key={column.id} className="vvl-card">
+                <div className="p-6 border-b border-white/20">
+                  <div className="flex items-center gap-3 mb-2">
+                    {column.id === 'text-only' && <Hash className="text-blue-400" size={20} />}
+                    {column.id === 'text-image' && <Image className="text-green-400" size={20} />}
+                    {column.id === 'text-video' && <Video className="text-purple-400" size={20} />}
+                    <h3 className="font-semibold vvl-text-primary">{column.title}</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">{column.description}</p>
-                  
-                  {column.isGenerating ? (
-                    <div className="space-y-3">
-                      {Array(3).fill(null).map((_, idx) => (
-                        <div key={idx} className="animate-pulse">
-                          <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                          <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {column.posts.map(post => (
-                        <div
-                          key={post.id}
-                          className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                            selectedPosts.includes(post.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => togglePostSelection(post.id)}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {post.type === 'text-with-image' && <Image size={14} className="text-green-600" />}
-                              {post.type === 'text-with-video' && <Video size={14} className="text-purple-600" />}
-                              {post.type === 'text-only' && <ExternalLink size={14} className="text-blue-600" />}
-                            </div>
-                            <MaterialButton
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                regeneratePost(column.id, post.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <RefreshCw size={12} />
-                            </MaterialButton>
-                          </div>
-                          
-                          <p className="text-sm mb-2">{post.content.text}</p>
+                  <p className="text-sm vvl-text-secondary">{column.description}</p>
+                  <button
+                    onClick={() => generateColumnPosts(column.id)}
+                    disabled={column.isGenerating}
+                    className="mt-4 vvl-button-secondary text-sm flex items-center gap-2 w-full justify-center disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={column.isGenerating ? 'animate-spin' : ''} />
+                    {column.isGenerating ? 'Generating...' : 'Regenerate'}
+                  </button>
+                </div>
+                
+                <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                  {column.posts.map((post: any) => (
+                    <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-grow">
+                          <p className="text-sm vvl-text-secondary mb-3 line-clamp-3">{post.content.text}</p>
                           
                           {post.content.imageUrl && (
                             <img 
                               src={post.content.imageUrl} 
-                              alt="Post preview" 
-                              className="w-full h-24 object-cover rounded mb-2"
+                              alt="Generated content" 
+                              className="w-full h-32 object-cover rounded mb-3"
                             />
                           )}
                           
-                          {post.content.videoUrl && (
-                            <div className="w-full h-24 bg-gray-100 rounded mb-2 flex items-center justify-center">
-                              <Video size={24} className="text-gray-400" />
-                            </div>
-                          )}
-                          
-                          {post.content.productUrl && (
-                            <div className="text-xs text-blue-600 mb-2">
-                              🔗 {post.content.productUrl}
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex gap-3">
-                              <span className="flex items-center gap-1">
-                                <Heart size={12} /> 24
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MessageCircle size={12} /> 8
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Share size={12} /> 3
-                              </span>
-                            </div>
-                            <div className="flex gap-1">
-                              {post.content.hashtags.map(tag => (
-                                <span key={tag} className="text-blue-600">{tag}</span>
+                          {post.content.hashtags && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {post.content.hashtags.map((tag: string, idx: number) => (
+                                <span key={idx} className="text-xs text-blue-400">#{tag.replace('#', '')}</span>
                               ))}
                             </div>
-                          </div>
+                          )}
                         </div>
-                      ))}
+                        
+                        <button
+                          onClick={() => togglePostSelection(post.id)}
+                          className={`ml-3 p-2 rounded-lg transition-all duration-200 ${
+                            selectedPosts.includes(post.id)
+                              ? 'bg-blue-500/30 text-blue-400'
+                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          <Heart size={16} className={selectedPosts.includes(post.id) ? 'fill-current' : ''} />
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs vvl-text-secondary">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1">
+                            <Heart size={12} />
+                            {Math.floor(Math.random() * 100) + 10}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle size={12} />
+                            {Math.floor(Math.random() * 20) + 2}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Share size={12} />
+                            {Math.floor(Math.random() * 10) + 1}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => regeneratePost(column.id, post.id)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <RefreshCw size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {column.posts.length === 0 && !column.isGenerating && (
+                    <div className="text-center py-8 vvl-text-secondary">
+                      <p className="text-sm">No posts generated yet</p>
+                      <p className="text-xs mt-1">Click "Regenerate" to create content</p>
                     </div>
                   )}
-                </MaterialCard>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              {selectedPosts.length} posts selected
-            </div>
-            
-            <div className="flex gap-4">
-              <MaterialButton
-                variant="outline"
-                onClick={() => navigate('/new')}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft size={16} />
-                <span>Back to Campaign</span>
-              </MaterialButton>
+          {/* Action Bar */}
+          <div className="vvl-card p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="vvl-text-primary font-medium">
+                  {selectedPosts.length} posts selected
+                </span>
+                {selectedPosts.length > 0 && (
+                  <span className="text-sm vvl-text-secondary">
+                    Ready for scheduling and publishing
+                  </span>
+                )}
+              </div>
               
-              <MaterialButton
-                onClick={handleProceedToScheduling}
-                disabled={selectedPosts.length === 0}
-                className="flex items-center gap-2"
-              >
-                <Calendar size={16} />
-                <span>Schedule Selected Posts ({selectedPosts.length})</span>
-                <ArrowRight size={16} />
-              </MaterialButton>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={generateAllPosts}
+                  disabled={isLoading}
+                  className="vvl-button-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+                  {isLoading ? 'Generating...' : 'Regenerate All'}
+                </button>
+                
+                <button
+                  onClick={handleProceedToScheduling}
+                  disabled={selectedPosts.length === 0}
+                  className="vvl-button-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowRight size={16} />
+                  Proceed to Scheduling ({selectedPosts.length})
+                </button>
+              </div>
             </div>
           </div>
         </div>
