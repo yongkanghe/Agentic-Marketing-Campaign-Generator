@@ -52,6 +52,27 @@ dev-local: ## Start both frontend and backend locally
 	@make dev-backend-local &
 	@make dev-frontend-local
 
+dev-with-env: ## Start both frontend and backend with .env file loaded
+	@echo "🚀 Starting Video Venture Launch with environment variables..."
+	@if [ ! -f backend/.env ]; then \
+		echo "⚠️  Creating backend/.env file..."; \
+		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
+		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
+	fi
+	@echo "Loading environment variables from backend/.env..."
+	@set -a && . backend/.env && set +a && \
+	echo "Starting backend server with loaded environment..." && \
+	cd backend && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload &
+	@echo "Starting frontend server..."
+	@if [ "$(BUN_AVAILABLE)" ]; then \
+		bun run dev; \
+	elif [ "$(NODE_AVAILABLE)" ]; then \
+		npm run dev; \
+	else \
+		echo "Error: Neither bun nor npm found. Please install Node.js or Bun."; \
+		exit 1; \
+	fi
+
 dev-frontend: ## Start frontend development server (Docker-first)
 	@if [ "$(DOCKER_COMPOSE_AVAILABLE)" ]; then \
 		echo "Starting frontend with Docker Compose..."; \
@@ -112,6 +133,46 @@ test-backend: ## Test backend ADK agent
 		exit 1; \
 	fi
 	@GEMINI_API_KEY=$(GEMINI_API_KEY) python3 -m google.adk.cli run backend.marketing_agent --query "Test campaign for a tech startup focused on AI solutions"
+
+test-api: ## Run comprehensive API tests
+	@echo "🧪 Running API Tests..."
+	@echo "====================="
+	@echo ""
+	@echo "1. Running unit tests..."
+	@make test-api-unit
+	@echo ""
+	@echo "2. Running integration tests..."
+	@make test-api-integration
+	@echo ""
+	@echo "3. Running end-to-end tests..."
+	@make test-api-e2e
+	@echo ""
+	@echo "✅ API testing complete!"
+
+test-api-unit: ## Run API unit tests
+	@echo "Running API unit tests..."
+	@cd backend && python -m pytest tests/ -v -m "not integration and not e2e" --tb=short
+
+test-api-integration: ## Run API integration tests
+	@echo "Running API integration tests..."
+	@cd backend && python -m pytest tests/ -v -m "integration" --tb=short
+
+test-api-e2e: ## Run API end-to-end tests
+	@echo "Running API end-to-end tests..."
+	@cd backend && python -m pytest tests/ -v -m "e2e" --tb=short
+
+test-api-coverage: ## Run API tests with coverage report
+	@echo "Running API tests with coverage..."
+	@cd backend && python -m pytest tests/ --cov=api --cov=agents --cov-report=term-missing --cov-report=html --cov-report=xml
+
+test-api-regression: ## Run regression test suite
+	@echo "🔄 Running Regression Tests..."
+	@echo "============================="
+	@echo ""
+	@echo "Testing all API endpoints for regression..."
+	@cd backend && python -m pytest tests/test_api_*.py -v --tb=short
+	@echo ""
+	@echo "✅ Regression testing complete!"
 
 # Runtime and UI Testing targets
 launch: ## Launch complete development environment and run health checks
@@ -197,7 +258,7 @@ test-user-flows: ## Test critical user flows
 		exit 1; \
 	fi
 
-test-api: ## Test API endpoints and backend services
+test-api-old: ## Test API endpoints and backend services (legacy)
 	@echo "🔌 Testing API Endpoints and Backend Services..."
 	@echo "==============================================="
 	@echo ""

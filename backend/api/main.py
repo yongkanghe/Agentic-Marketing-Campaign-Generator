@@ -26,12 +26,12 @@ from google.adk.agents.llm_agent import LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
-from google.adk.runners import run_async
+from google.adk.runners import InMemoryRunner
 from google.adk.telemetry import tracer
 
 from .routes import campaigns, content, analysis
 from .models import CampaignRequest, CampaignResponse, ErrorResponse
-from ..agents.marketing_orchestrator import create_marketing_orchestrator_agent
+from agents.marketing_orchestrator import create_marketing_orchestrator_agent
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -50,8 +50,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Initializing Video Venture Launch backend...")
     
     # Validate environment
-    if not os.getenv("GEMINI_KEY"):
-        logger.warning("GEMINI_KEY not set - AI functionality will be limited")
+    if not os.getenv("GEMINI_API_KEY"):
+        logger.warning("GEMINI_API_KEY not set - AI functionality will be limited")
     
     # Initialize the marketing orchestrator agent
     try:
@@ -90,10 +90,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add trusted host middleware for security
+# Add trusted host middleware for security (allow test hosts)
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "*.web.app", "*.run.app"]
+    allowed_hosts=["localhost", "127.0.0.1", "testserver", "*.web.app", "*.run.app"]
 )
 
 # Include API routes
@@ -120,7 +120,7 @@ async def health_check():
     return {
         "status": "healthy",
         "agent_initialized": marketing_agent is not None,
-        "gemini_key_configured": bool(os.getenv("GEMINI_KEY")),
+        "gemini_key_configured": bool(os.getenv("GEMINI_API_KEY")),
         "services": {
             "session_service": "in_memory",
             "artifact_service": "in_memory"
@@ -145,20 +145,28 @@ async def agent_status():
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """Handle HTTP exceptions with proper error response format."""
-    return ErrorResponse(
-        error=exc.detail,
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
         status_code=exc.status_code,
-        path=str(request.url)
+        content={
+            "error": exc.detail,
+            "status_code": exc.status_code,
+            "path": str(request.url)
+        }
     )
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     """Handle general exceptions with proper logging."""
+    from fastapi.responses import JSONResponse
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return ErrorResponse(
-        error="Internal server error",
+    return JSONResponse(
         status_code=500,
-        path=str(request.url)
+        content={
+            "error": "Internal server error",
+            "status_code": 500,
+            "path": str(request.url)
+        }
     )
 
 if __name__ == "__main__":

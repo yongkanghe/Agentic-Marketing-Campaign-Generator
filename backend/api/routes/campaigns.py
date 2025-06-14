@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..models import CampaignRequest, CampaignResponse, BusinessAnalysis, SocialMediaPost
-from ...agents.marketing_orchestrator import execute_campaign_workflow
+from agents.marketing_orchestrator import execute_campaign_workflow
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -87,4 +87,115 @@ async def get_campaign(campaign_id: str) -> CampaignResponse:
         social_posts=[SocialMediaPost(**post) for post in workflow_result["social_posts"]],
         created_at=datetime.fromisoformat(workflow_result["created_at"]),
         status=workflow_result["status"]
-    ) 
+    )
+
+@router.get("/", response_model=Dict[str, Any])
+async def list_campaigns(limit: int = 10, offset: int = 0) -> Dict[str, Any]:
+    """List campaigns with pagination."""
+    
+    # Get campaigns from store
+    all_campaigns = list(campaigns_store.values())
+    total = len(all_campaigns)
+    
+    # Apply pagination
+    paginated_campaigns = all_campaigns[offset:offset + limit]
+    
+    # Convert to response format
+    campaigns = []
+    for workflow_result in paginated_campaigns:
+        campaign = {
+            "campaign_id": workflow_result["campaign_id"],
+            "summary": workflow_result["summary"],
+            "created_at": workflow_result["created_at"],
+            "status": workflow_result["status"]
+        }
+        campaigns.append(campaign)
+    
+    return {
+        "campaigns": campaigns,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + limit < total
+    }
+
+@router.delete("/{campaign_id}", response_model=Dict[str, str])
+async def delete_campaign(campaign_id: str) -> Dict[str, str]:
+    """Delete a campaign by ID."""
+    
+    if campaign_id not in campaigns_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Campaign not found: {campaign_id}"
+        )
+    
+    del campaigns_store[campaign_id]
+    
+    return {
+        "message": f"Campaign {campaign_id} deleted successfully"
+    }
+
+@router.post("/{campaign_id}/duplicate", response_model=CampaignResponse)
+async def duplicate_campaign(campaign_id: str) -> CampaignResponse:
+    """Duplicate an existing campaign."""
+    
+    if campaign_id not in campaigns_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Campaign not found: {campaign_id}"
+        )
+    
+    # Get original campaign
+    original_workflow = campaigns_store[campaign_id]
+    
+    # Create new campaign ID
+    new_campaign_id = f"campaign_{datetime.now().strftime('%Y%m%d_%H%M%S')}_dup"
+    
+    # Duplicate the workflow result
+    duplicated_workflow = original_workflow.copy()
+    duplicated_workflow["campaign_id"] = new_campaign_id
+    duplicated_workflow["summary"] = f"Copy of {original_workflow['summary']}"
+    duplicated_workflow["created_at"] = datetime.now().isoformat()
+    
+    # Store duplicated campaign
+    campaigns_store[new_campaign_id] = duplicated_workflow
+    
+    return CampaignResponse(
+        campaign_id=duplicated_workflow["campaign_id"],
+        summary=duplicated_workflow["summary"],
+        business_analysis=BusinessAnalysis(**duplicated_workflow["business_analysis"]),
+        social_posts=[SocialMediaPost(**post) for post in duplicated_workflow["social_posts"]],
+        created_at=datetime.fromisoformat(duplicated_workflow["created_at"]),
+        status=duplicated_workflow["status"]
+    )
+
+@router.get("/{campaign_id}/export")
+async def export_campaign(campaign_id: str, format: str = "json"):
+    """Export a campaign in the specified format."""
+    
+    if campaign_id not in campaigns_store:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Campaign not found: {campaign_id}"
+        )
+    
+    if format not in ["json", "csv", "xlsx"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported export format: {format}. Supported formats: json, csv, xlsx"
+        )
+    
+    workflow_result = campaigns_store[campaign_id]
+    
+    if format == "json":
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            content=workflow_result,
+            headers={"Content-Disposition": f"attachment; filename=campaign_{campaign_id}.json"}
+        )
+    else:
+        # For CSV and XLSX, return a placeholder response
+        raise HTTPException(
+            status_code=501,
+            detail=f"Export format {format} not yet implemented"
+        ) 

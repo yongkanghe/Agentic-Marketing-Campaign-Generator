@@ -375,7 +375,7 @@ async def execute_campaign_workflow(
             "product_service_url": product_service_url,
             "uploaded_files": uploaded_files or [],
             "post_count": 9,  # 3 per format type
-            "workflow_id": f"campaign_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "workflow_id": f"campaign_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
             "timestamp": datetime.now().isoformat()
         }
         
