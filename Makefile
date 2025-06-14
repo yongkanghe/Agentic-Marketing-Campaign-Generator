@@ -82,8 +82,13 @@ dev-backend: ## Start backend development server (Docker-first)
 	fi
 
 dev-backend-local: ## Start backend development server locally
-	@echo "Starting backend development server locally..."
-	@echo "Note: Backend API server not yet implemented. Use 'make test-backend' to test ADK agent."
+	@echo "🚀 Starting Video Venture Launch backend server..."
+	@if [ ! -f backend/.env ]; then \
+		echo "⚠️  Creating backend/.env file..."; \
+		echo "GEMINI_KEY=your_gemini_key_here" > backend/.env; \
+		echo "📝 Please update backend/.env with your GEMINI_KEY"; \
+	fi
+	@cd backend && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Testing targets
 test: test-frontend test-backend ## Run all tests

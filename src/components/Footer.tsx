@@ -19,7 +19,16 @@ const Footer: React.FC = () => {
                 Video Venture Launch - Agentic AI Marketing Campaign Manager
               </h3>
               <p className="text-gray-600">
-                Authored by <strong>Jaroslav Pantsjoha</strong> for the <strong>Agentic AI Solution Hackathon</strong>
+                Authored by{' '}
+                <a 
+                  href="https://www.linkedin.com/in/johas" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-bold text-blue-600 hover:text-blue-800 underline"
+                >
+                  Jaroslav Pantsjoha
+                </a>{' '}
+                for the <strong>Agentic AI Solution Hackathon</strong>
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 Powered by Google's Agent Development Kit (ADK) and Gemini AI
