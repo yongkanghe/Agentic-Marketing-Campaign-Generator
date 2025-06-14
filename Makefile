@@ -3,7 +3,7 @@
 # 3 Musketeers pattern for consistent development workflow
 # Uses Docker, Docker Compose, and Make for environment consistency
 
-.PHONY: help install install-frontend install-backend dev dev-frontend dev-backend test test-frontend test-backend test-ui test-api health-check launch runtime status-check build clean lint format docker-build docker-run docker-dev docker-test
+.PHONY: help install install-frontend install-backend dev dev-frontend dev-backend test test-frontend test-backend test-ui test-api health-check launch runtime status-check build clean lint format docker-build docker-run docker-dev docker-test test-unit test-integration test-e2e test-coverage
 
 # Environment Detection
 DOCKER_AVAILABLE := $(shell command -v docker 2> /dev/null)
@@ -477,3 +477,20 @@ doctor: ## Diagnose common development issues
 	@echo "2. Run 'make install' to install dependencies"
 	@echo "3. Set GEMINI_KEY environment variable"
 	@echo "4. Run 'make dev' to start development"
+
+# Testing
+test-unit:
+	@echo "Running unit tests..."
+	pytest backend/tests/ -v -m "not integration and not e2e"
+
+test-integration:
+	@echo "Running integration tests..."
+	pytest backend/tests/ -v -m "integration"
+
+test-e2e:
+	@echo "Running end-to-end tests..."
+	pytest backend/tests/ -v -m "e2e"
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	pytest backend/tests/ --cov=backend --cov-report=term-missing --cov-report=html

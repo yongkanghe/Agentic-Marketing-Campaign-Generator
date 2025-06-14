@@ -12,3 +12,9 @@ assess if the functionality and features have been implemented sucessfully by ru
 Mark the TODO/EPIC activities as done once relevant features/functioanltiy has been implemented
 
 Commit and push once the testing and documentation  update tasks are performed
+
+We are working towards MVP grade solution. 
+
+ensure you regularly test and validate the solution architecture, before committing and pushing the changes to github
+
+do not use stubs or mock data, as we target a functionally complete solution capability
