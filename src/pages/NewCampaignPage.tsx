@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Upload, Link2, Image, FileText, Sparkles, Globe, Package } from 'lucide-react';
+import { ArrowLeft, Upload, Link2, Image, FileText, Sparkles, Globe, Package, CloudUpload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NewCampaignPage: React.FC = () => {
@@ -33,7 +33,43 @@ const NewCampaignPage: React.FC = () => {
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
   const [campaignAssets, setCampaignAssets] = useState<File[]>([]);
   
+  // Campaign template upload
+  const [campaignTemplate, setCampaignTemplate] = useState<File | null>(null);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleCampaignTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCampaignTemplate(file);
+      
+      setIsLoadingTemplate(true);
+      try {
+        // TODO: Parse campaign template and populate form
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const template = JSON.parse(event.target?.result as string);
+            // Auto-populate form fields from template
+            setName(template.name || '');
+            setObjective(template.objective || '');
+            setBusinessDescription(template.businessDescription || '');
+            setCampaignType(template.campaignType || 'product');
+            setCreativityLevel([template.creativityLevel || 7]);
+            toast.success('Campaign template loaded successfully!');
+          } catch (error) {
+            toast.error('Invalid campaign template format');
+          }
+        };
+        reader.readAsText(file);
+      } catch (error) {
+        toast.error('Failed to load campaign template');
+      } finally {
+        setIsLoadingTemplate(false);
+      }
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -133,6 +169,46 @@ const NewCampaignPage: React.FC = () => {
         <MaterialCard className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="p-6">
             <h1 className="text-2xl font-medium mb-6">Create New Marketing Campaign</h1>
+            
+            {/* Campaign Template Upload */}
+            <MaterialCard className="mb-8 p-6 bg-orange-50 border-orange-200">
+              <div className="flex items-center gap-2 mb-4">
+                <CloudUpload className="text-orange-600" size={20} />
+                <h2 className="text-lg font-medium text-orange-900">Quick Start with Previous Campaign</h2>
+              </div>
+              <p className="text-sm text-orange-700 mb-4">
+                Upload a previous campaign template to get started immediately with proven prompts and settings.
+              </p>
+              
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  accept=".json,.txt"
+                  onChange={handleCampaignTemplateUpload}
+                  className="hidden"
+                  id="campaign-template-upload"
+                />
+                <label
+                  htmlFor="campaign-template-upload"
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 rounded-md cursor-pointer transition-colors"
+                >
+                  <Upload size={16} />
+                  <span className="text-sm font-medium">Upload Campaign Template</span>
+                </label>
+                
+                {campaignTemplate && (
+                  <div className="flex items-center gap-2 text-sm text-orange-700">
+                    <FileText size={16} />
+                    <span>{campaignTemplate.name}</span>
+                    {isLoadingTemplate && <span className="text-orange-500">Loading...</span>}
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-3 text-xs text-orange-600">
+                <p>💡 Tip: Save successful campaigns as templates from the scheduling page to reuse winning formulas!</p>
+              </div>
+            </MaterialCard>
             
             {/* Basic Campaign Info */}
             <div className="space-y-6 mb-8">

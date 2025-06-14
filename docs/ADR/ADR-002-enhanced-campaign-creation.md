@@ -144,4 +144,4 @@ class CampaignPreparationAgent:
 
 - ADR-001: Technology Stack Selection
 - Future ADR: Data Privacy and Security for File Uploads
-- Future ADR: Caching Strategy for URL Analysis Results 
+- Future ADR: Caching Strategy for URL Analysis Results

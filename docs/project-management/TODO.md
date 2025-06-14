@@ -51,6 +51,15 @@ Detailed task list for implementing the Video Venture Launch marketing campaign 
 - [x] Add `make build` target (build for production)
 - [x] Add `make clean` target (cleanup build artifacts)
 
+### Enhanced AI Capabilities
+- [ ] **Implement URL scraping agent** - BeautifulSoup/Scrapy for web content extraction
+- [ ] **Implement multimodal file analysis** - Gemini vision for image analysis
+- [ ] **Implement document parsing** - PDF/DOC text extraction and analysis
+- [ ] **Add creativity level controls** - Adjust AI temperature based on user preference
+- [ ] **Implement campaign type specialization** - Different prompts for product/service/brand/event
+- [ ] **Add business context extraction** - Sector, locality, target audience identification
+- [ ] **Implement visual style analysis** - Brand consistency and design direction from images
+
 ---
 
 ## 🚨 HIGH PRIORITY - Core Functionality
@@ -232,4 +241,4 @@ Detailed task list for implementing the Video Venture Launch marketing campaign 
 - [ ] **Add creativity level controls** - Adjust AI temperature based on user preference
 - [ ] **Implement campaign type specialization** - Different prompts for product/service/brand/event
 - [ ] **Add business context extraction** - Sector, locality, target audience identification
-- [ ] **Implement visual style analysis** - Brand consistency and design direction from images 
+- [ ] **Implement visual style analysis** - Brand consistency and design direction from images

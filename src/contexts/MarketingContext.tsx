@@ -1,5 +1,59 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+export type SocialMediaPost = {
+  id: string;
+  type: 'text-only' | 'text-with-image' | 'text-with-video';
+  platform: 'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'tiktok';
+  content: {
+    text: string;
+    hashtags: string[];
+    imageUrl?: string;
+    videoUrl?: string;
+    productUrl?: string; // For URL unfurling
+  };
+  generationPrompt: string; // Full prompt used to generate this post
+  selected?: boolean;
+  scheduledFor?: string; // ISO date string
+  posted?: boolean;
+  postId?: string; // Social media platform post ID
+};
+
+export type SocialMediaColumn = {
+  id: string;
+  title: string;
+  description: string;
+  mediaType: 'text-only' | 'text-with-image' | 'text-with-video';
+  posts: SocialMediaPost[];
+  isGenerating?: boolean;
+};
+
+export type ScheduledPost = {
+  id: string;
+  post: SocialMediaPost;
+  scheduledTime: string;
+  platform: string;
+  status: 'pending' | 'posted' | 'failed';
+  campaignId: string;
+};
+
+export type CampaignTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  prompts: {
+    summary: string;
+    themes: string[];
+    tags: string[];
+    socialPosts: string;
+  };
+  settings: {
+    creativityLevel: number;
+    campaignType: string;
+    preferredDesign: string;
+  };
+  createdAt: string;
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -20,6 +74,10 @@ export type Campaign = {
   uploadedImages?: File[];
   uploadedDocuments?: File[];
   campaignAssets?: File[];
+  // Social media enhancements
+  socialMediaColumns?: SocialMediaColumn[];
+  selectedPosts?: SocialMediaPost[];
+  campaignTemplate?: CampaignTemplate;
 };
 
 export type IdeaType = {

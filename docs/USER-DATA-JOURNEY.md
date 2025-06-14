@@ -250,3 +250,163 @@ Production       → Make Commands → Docker Containers → Same Environment
 5. Deploy using 3 Musketeers pattern
 
 The architecture is sound and follows industry best practices. The implementation just needs to catch up to the design! 
+
+## 🎯 Enhanced Social Media Campaign Management Journey
+
+### Complete User Flow: Campaign Creation → Post Generation → Scheduling → Publishing
+
+```
+USER JOURNEY:
+1. Campaign Creation (Enhanced) → 2. Social Media Post Generation → 3. Post Selection → 4. Scheduling & Publishing
+
+DETAILED FLOW:
+Campaign Upload/Creation → AI Analysis → 3-Column Post Generation → Selection → Scheduling → Social Media Publishing
+```
+
+### 1. Enhanced Campaign Creation
+**Page**: `/new` (NewCampaignPage)
+
+#### Quick Start Options
+- **Campaign Template Upload**: Upload previous successful campaign JSON templates
+- **URL Analysis**: Automatic business context extraction from website URLs
+- **File Upload**: Images, documents, and campaign assets for AI analysis
+- **Creativity Controls**: 1-10 dial for AI generation approach
+
+#### User Actions
+```
+USER → Upload Template (Optional) → Auto-populate form
+USER → Provide URLs → AI scrapes and analyzes business context
+USER → Upload Files → AI analyzes images/documents for visual direction
+USER → Set Creativity Level → Control AI experimental vs. conservative approach
+USER → Submit → Navigate to Social Media Post Generation
+```
+
+### 2. Social Media Post Generation
+**Page**: `/ideation` (IdeationPage - Transformed)
+
+#### 3-Column Post Generation System
+1. **Text + URL Posts**: Marketing text with product URL for link unfurling
+2. **Text + Image Posts**: Shortened text with AI-generated images
+3. **Text + Video Posts**: Marketing text with AI-generated videos
+
+#### User Actions
+```
+USER → View AI Campaign Summary → See extracted business context
+USER → Review Suggested Hashtags → Quick hashtag selection
+USER → Browse 3 Columns of Generated Posts → Each column shows 5+ post options
+USER → Click Posts to Select → Visual selection with blue highlighting
+USER → Regenerate Individual Posts → Refresh single posts or entire columns
+USER → Select Multiple Posts → Build custom campaign mix
+USER → Proceed to Scheduling → Navigate with selected posts
+```
+
+#### Post Types & Features
+- **Text-Only Posts**: Include product URLs for automatic unfurling
+- **Image Posts**: AI-generated visuals with shortened marketing text
+- **Video Posts**: AI-generated videos with engaging captions
+- **Social Proof**: Mock engagement metrics (likes, comments, shares)
+- **Platform Optimization**: Content optimized for each social platform
+
+### 3. Post Selection & Scheduling
+**Page**: `/scheduling` (SchedulingPage)
+
+#### Social Media Platform Integration
+- **Platform Selection**: LinkedIn, Twitter/X, Instagram, Facebook, TikTok
+- **OAuth Integration**: Connect social media accounts
+- **Platform Status**: Visual indicators for connected/disconnected accounts
+
+#### Scheduling Controls
+- **Start Time**: Set initial posting time
+- **Interval Control**: 1-24 hour sliding scale between posts
+- **Platform Distribution**: Automatic distribution across selected platforms
+- **Session Management**: Active scheduling while page remains open
+
+#### User Actions
+```
+USER → Select Social Platforms → Choose connected accounts for posting
+USER → Configure Scheduling → Set start time and interval (1-24 hours)
+USER → Preview Schedule → See when each post will be published
+USER → Start Scheduling → Begin automated posting sequence
+USER → Monitor Progress → View scheduled posts in slide-out panel
+USER → Export Template → Save successful campaign for future use
+```
+
+### 4. Scheduled Posts Management
+**Feature**: Slide-out Panel (Right Side)
+
+#### Real-time Monitoring
+- **Scheduled Queue**: View all pending posts with timestamps
+- **Status Tracking**: Pending, Posted, Failed status indicators
+- **Platform Distribution**: See which platforms each post targets
+- **Post Preview**: Truncated content preview with full details
+
+#### User Actions
+```
+USER → Toggle Scheduled Panel → Slide out from right side
+USER → Monitor Queue → See upcoming posts and timing
+USER → View Posted Content → Click to view published posts on platforms
+USER → Manage Schedule → Pause/resume scheduling as needed
+USER → Go Back to Selection → Return to post generation for more content
+```
+
+## 🔄 Bidirectional Navigation
+
+### Forward Flow
+```
+Campaign Creation → Post Generation → Selection → Scheduling → Publishing
+```
+
+### Backward Flow
+```
+Scheduling ← Post Selection ← Post Generation ← Campaign Creation
+```
+
+### Cross-Navigation
+- **Add More Posts**: From scheduling back to post generation
+- **Modify Campaign**: From any stage back to campaign creation
+- **Template Reuse**: Export from scheduling, import in campaign creation
+
+## 🎨 Enhanced User Experience Features
+
+### Visual Feedback
+- **Loading States**: Animated spinners during AI generation
+- **Selection Indicators**: Blue highlighting for selected posts
+- **Progress Tracking**: Visual progress through campaign stages
+- **Status Badges**: Color-coded status indicators throughout
+
+### Smart Defaults
+- **Auto-selection**: Default themes/tags for quick start
+- **Platform Suggestions**: Recommend platforms based on campaign type
+- **Optimal Timing**: Suggest best posting times based on platform
+- **Content Optimization**: Platform-specific content formatting
+
+### Error Handling & Fallbacks
+- **Generation Failures**: Graceful fallback with retry options
+- **Platform Disconnection**: Clear indicators and reconnection flows
+- **Scheduling Interruption**: Session recovery and resume capabilities
+- **Content Validation**: Pre-publish content checking
+
+## 🔧 Technical Implementation
+
+### State Management Flow
+```
+Campaign Context → Post Generation State → Selection State → Scheduling State
+```
+
+### API Integration Points
+```
+POST /api/v1/campaigns/analyze-url          → Business context extraction
+POST /api/v1/content/generate-posts         → 3-column post generation
+POST /api/v1/content/regenerate-post        → Individual post regeneration
+POST /api/v1/social/connect-platform        → OAuth social media integration
+POST /api/v1/social/schedule-posts          → Automated posting setup
+POST /api/v1/campaigns/export-template      → Campaign template export
+```
+
+### Real-time Features
+- **Live Generation**: Real-time post creation with progress indicators
+- **Session Persistence**: Maintain state across page refreshes
+- **Scheduling Engine**: Background posting while page is active
+- **Status Updates**: Real-time status updates for scheduled posts
+
+This enhanced journey transforms the basic campaign creation into a comprehensive social media management platform with professional-grade features for content generation, curation, and automated publishing. 
