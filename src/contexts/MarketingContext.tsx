@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type Campaign = {
@@ -12,6 +11,15 @@ export type Campaign = {
   generatedIdeas?: IdeaType[];
   selectedThemes?: string[];
   selectedTags?: string[];
+  // Enhanced campaign fields
+  businessUrl?: string;
+  aboutPageUrl?: string;
+  productServiceUrl?: string;
+  campaignType?: 'product' | 'service' | 'brand' | 'event';
+  creativityLevel?: number;
+  uploadedImages?: File[];
+  uploadedDocuments?: File[];
+  campaignAssets?: File[];
 };
 
 export type IdeaType = {

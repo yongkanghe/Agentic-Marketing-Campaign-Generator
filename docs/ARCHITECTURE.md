@@ -265,3 +265,93 @@ sequenceDiagram
 
 At present, the AI calls are mocked in the frontend and the Python agent runs standalone via CLI. The target architecture integrates these components through a proper API layer with persistent storage and real-time AI generation capabilities.
 
+## 🎯 Enhanced Campaign Creation Flow
+
+### Smart Business Analysis
+The campaign creation process now includes intelligent business context gathering:
+
+1. **URL Analysis**: AI agent scrapes and analyzes business websites, about pages, and product pages
+2. **File Upload Processing**: Gemini analyzes uploaded images, documents, and existing campaign assets
+3. **Automated Context Extraction**: Reduces manual input by automatically understanding business purpose, sector, and locality
+
+### Campaign Preparation Agent Features
+
+#### URL-Based Analysis
+- **Business Website**: Main company website analysis for brand understanding
+- **About Page**: Company mission, values, and team analysis
+- **Product/Service Pages**: Specific offering analysis for targeted campaigns
+
+#### File Upload & Analysis
+- **Product/Brand Images**: Visual analysis for design direction and brand consistency
+- **Documents & Specs**: Technical specifications, product details, service descriptions
+- **Existing Campaign Assets**: Reference materials for style and messaging consistency
+
+#### AI Creativity Controls
+- **Creativity Dial**: 1-10 scale controlling AI experimental vs. conservative approach
+  - 1-3: Conservative (proven strategies, safe messaging)
+  - 4-6: Balanced (mix of proven and creative approaches)
+  - 7-8: Innovative (creative concepts, unique angles)
+  - 9-10: Experimental (cutting-edge, high-risk/high-reward ideas)
+
+#### Campaign Type Classification
+- **Product Launch**: New product introduction campaigns
+- **Service Promotion**: Service-based business marketing
+- **Brand Awareness**: Company/brand visibility campaigns  
+- **Event Marketing**: Event promotion and attendance campaigns
+
+### Backend Agent Integration
+
+The enhanced campaign creation requires new backend endpoints:
+
+```
+POST /api/v1/campaigns/analyze-url
+POST /api/v1/campaigns/analyze-files
+POST /api/v1/campaigns/create-enhanced
+```
+
+#### URL Analysis Agent
+```python
+@tracer.span("analyze_business_url")
+async def analyze_business_url(url: str, analysis_type: str) -> BusinessContext:
+    """
+    Scrape and analyze business URLs for context extraction
+    - Extracts business purpose, sector, target audience
+    - Identifies key products/services
+    - Analyzes brand tone and messaging
+    """
+```
+
+#### File Analysis Agent  
+```python
+@tracer.span("analyze_campaign_files")
+async def analyze_campaign_files(files: List[File], file_type: str) -> FileAnalysis:
+    """
+    Process uploaded files using Gemini multimodal capabilities
+    - Image analysis for visual direction
+    - Document parsing for detailed context
+    - Asset analysis for style consistency
+    """
+```
+
+#### Enhanced Campaign Context
+```python
+class EnhancedCampaignContext:
+    # Basic campaign info
+    name: str
+    objective: str
+    campaign_type: CampaignType
+    
+    # AI-extracted context
+    business_context: BusinessContext
+    visual_analysis: VisualAnalysis
+    document_insights: DocumentInsights
+    
+    # User preferences
+    creativity_level: int
+    preferred_design: Optional[str]
+    
+    # Source materials
+    reference_urls: List[str]
+    uploaded_assets: List[FileReference]
+```
+
