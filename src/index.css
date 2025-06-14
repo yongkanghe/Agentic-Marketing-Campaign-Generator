@@ -75,6 +75,9 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Roboto', sans-serif;
+    /* Apply consistent blue gradient background across all pages */
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    min-height: 100vh;
   }
 
   /* Material Design Paper Effect */
@@ -130,5 +133,57 @@
   /* Material Design ripple effect container */
   .ripple-container {
     @apply relative overflow-hidden;
+  }
+
+  /* Video Venture Launch Blue Theme */
+  .vvl-gradient-bg {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  }
+
+  .vvl-card {
+    @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .vvl-card-hover {
+    @apply transition-all duration-300 hover:bg-white/15 hover:shadow-xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .vvl-card-hover:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .vvl-button-primary {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium px-6 py-3 rounded-lg transition-all duration-200;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  }
+
+  .vvl-button-secondary {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 text-white hover:bg-white/20 font-medium px-6 py-3 rounded-lg transition-all duration-200;
+  }
+
+  .vvl-input {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 text-white placeholder-gray-300 rounded-lg px-4 py-3 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200;
+  }
+
+  .vvl-input option {
+    @apply bg-slate-800 text-white;
+  }
+
+  .vvl-text-primary {
+    @apply text-white;
+  }
+
+  .vvl-text-secondary {
+    @apply text-gray-300;
+  }
+
+  .vvl-text-accent {
+    @apply bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent;
+  }
+
+  .vvl-header-blur {
+    @apply bg-slate-900/80 backdrop-blur-md border-b border-white/10;
   }
 }

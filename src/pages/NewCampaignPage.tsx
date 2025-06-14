@@ -155,40 +155,51 @@ const NewCampaignPage: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <MaterialAppBar title="New Campaign">
-        <div className="flex items-center gap-2">
-          <MaterialButton 
-            variant="outline" 
-            className="flex items-center gap-1"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </MaterialButton>
-          <MaterialButton 
-            variant="outline" 
-            className="flex items-center gap-1"
-            onClick={() => setShowSaveDialog(true)}
-          >
-            <Save size={16} />
-            <span>Save Progress</span>
-          </MaterialButton>
+    <div className="min-h-screen vvl-gradient-bg flex flex-col">
+      <header className="vvl-header-blur">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold vvl-text-primary">New Campaign</h1>
+                <p className="text-xs vvl-text-secondary">Create Your Marketing Campaign</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                className="vvl-button-secondary flex items-center gap-1"
+                onClick={() => navigate('/')}
+              >
+                <ArrowLeft size={16} />
+                <span>Back</span>
+              </button>
+              <button 
+                className="vvl-button-secondary flex items-center gap-1"
+                onClick={() => setShowSaveDialog(true)}
+              >
+                <Save size={16} />
+                <span>Save Progress</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </MaterialAppBar>
+      </header>
       
       <div className="container py-8">
-        <MaterialCard className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="p-6">
-            <h1 className="text-2xl font-medium mb-6">Create New Marketing Campaign</h1>
+        <div className="vvl-card max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="p-8">
+            <h1 className="text-3xl font-bold vvl-text-primary mb-8">Create New Marketing Campaign</h1>
             
             {/* Campaign Template Upload */}
-            <MaterialCard className="mb-8 p-6 bg-orange-50 border-orange-200">
+            <div className="vvl-card mb-8 p-6">
               <div className="flex items-center gap-2 mb-4">
-                <CloudUpload className="text-orange-600" size={20} />
-                <h2 className="text-lg font-medium text-orange-900">Quick Start with Previous Campaign</h2>
+                <CloudUpload className="text-blue-400" size={20} />
+                <h2 className="text-lg font-medium vvl-text-primary">Quick Start with Previous Campaign</h2>
               </div>
-              <p className="text-sm text-orange-700 mb-4">
+              <p className="text-sm vvl-text-secondary mb-4">
                 Upload a previous campaign template to get started immediately with proven prompts and settings.
               </p>
               
@@ -198,48 +209,47 @@ const NewCampaignPage: React.FC = () => {
                   accept=".json,.txt"
                   onChange={handleCampaignTemplateUpload}
                   className="hidden"
-                  id="campaign-template-upload"
+                  id="template-upload"
                 />
-                <label
-                  htmlFor="campaign-template-upload"
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 rounded-md cursor-pointer transition-colors"
+                <label 
+                  htmlFor="template-upload"
+                  className="vvl-button-primary cursor-pointer flex items-center gap-2"
                 >
                   <Upload size={16} />
-                  <span className="text-sm font-medium">Upload Campaign Template</span>
+                  Upload Campaign Template
                 </label>
-                
                 {campaignTemplate && (
-                  <div className="flex items-center gap-2 text-sm text-orange-700">
-                    <FileText size={16} />
-                    <span>{campaignTemplate.name}</span>
-                    {isLoadingTemplate && <span className="text-orange-500">Loading...</span>}
-                  </div>
+                  <span className="text-sm vvl-text-secondary">
+                    {isLoadingTemplate ? 'Loading...' : `Loaded: ${campaignTemplate.name}`}
+                  </span>
                 )}
               </div>
               
-              <div className="mt-3 text-xs text-orange-600">
+              <div className="mt-3 text-xs vvl-text-secondary">
                 <p>💡 Tip: Save successful campaigns as templates from the scheduling page to reuse winning formulas!</p>
               </div>
-            </MaterialCard>
+            </div>
             
             {/* Basic Campaign Info */}
             <div className="space-y-6 mb-8">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Campaign Name *</Label>
-                  <Input
+                  <label htmlFor="name" className="block text-sm font-medium vvl-text-primary">Campaign Name *</label>
+                  <input
                     id="name"
+                    type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="E.g., Summer Product Launch"
+                    className="vvl-input w-full"
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="type">Campaign Type</Label>
+                  <label htmlFor="type" className="block text-sm font-medium vvl-text-primary">Campaign Type</label>
                   <select 
-                    className="w-full p-2 border rounded-md"
+                    className="vvl-input w-full"
                     value={campaignType}
                     onChange={(e) => setCampaignType(e.target.value as any)}
                   >
@@ -252,107 +262,111 @@ const NewCampaignPage: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="objective">Campaign Objective *</Label>
-                <Input
+                <label htmlFor="objective" className="block text-sm font-medium vvl-text-primary">Campaign Objective *</label>
+                <input
                   id="objective"
+                  type="text"
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
                   placeholder="E.g., Increase brand awareness, Drive sales, Generate leads"
+                  className="vvl-input w-full"
                   required
                 />
               </div>
             </div>
 
             {/* URL Analysis Section */}
-            <MaterialCard className="mb-8 p-6 bg-blue-50 border-blue-200">
+            <div className="vvl-card mb-8 p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Globe className="text-blue-600" size={20} />
-                <h2 className="text-lg font-medium text-blue-900">Smart Business Analysis</h2>
+                <Globe className="text-blue-400" size={20} />
+                <h2 className="text-lg font-medium vvl-text-primary">Smart Business Analysis</h2>
               </div>
-              <p className="text-sm text-blue-700 mb-4">
+              <p className="text-sm vvl-text-secondary mb-4">
                 Let our AI analyze your business automatically by providing URLs. This reduces manual input and gives better context.
               </p>
               
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="businessUrl">Business Website URL</Label>
-                  <Input
+                  <label htmlFor="businessUrl" className="block text-sm font-medium vvl-text-primary">Business Website URL</label>
+                  <input
                     id="businessUrl"
                     value={businessUrl}
                     onChange={(e) => setBusinessUrl(e.target.value)}
                     placeholder="https://yourbusiness.com"
                     type="url"
+                    className="vvl-input w-full"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="aboutUrl">About Page URL</Label>
-                  <Input
+                  <label htmlFor="aboutUrl" className="block text-sm font-medium vvl-text-primary">About Page URL</label>
+                  <input
                     id="aboutUrl"
                     value={aboutPageUrl}
                     onChange={(e) => setAboutPageUrl(e.target.value)}
                     placeholder="https://yourbusiness.com/about"
                     type="url"
+                    className="vvl-input w-full"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="productUrl">Product/Service Page URL</Label>
-                  <Input
+                  <label htmlFor="productUrl" className="block text-sm font-medium vvl-text-primary">Product/Service Page URL</label>
+                  <input
                     id="productUrl"
                     value={productServiceUrl}
                     onChange={(e) => setProductServiceUrl(e.target.value)}
                     placeholder="https://yourbusiness.com/products/your-product"
                     type="url"
+                    className="vvl-input w-full"
                   />
                 </div>
                 
-                <MaterialButton
+                <button
                   type="button"
-                  variant="outline"
                   onClick={handleAnalyzeUrls}
                   disabled={isAnalyzing}
-                  className="flex items-center gap-2"
+                  className="vvl-button-primary flex items-center gap-2"
                 >
                   <Sparkles size={16} />
                   {isAnalyzing ? 'Analyzing...' : 'Analyze URLs'}
-                </MaterialButton>
+                </button>
               </div>
-            </MaterialCard>
+            </div>
 
             {/* File Upload Section */}
-            <MaterialCard className="mb-8 p-6 bg-green-50 border-green-200">
+            <div className="vvl-card mb-8 p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Upload className="text-green-600" size={20} />
-                <h2 className="text-lg font-medium text-green-900">Campaign Assets & Context</h2>
+                <Upload className="text-green-400" size={20} />
+                <h2 className="text-lg font-medium vvl-text-primary">Campaign Assets & Context</h2>
               </div>
-              <p className="text-sm text-green-700 mb-4">
+              <p className="text-sm vvl-text-secondary mb-4">
                 Upload images, documents, or existing campaign materials for AI analysis and reference.
               </p>
               
               <div className="grid md:grid-cols-3 gap-6">
                 {/* Images Upload */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium vvl-text-primary">
                     <Image size={16} />
                     Product/Brand Images
-                  </Label>
+                  </label>
                   <input
                     type="file"
                     multiple
                     accept="image/*"
                     onChange={handleImageUpload}
-                    className="w-full p-2 border rounded-md text-sm"
+                    className="vvl-input w-full text-sm"
                   />
                   {uploadedImages.length > 0 && (
                     <div className="space-y-1">
                       {uploadedImages.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                          <span className="truncate">{file.name}</span>
+                        <div key={index} className="flex items-center justify-between text-xs bg-white/10 p-2 rounded">
+                          <span className="truncate vvl-text-secondary">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => removeFile(uploadedImages, setUploadedImages, index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-400 hover:text-red-300"
                           >
                             ×
                           </button>
@@ -364,26 +378,26 @@ const NewCampaignPage: React.FC = () => {
 
                 {/* Documents Upload */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium vvl-text-primary">
                     <FileText size={16} />
                     Documents & Specs
-                  </Label>
+                  </label>
                   <input
                     type="file"
                     multiple
                     accept=".pdf,.doc,.docx,.txt"
                     onChange={handleDocumentUpload}
-                    className="w-full p-2 border rounded-md text-sm"
+                    className="vvl-input w-full text-sm"
                   />
                   {uploadedDocuments.length > 0 && (
                     <div className="space-y-1">
                       {uploadedDocuments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                          <span className="truncate">{file.name}</span>
+                        <div key={index} className="flex items-center justify-between text-xs bg-white/10 p-2 rounded">
+                          <span className="truncate vvl-text-secondary">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => removeFile(uploadedDocuments, setUploadedDocuments, index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-400 hover:text-red-300"
                           >
                             ×
                           </button>
@@ -395,26 +409,26 @@ const NewCampaignPage: React.FC = () => {
 
                 {/* Campaign Assets Upload */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium vvl-text-primary">
                     <Package size={16} />
                     Existing Campaign Assets
-                  </Label>
+                  </label>
                   <input
                     type="file"
                     multiple
                     accept="image/*,.pdf,.doc,.docx"
                     onChange={handleAssetUpload}
-                    className="w-full p-2 border rounded-md text-sm"
+                    className="vvl-input w-full text-sm"
                   />
                   {campaignAssets.length > 0 && (
                     <div className="space-y-1">
                       {campaignAssets.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between text-xs bg-white p-2 rounded">
-                          <span className="truncate">{file.name}</span>
+                        <div key={index} className="flex items-center justify-between text-xs bg-white/10 p-2 rounded">
+                          <span className="truncate vvl-text-secondary">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => removeFile(campaignAssets, setCampaignAssets, index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-400 hover:text-red-300"
                           >
                             ×
                           </button>
@@ -424,15 +438,15 @@ const NewCampaignPage: React.FC = () => {
                   )}
                 </div>
               </div>
-            </MaterialCard>
+            </div>
 
             {/* Creativity Control */}
-            <MaterialCard className="mb-8 p-6 bg-purple-50 border-purple-200">
+            <div className="vvl-card mb-8 p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="text-purple-600" size={20} />
-                <h2 className="text-lg font-medium text-purple-900">AI Creativity Level</h2>
+                <Sparkles className="text-purple-400" size={20} />
+                <h2 className="text-lg font-medium vvl-text-primary">AI Creativity Level</h2>
               </div>
-              <p className="text-sm text-purple-700 mb-4">
+              <p className="text-sm vvl-text-secondary mb-4">
                 Control how creative and experimental the AI should be with your campaign ideas.
               </p>
               
@@ -447,56 +461,55 @@ const NewCampaignPage: React.FC = () => {
                     className="w-full"
                   />
                 </div>
-                <div className="flex justify-between text-xs text-purple-600">
+                <div className="flex justify-between text-xs vvl-text-secondary">
                   <span>Conservative</span>
-                  <span className="font-medium">
+                  <span className="font-medium vvl-text-primary">
                     Level {creativityLevel[0]} - {creativityLabels[creativityLevel[0] as keyof typeof creativityLabels] || 'Creative'}
                   </span>
                   <span>Experimental</span>
                 </div>
               </div>
-            </MaterialCard>
+            </div>
 
             {/* Manual Description (Fallback) */}
             <div className="space-y-6 mb-8">
               <div className="space-y-2">
-                <Label htmlFor="description">Business Description (Optional if URLs provided)</Label>
-                <Textarea
+                <label htmlFor="description" className="block text-sm font-medium vvl-text-primary">Business Description (Optional if URLs provided)</label>
+                <textarea
                   id="description"
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
                   placeholder="Describe your business, products, services, and target audience... (This will be auto-filled if you provide URLs above)"
-                  className="min-h-[120px]"
+                  className="vvl-input w-full min-h-[120px] resize-vertical"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="example">Example Content (Optional)</Label>
-                <Textarea
+                <label htmlFor="example" className="block text-sm font-medium vvl-text-primary">Example Content (Optional)</label>
+                <textarea
                   id="example"
                   value={exampleContent}
                   onChange={(e) => setExampleContent(e.target.value)}
                   placeholder="Add any example content you'd like the AI to reference..."
-                  className="min-h-[80px]"
+                  className="vvl-input w-full min-h-[80px] resize-vertical"
                 />
               </div>
             </div>
             
-            <div className="mt-8 flex justify-end">
-              <MaterialButton
+            <div className="mt-8 flex justify-end gap-4">
+              <button
                 type="button"
-                variant="outline" 
-                className="mr-4"
+                className="vvl-button-secondary"
                 onClick={() => navigate('/')}
               >
                 Cancel
-              </MaterialButton>
-              <MaterialButton type="submit">
+              </button>
+              <button type="submit" className="vvl-button-primary">
                 Create Campaign & Analyze
-              </MaterialButton>
+              </button>
             </div>
           </form>
-        </MaterialCard>
+        </div>
       </div>
       
       <SaveCampaignDialog 
