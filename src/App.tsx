@@ -7,6 +7,7 @@ import { MarketingProvider } from "@/contexts/MarketingContext";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
+import AboutPage from "./pages/AboutPage";
 import DashboardPage from "./pages/DashboardPage";
 import NewCampaignPage from "./pages/NewCampaignPage";
 import IdeationPage from "./pages/IdeationPage";
@@ -25,6 +26,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/campaigns" element={<DashboardPage />} />
             <Route path="/new-campaign" element={<NewCampaignPage />} />
             <Route path="/ideation" element={<IdeationPage />} />

@@ -127,19 +127,24 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <MaterialButton 
-                variant="outline" 
-                className="text-white border-gray-600 hover:border-gray-400"
+              <button 
+                className="vvl-button-secondary"
+                onClick={() => navigate('/about')}
+              >
+                About
+              </button>
+              <button 
+                className="vvl-button-secondary"
                 onClick={() => navigate('/campaigns')}
               >
                 View Campaigns
-              </MaterialButton>
-              <MaterialButton 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              </button>
+              <button 
+                className="vvl-button-primary"
                 onClick={() => navigate('/new-campaign')}
               >
                 Create Your Campaign
-              </MaterialButton>
+              </button>
             </div>
           </div>
         </div>
@@ -167,24 +172,21 @@ const LandingPage: React.FC = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <MaterialButton 
-                size="lg"
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-lg px-8 py-4"
+              <button 
+                className="vvl-button-primary text-lg px-8 py-4 flex items-center gap-2"
                 onClick={() => navigate('/new-campaign')}
               >
-                <Rocket className="w-5 h-5 mr-2" />
+                <Rocket className="w-5 h-5" />
                 Create Your Campaign
-              </MaterialButton>
+              </button>
               
-              <MaterialButton 
-                variant="outline" 
-                size="lg"
-                className="text-white border-gray-600 hover:border-gray-400 text-lg px-8 py-4"
+              <button 
+                className="vvl-button-secondary text-lg px-8 py-4 flex items-center gap-2"
                 onClick={() => navigate('/campaigns')}
               >
-                <Play className="w-5 h-5 mr-2" />
+                <Play className="w-5 h-5" />
                 View Demo
-              </MaterialButton>
+              </button>
             </div>
 
             {/* Quick Stats */}
