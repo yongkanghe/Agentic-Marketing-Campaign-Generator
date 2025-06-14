@@ -6,6 +6,7 @@ import { Plus, FileText, Calendar } from 'lucide-react';
 import { MaterialCard } from '@/components/MaterialCard';
 import { MaterialButton } from '@/components/MaterialButton';
 import { MaterialAppBar } from '@/components/MaterialAppBar';
+import Footer from '@/components/Footer';
 
 const DashboardPage: React.FC = () => {
   const { campaigns, loadCampaign } = useMarketingContext();
@@ -18,11 +19,10 @@ const DashboardPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-medium">Your Marketing Campaigns</h1>
           <MaterialButton 
-            variant="primary"
             className="flex items-center gap-2"
             asChild
           >
-            <Link to="/new">
+            <Link to="/new-campaign">
               <Plus size={18} />
               <span>New Campaign</span>
             </Link>
@@ -30,7 +30,7 @@ const DashboardPage: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link to="/new">
+          <Link to="/new-campaign">
             <MaterialCard 
               className="h-64 flex flex-col justify-center items-center border-2 border-dashed border-border hover:border-primary/50 cursor-pointer"
               elevation={0}
@@ -73,6 +73,8 @@ const DashboardPage: React.FC = () => {
           ))}
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

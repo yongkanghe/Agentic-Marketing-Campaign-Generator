@@ -96,7 +96,7 @@ export type IdeaType = {
   selected?: boolean;
 };
 
-type MarketingContextType = {
+interface MarketingContextType {
   campaigns: Campaign[];
   currentCampaign: Campaign | null;
   generatedIdeas: IdeaType[];
@@ -116,10 +116,47 @@ type MarketingContextType = {
   unselectTag: (tag: string) => void;
   generateVideos: () => Promise<void>;
   toggleIdeaSelection: (ideaId: string) => void;
-  saveCampaign: () => void;
+  saveCampaign: (campaignName: string) => Promise<void>;
   exportToText: () => void;
-  loadCampaign: (campaignId: string) => void;
-};
+  loadCampaign: (campaignId: string) => Promise<void>;
+  getSavedCampaigns: () => SavedCampaign[];
+  deleteSavedCampaign: (campaignId: string) => void;
+}
+
+interface BusinessUrls {
+  website?: string;
+  aboutPage?: string;
+  productPage?: string;
+}
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  category: 'images' | 'documents' | 'campaigns';
+}
+
+interface SavedCampaign {
+  id: string;
+  name: string;
+  createdAt: Date;
+  lastModified: Date;
+  campaignData: {
+    businessDescription: string;
+    objective: string;
+    targetAudience: string;
+    campaignType: string;
+    creativityLevel: number;
+    businessUrls: BusinessUrls;
+    uploadedFiles: UploadedFile[];
+    selectedThemes: string[];
+    selectedTags: string[];
+    generatedColumns: SocialMediaColumn[];
+    selectedPosts: string[];
+    schedulingConfig: any;
+  };
+}
 
 const MarketingContext = createContext<MarketingContextType | undefined>(undefined);
 
@@ -309,9 +346,34 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateCurrentCampaign({ generatedIdeas: updatedIdeas });
   };
 
-  const saveCampaign = () => {
-    if (!currentCampaign) return;
-    setCampaigns(campaigns.map(c => c.id === currentCampaign.id ? currentCampaign : c));
+  const saveCampaign = async (campaignName: string): Promise<void> => {
+    const campaignData = {
+      businessDescription: currentCampaign?.businessDescription || '',
+      objective: currentCampaign?.objective || '',
+      targetAudience: '',
+      campaignType: currentCampaign?.campaignType || 'product',
+      creativityLevel: currentCampaign?.creativityLevel || 0,
+      businessUrls: {},
+      uploadedFiles: [],
+      selectedThemes: currentCampaign?.selectedThemes || [],
+      selectedTags: currentCampaign?.selectedTags || [],
+      generatedColumns: currentCampaign?.socialMediaColumns || [],
+      selectedPosts: currentCampaign?.selectedPosts?.map(p => p.id) || [],
+      schedulingConfig: {} // Add scheduling config when available
+    };
+
+    const savedCampaign: SavedCampaign = {
+      id: `campaign_${Date.now()}`,
+      name: campaignName,
+      createdAt: new Date(),
+      lastModified: new Date(),
+      campaignData
+    };
+
+    // Save to localStorage for now (in production, this would be an API call)
+    const existingSavedCampaigns = JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
+    const updatedCampaigns = [...existingSavedCampaigns, savedCampaign];
+    localStorage.setItem('savedCampaigns', JSON.stringify(updatedCampaigns));
   };
 
   const exportToText = () => {
@@ -356,14 +418,40 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     link.click();
   };
 
-  const loadCampaign = (campaignId: string) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (campaign) {
-      setCurrentCampaignState(campaign);
-    }
+  const loadCampaign = async (campaignId: string): Promise<void> => {
+    const savedCampaigns = JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
+    const campaign = savedCampaigns.find((c: SavedCampaign) => c.id === campaignId);
+    
+         if (campaign) {
+       const { campaignData } = campaign;
+       const loadedCampaign: Campaign = {
+         id: campaign.id,
+         name: campaign.name,
+         createdAt: campaign.createdAt,
+         businessDescription: campaignData.businessDescription,
+         objective: campaignData.objective,
+         campaignType: campaignData.campaignType,
+         creativityLevel: campaignData.creativityLevel,
+         selectedThemes: campaignData.selectedThemes,
+         selectedTags: campaignData.selectedTags,
+         socialMediaColumns: campaignData.generatedColumns,
+         selectedPosts: []
+       };
+       setCurrentCampaignState(loadedCampaign);
+     }
   };
 
-  const value = {
+  const getSavedCampaigns = (): SavedCampaign[] => {
+    return JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
+  };
+
+  const deleteSavedCampaign = (campaignId: string): void => {
+    const savedCampaigns = JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
+    const updatedCampaigns = savedCampaigns.filter((c: SavedCampaign) => c.id !== campaignId);
+    localStorage.setItem('savedCampaigns', JSON.stringify(updatedCampaigns));
+  };
+
+  const value: MarketingContextType = {
     campaigns,
     currentCampaign,
     generatedIdeas,
@@ -385,7 +473,9 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toggleIdeaSelection,
     saveCampaign,
     exportToText,
-    loadCampaign
+    loadCampaign,
+    getSavedCampaigns,
+    deleteSavedCampaign,
   };
 
   return (

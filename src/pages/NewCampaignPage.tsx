@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Upload, Link2, Image, FileText, Sparkles, Globe, Package, CloudUpload } from 'lucide-react';
+import { ArrowLeft, Upload, Link2, Image, FileText, Sparkles, Globe, Package, CloudUpload, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import SaveCampaignDialog from '@/components/SaveCampaignDialog';
 
 const NewCampaignPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const NewCampaignPage: React.FC = () => {
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   const handleCampaignTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -155,14 +157,24 @@ const NewCampaignPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MaterialAppBar title="New Campaign">
-        <MaterialButton 
-          variant="outline" 
-          className="mr-2 flex items-center gap-1"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft size={16} />
-          <span>Back</span>
-        </MaterialButton>
+        <div className="flex items-center gap-2">
+          <MaterialButton 
+            variant="outline" 
+            className="flex items-center gap-1"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </MaterialButton>
+          <MaterialButton 
+            variant="outline" 
+            className="flex items-center gap-1"
+            onClick={() => setShowSaveDialog(true)}
+          >
+            <Save size={16} />
+            <span>Save Progress</span>
+          </MaterialButton>
+        </div>
       </MaterialAppBar>
       
       <div className="container py-8">
@@ -486,6 +498,11 @@ const NewCampaignPage: React.FC = () => {
           </form>
         </MaterialCard>
       </div>
+      
+      <SaveCampaignDialog 
+        open={showSaveDialog} 
+        onClose={() => setShowSaveDialog(false)} 
+      />
     </div>
   );
 };
