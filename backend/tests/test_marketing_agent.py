@@ -12,14 +12,18 @@ from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.agents.llm_agent import LlmAgent
 from google.adk.agents.run_config import RunConfig, StreamingMode
 
-from ..marketing_agent import (
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from marketing_agent import (
     MarketingCampaignContext,
     create_summary_agent,
     create_idea_agent,
     create_social_agent,
     create_video_agent,
     create_root_agent,
-    root_agent,
+    get_root_agent,
 )
 
 # Test Data
@@ -147,6 +151,7 @@ async def test_agent_workflow():
         ]
 
         # Execute the workflow
+        root_agent = await get_root_agent()
         result = await root_agent.run(context)
 
         # Verify the results
@@ -164,12 +169,14 @@ async def test_error_handling():
     # Test with invalid input
     with pytest.raises(ValueError):
         context.business_description = ""  # Empty business description
+        root_agent = await get_root_agent()
         await root_agent.run(context)
 
     # Test with API error
     with patch("google.adk.agents.llm_agent.LlmAgent._call_llm") as mock_call:
         mock_call.side_effect = Exception("API Error")
         with pytest.raises(Exception):
+            root_agent = await get_root_agent()
             await root_agent.run(context)
 
 # Performance Tests
@@ -181,6 +188,7 @@ async def test_agent_performance():
         context.business_description = SAMPLE_CAMPAIGN["business_description"]
         context.objective = SAMPLE_CAMPAIGN["objective"]
         context.target_audience = SAMPLE_CAMPAIGN["target_audience"]
+        root_agent = await get_root_agent()
         return await root_agent.run(context)
 
     # Run multiple concurrent requests
@@ -201,6 +209,7 @@ async def test_end_to_end_workflow():
     context.target_audience = SAMPLE_CAMPAIGN["target_audience"]
 
     # Execute the workflow with real API calls
+    root_agent = await get_root_agent()
     result = await root_agent.run(context)
 
     # Verify the structure of the results

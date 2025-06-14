@@ -23,6 +23,57 @@ Video Venture Launch is a comprehensive marketing campaign generator built with 
 
 ## 🏗️ Architecture
 
+### System Architecture Diagram
+
+The following diagram shows the high-level system architecture of Video Venture Launch:
+
+```plantuml
+@startuml Video Venture Launch - System Architecture
+!theme aws-orange
+title Video Venture Launch - System Architecture
+
+package "Frontend Layer" {
+    [React UI] as UI
+    [Component Library] as COMP
+    [State Management] as STATE
+}
+
+package "API Gateway Layer" {
+    [FastAPI Gateway] as GATEWAY
+    [Authentication] as AUTH
+    [Rate Limiting] as RATE
+    [CORS Middleware] as CORS
+}
+
+package "Agentic AI Layer" {
+    [Marketing Orchestrator] as ORCHESTRATOR
+    package "Specialized Agents" {
+        [Summary Agent] as SUMMARY
+        [Idea Agent] as IDEA
+        [Content Agent] as CONTENT
+        [Analysis Agent] as ANALYSIS
+    }
+    package "AI Services" {
+        [Google Gemini] as GEMINI
+        [Google Veo] as VEO
+        [ADK Framework] as ADK
+    }
+}
+
+UI --> GATEWAY : REST API
+GATEWAY --> ORCHESTRATOR
+ORCHESTRATOR --> SUMMARY
+ORCHESTRATOR --> IDEA
+ORCHESTRATOR --> CONTENT
+ORCHESTRATOR --> ANALYSIS
+SUMMARY --> GEMINI
+IDEA --> GEMINI
+CONTENT --> GEMINI
+ANALYSIS --> GEMINI
+GEMINI --> ADK
+@enduml
+```
+
 ### Technology Stack
 
 **Frontend**:

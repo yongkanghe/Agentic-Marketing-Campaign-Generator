@@ -14,7 +14,16 @@ from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.agents.run_config import RunConfig, StreamingMode
-from google.adk.telemetry import trace_call_llm, tracer
+try:
+    from google.adk.telemetry import trace_call_llm, tracer
+except ImportError:
+    # Fallback for environments without telemetry
+    def tracer_span(func):
+        return func
+    class MockTracer:
+        def span(self, func):
+            return func
+    tracer = MockTracer()
 
 # Configuration
 GEMINI_MODEL = "gemini-2.0-pro"
@@ -32,7 +41,6 @@ class MarketingCampaignContext:
         self.video_prompts: List[str] = []
 
 # --- Sub Agents ---
-@tracer.span
 async def create_summary_agent() -> LlmAgent:
     """Creates the summary agent for business analysis."""
     return LlmAgent(
@@ -56,7 +64,6 @@ Generate a detailed summary that captures:
     output_key="summary",
 )
 
-@tracer.span
 async def create_idea_agent() -> LlmAgent:
     """Creates the idea generation agent."""
     return LlmAgent(
@@ -84,7 +91,6 @@ Idea X:
     output_key="ideas",
 )
 
-@tracer.span
 async def create_social_agent() -> LlmAgent:
     """Creates the social media content agent."""
     return LlmAgent(
@@ -111,7 +117,6 @@ Idea X Social Content:
     output_key="posts",
 )
 
-@tracer.span
 async def create_video_agent() -> LlmAgent:
     """Creates the video content generation agent."""
     return LlmAgent(
@@ -139,7 +144,6 @@ Idea X Video Prompt:
     )
 
 # --- Root Sequential Agent ---
-@tracer.span
 async def create_root_agent() -> SequentialAgent:
     """Creates the root sequential agent orchestrating the workflow."""
     summary_agent = await create_summary_agent()
@@ -154,5 +158,7 @@ async def create_root_agent() -> SequentialAgent:
 from business analysis to content creation and video production.""",
 )
 
-# Initialize the root agent
-root_agent = create_root_agent()
+# Initialize the root agent (async function, will be called when needed)
+async def get_root_agent():
+    """Get the initialized root agent."""
+    return await create_root_agent()
