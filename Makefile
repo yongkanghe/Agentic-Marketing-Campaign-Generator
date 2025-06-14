@@ -85,8 +85,8 @@ dev-backend-local: ## Start backend development server locally
 	@echo "🚀 Starting Video Venture Launch backend server..."
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
-		echo "GEMINI_KEY=your_gemini_key_here" > backend/.env; \
-		echo "📝 Please update backend/.env with your GEMINI_KEY"; \
+		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
+		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
 	fi
 	@cd backend && python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -106,12 +106,12 @@ test-frontend: ## Run frontend tests
 
 test-backend: ## Test backend ADK agent
 	@echo "Testing backend ADK agent..."
-	@if [ -z "$(GEMINI_KEY)" ]; then \
-		echo "Error: GEMINI_KEY environment variable not set"; \
-		echo "Usage: GEMINI_KEY=your_key make test-backend"; \
+	@if [ -z "$(GEMINI_API_KEY)" ]; then \
+		echo "Error: GEMINI_API_KEY environment variable not set"; \
+		echo "Usage: GEMINI_API_KEY=your_key make test-backend"; \
 		exit 1; \
 	fi
-	@GEMINI_KEY=$(GEMINI_KEY) python3 -m google.adk.cli run backend.marketing_agent --query "Test campaign for a tech startup focused on AI solutions"
+	@GEMINI_API_KEY=$(GEMINI_API_KEY) python3 -m google.adk.cli run backend.marketing_agent --query "Test campaign for a tech startup focused on AI solutions"
 
 # Runtime and UI Testing targets
 launch: ## Launch complete development environment and run health checks
@@ -202,11 +202,11 @@ test-api: ## Test API endpoints and backend services
 	@echo "==============================================="
 	@echo ""
 	@echo "1. Testing backend ADK agent..."
-	@if [ -n "$(GEMINI_KEY)" ]; then \
+	@if [ -n "$(GEMINI_API_KEY)" ]; then \
 		make test-backend; \
 	else \
-		echo "⚠️  GEMINI_KEY not set - skipping ADK agent test"; \
-		echo "   Set GEMINI_KEY to test: GEMINI_KEY=your_key make test-api"; \
+		echo "⚠️  GEMINI_API_KEY not set - skipping ADK agent test"; \
+		echo "   Set GEMINI_API_KEY to test: GEMINI_API_KEY=your_key make test-api"; \
 	fi
 	@echo ""
 	@echo "2. Testing API status endpoints..."
@@ -248,10 +248,10 @@ health-check: ## Comprehensive health check of all services
 	@echo "❌ Not implemented"
 	@echo -n "  ADK Agent.................. "
 	@if [ "$(PYTHON_AVAILABLE)" ] && python3 -c "import google.adk" 2>/dev/null; then \
-		if [ -n "$(GEMINI_KEY)" ]; then \
+		if [ -n "$(GEMINI_API_KEY)" ]; then \
 			echo "✅ Ready"; \
 		else \
-			echo "⚠️  Ready (GEMINI_KEY not set)"; \
+			echo "⚠️  Ready (GEMINI_API_KEY not set)"; \
 		fi; \
 	else \
 		echo "❌ Not available"; \

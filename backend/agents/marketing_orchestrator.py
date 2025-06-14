@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 # Model configuration
 GEMINI_MODEL = "gemini-2.0-flash-exp"
-GEMINI_KEY = os.getenv("GEMINI_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GEMINI_KEY:
-    logger.warning("GEMINI_KEY not configured - using mock responses")
+if not GEMINI_API_KEY:
+    logger.warning("GEMINI_API_KEY not configured - using mock responses")
 
 # --- Business Analysis Agents ---
 
@@ -36,7 +36,7 @@ async def create_url_analysis_agent() -> LlmAgent:
     """Creates the URL analysis agent for web content extraction."""
     return LlmAgent(
         name="URLAnalysisAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_KEY) if GEMINI_KEY else "mock",
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
         instruction="""You are an expert web content analyzer specializing in business intelligence extraction.
 
 Given business URLs (website, about page, product/service pages), extract comprehensive business information:
@@ -87,7 +87,7 @@ async def create_file_analysis_agent() -> LlmAgent:
     """Creates the file analysis agent for multimodal content processing."""
     return LlmAgent(
         name="FileAnalysisAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_KEY) if GEMINI_KEY else "mock",
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
         instruction="""You are a multimodal content analyst specializing in extracting business insights from various file types.
 
 Input: Uploaded files including images, documents, and campaign assets
@@ -146,7 +146,7 @@ async def create_business_context_agent() -> LlmAgent:
     """Creates the business context synthesis agent."""
     return LlmAgent(
         name="BusinessContextAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_KEY) if GEMINI_KEY else "mock",
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
         instruction="""You are a strategic business analyst who synthesizes multiple data sources into comprehensive business context for marketing campaigns.
 
 Input Sources:
@@ -205,7 +205,7 @@ async def create_social_content_agent() -> LlmAgent:
     """Creates the social media content generation agent."""
     return LlmAgent(
         name="SocialContentAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_KEY) if GEMINI_KEY else "mock",
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
         instruction="""You are an expert social media content creator specializing in multi-format campaign content.
 
 Input Context:
@@ -254,7 +254,7 @@ async def create_hashtag_optimization_agent() -> LlmAgent:
     """Creates the hashtag optimization and trend analysis agent."""
     return LlmAgent(
         name="HashtagOptimizationAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_KEY) if GEMINI_KEY else "mock",
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
         instruction="""You are a social media hashtag strategist and trend analyst.
 
 Input Context:
@@ -336,18 +336,7 @@ async def create_marketing_orchestrator_agent() -> SequentialAgent:
     orchestrator = SequentialAgent(
         name="MarketingOrchestratorAgent",
         sub_agents=[business_agent, content_agent],
-        instruction="""You are the master marketing campaign orchestrator responsible for coordinating
-        a complete social media marketing campaign workflow.
-        
-        Your role is to:
-        1. Coordinate comprehensive business analysis and context extraction
-        2. Orchestrate multi-format content generation and optimization
-        3. Ensure campaign consistency and brand alignment throughout the workflow
-        4. Maintain context flow between all workflow stages
-        
-        Execute each stage sequentially, ensuring proper context transfer and maintaining
-        campaign coherence from business analysis through final content delivery.""",
-        description="Master orchestrator for complete marketing campaign workflow"
+        description="Master orchestrator for complete marketing campaign workflow that coordinates business analysis and content generation"
     )
     
     logger.info(f"Marketing Orchestrator Agent initialized with {len(orchestrator.sub_agents)} sub-agents")
@@ -391,12 +380,12 @@ async def execute_campaign_workflow(
         }
         
         # Execute workflow (this would integrate with ADK runners in production)
-        if GEMINI_KEY:
+        if GEMINI_API_KEY:
             # TODO: Integrate with ADK runners for actual execution
             logger.info("Would execute ADK workflow with real Gemini integration")
             result = await _mock_workflow_execution(workflow_context)
         else:
-            logger.info("Executing mock workflow (GEMINI_KEY not configured)")
+            logger.info("Executing mock workflow (GEMINI_API_KEY not configured)")
             result = await _mock_workflow_execution(workflow_context)
         
         logger.info("Marketing campaign workflow completed successfully")

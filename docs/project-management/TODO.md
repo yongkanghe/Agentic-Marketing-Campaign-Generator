@@ -37,6 +37,7 @@ Detailed task list for implementing the Video Venture Launch marketing campaign 
 - [ ] **Add error handling** - Display API errors to users
 - [ ] **Update environment config** - API base URL configuration
 - [ ] **Test end-to-end flow** - Campaign creation → AI generation
+- [ ] **Configure GEMINI_API_KEY** - Set up .env file with real API key
 
 ### Enhanced Development Workflow
 - [ ] **Update `make dev`** - Start both frontend and backend

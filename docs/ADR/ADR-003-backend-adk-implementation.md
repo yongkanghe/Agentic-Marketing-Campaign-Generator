@@ -64,7 +64,7 @@ We implemented a comprehensive backend API service using FastAPI with ADK sequen
 ```python
 # Model configuration
 GEMINI_MODEL = "gemini-2.0-flash-exp"
-GEMINI_KEY = os.getenv("GEMINI_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Sequential agent creation with proper context flow
 orchestrator = SequentialAgent(
@@ -88,7 +88,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 ```
 
 ### Mock vs Real Implementation
-- **Development Mode**: Mock responses when GEMINI_KEY not configured
+- **Development Mode**: Mock responses when GEMINI_API_KEY not configured
 - **Production Mode**: Real ADK agent execution with Gemini integration
 - **Graceful Fallback**: Comprehensive error handling and logging
 
@@ -106,7 +106,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 - **Sequential Execution**: May be slower than parallel processing for some operations
 - **Complexity**: Multiple agent layers require careful state management
 - **Resource Usage**: Multiple LLM calls per campaign creation
-- **API Key Dependency**: Requires GEMINI_KEY for full functionality
+- **API Key Dependency**: Requires GEMINI_API_KEY for full functionality
 
 ### Neutral
 - **Learning Curve**: Developers need to understand ADK patterns
@@ -136,13 +136,13 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 - ✅ **Mock Implementation**: Development-ready with fallback responses
 - ✅ **Documentation**: Comprehensive code documentation and ADR
 - ⏳ **Frontend Integration**: Next step - connect React frontend to API
-- ⏳ **Real AI Testing**: Requires GEMINI_KEY configuration
+- ⏳ **Real AI Testing**: Requires GEMINI_API_KEY configuration
 - ⏳ **Production Deployment**: Cloud Run deployment configuration needed
 
 ## Next Steps
 
 1. **Frontend Integration**: Update MarketingContext to use real API endpoints
-2. **Environment Setup**: Configure GEMINI_KEY for real AI testing
+2. **Environment Setup**: Configure GEMINI_API_KEY for real AI testing
 3. **Integration Testing**: End-to-end testing with real Gemini responses
 4. **Performance Optimization**: Monitor and optimize agent execution times
 5. **Production Deployment**: Set up Cloud Run deployment pipeline
