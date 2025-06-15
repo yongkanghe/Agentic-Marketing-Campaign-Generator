@@ -103,11 +103,65 @@ const NewCampaignPage: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
-      // TODO: Implement URL analysis with backend
-      toast.success('URLs analyzed! Business context extracted.');
-      // This would populate businessDescription automatically
+      // Collect all provided URLs
+      const urls = [businessUrl, aboutPageUrl, productServiceUrl].filter(url => url && url.trim());
+      
+      // Call the backend API for URL analysis
+      const response = await fetch('http://localhost:8000/api/v1/analysis/url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          urls: urls,
+          analysis_depth: 'standard'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const analysisResult = await response.json();
+      
+      // Extract business information and populate the form
+      const businessAnalysis = analysisResult.business_analysis;
+      if (businessAnalysis) {
+        // Auto-populate business description with AI analysis
+        const autoDescription = `
+Company: ${businessAnalysis.company_name}
+Industry: ${businessAnalysis.industry}
+Target Audience: ${businessAnalysis.target_audience}
+Brand Voice: ${businessAnalysis.brand_voice}
+
+Value Propositions:
+${businessAnalysis.value_propositions?.map((vp: string) => `• ${vp}`).join('\n') || '• Not specified'}
+
+Competitive Advantages:
+${businessAnalysis.competitive_advantages?.map((ca: string) => `• ${ca}`).join('\n') || '• Not specified'}
+
+Market Positioning: ${businessAnalysis.market_positioning}
+        `.trim();
+        
+        setBusinessDescription(autoDescription);
+        
+        // Show success message with analysis details
+        toast.success(`✨ AI Analysis Complete! 
+        
+Company: ${businessAnalysis.company_name}
+Industry: ${businessAnalysis.industry}
+Confidence: ${Math.round((analysisResult.confidence_score || 0.75) * 100)}%
+
+Business context has been automatically populated below.`, {
+          duration: 6000,
+        });
+      } else {
+        toast.success('URLs analyzed! Please review the extracted information.');
+      }
+      
     } catch (error) {
-      toast.error('Failed to analyze URLs. Please try again.');
+      console.error('URL analysis error:', error);
+      toast.error('Failed to analyze URLs. Please check your connection and try again.');
     } finally {
       setIsAnalyzing(false);
     }
