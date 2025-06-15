@@ -1,5 +1,5 @@
 # Video Venture Launch - Makefile
-# Author: JP + 2024-12-19
+# Author: JP + 2025-06-15
 # 3 Musketeers pattern for consistent development workflow
 # Uses Docker, Docker Compose, and Make for environment consistency
 

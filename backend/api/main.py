@@ -1,7 +1,7 @@
 """
 FILENAME: main.py
 DESCRIPTION/PURPOSE: FastAPI application entry point for Video Venture Launch backend
-Author: JP + 2024-12-19
+Author: JP + 2025-06-15
 
 This module provides the main FastAPI application with ADK agent integration,
 following Google ADK samples best practices for sequential agent workflows.

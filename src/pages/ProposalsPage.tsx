@@ -1,7 +1,7 @@
 /**
  * FILENAME: ProposalsPage.tsx
  * DESCRIPTION/PURPOSE: Marketing proposals page with video generation capabilities using VVL design system
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import React, { useState, useEffect } from 'react';

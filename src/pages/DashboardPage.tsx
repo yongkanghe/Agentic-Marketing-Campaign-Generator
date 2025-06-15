@@ -1,7 +1,7 @@
 /**
  * FILENAME: DashboardPage.tsx
  * DESCRIPTION/PURPOSE: Dashboard page for viewing and managing marketing campaigns with VVL design system
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import React from 'react';

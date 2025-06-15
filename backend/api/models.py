@@ -1,7 +1,7 @@
 """
 FILENAME: models.py
 DESCRIPTION/PURPOSE: Pydantic models for API request/response handling
-Author: JP + 2024-12-19
+Author: JP + 2025-06-15
 
 This module defines the data models used for API communication between
 the frontend and backend, ensuring type safety and validation.

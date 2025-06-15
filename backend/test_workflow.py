@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Simple test script to verify the marketing workflow execution.
-Author: JP + 2024-12-19
+Author: JP + 2025-06-15
 """
 
 import asyncio

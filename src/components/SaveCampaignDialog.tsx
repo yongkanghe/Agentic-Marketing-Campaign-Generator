@@ -1,7 +1,7 @@
 /**
  * FILENAME: SaveCampaignDialog.tsx
  * DESCRIPTION/PURPOSE: Dialog component for saving campaign progress with a custom name
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import React, { useState } from 'react';

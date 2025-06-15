@@ -1,6 +1,6 @@
 # ADR-003: VVL Design System Framework Selection
 
-**Date:** 2024-12-19  
+**Date:** 2025-06-15  
 **Status:** Accepted  
 **Authors:** JP + Claude Sonnet 4  
 **Reviewers:** Development Team  

@@ -1,7 +1,7 @@
 /**
  * FILENAME: LandingPage.tsx
  * DESCRIPTION/PURPOSE: Main landing page with VVL design system styling and consistent branding
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import React from 'react';

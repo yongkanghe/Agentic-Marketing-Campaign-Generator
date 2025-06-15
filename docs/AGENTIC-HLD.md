@@ -1,6 +1,6 @@
 # Agentic High-Level Design (HLD) - Video Venture Launch
 
-**Author: Jaroslav Pantsjoha + 2024-12-19**
+**Author: Jaroslav Pantsjoha + 2025-06-15**
 **Solution**: Video Venture Launch - Agentic AI Marketing Campaign Manager
 **Framework**: Google ADK (Agent Development Kit)
 
@@ -1073,6 +1073,6 @@ async def get_monitoring_status(campaign_id: str):
 ---
 
 **Author**: Jaroslav Pantsjoha  
-**Date**: 2024-12-19  
+**Date**: 2025-06-15  
 **Framework**: Google ADK (Agent Development Kit)  
 **Solution**: Video Venture Launch - Agentic AI Marketing Campaign Manager 

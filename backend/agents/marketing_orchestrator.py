@@ -1,7 +1,7 @@
 """
 FILENAME: marketing_orchestrator.py
 DESCRIPTION/PURPOSE: Main marketing orchestrator agent implementing ADK sequential workflow
-Author: JP + 2024-12-19
+Author: JP + 2025-06-15
 
 This module implements the root sequential agent that orchestrates the complete
 marketing campaign workflow, following Google ADK samples best practices.

@@ -1,8 +1,8 @@
 # ADR-002: Enhanced Campaign Creation with Multimodal AI Analysis
 
-**Author: JP + 2024-12-19**
+**Author: JP + 2025-06-15**
 **Status**: Accepted
-**Date**: 2024-12-19
+**Date**: 2025-06-15
 
 ## Context
 

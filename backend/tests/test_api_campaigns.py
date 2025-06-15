@@ -1,7 +1,7 @@
 """
 FILENAME: test_api_campaigns.py
 DESCRIPTION/PURPOSE: API tests for campaign endpoints
-Author: JP + 2024-12-19
+Author: JP + 2025-06-15
 
 This module tests the campaign management API endpoints for regression testing.
 """

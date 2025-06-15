@@ -1,7 +1,7 @@
 /**
  * FILENAME: IdeationPage.tsx
  * DESCRIPTION/PURPOSE: Social media post ideation and generation page with VVL design system styling
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import React, { useState, useEffect } from 'react';

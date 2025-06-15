@@ -1,7 +1,7 @@
 /**
  * FILENAME: NotFound.tsx
  * DESCRIPTION/PURPOSE: 404 error page with VVL design system styling
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  */
 
 import { useLocation, Link } from 'react-router-dom';

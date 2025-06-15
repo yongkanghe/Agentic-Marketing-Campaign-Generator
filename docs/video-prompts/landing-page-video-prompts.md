@@ -2,7 +2,7 @@
 
 **FILENAME:** landing-page-video-prompts.md  
 **DESCRIPTION/PURPOSE:** LLM prompts for generating marketing videos showcasing the VVL agentic AI solution  
-**Author:** JP + 2024-12-19
+**Author:** JP + 2025-06-15
 
 ## Video Prompt #1: "The Marketing Revolution in Action"
 

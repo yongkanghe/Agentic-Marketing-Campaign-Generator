@@ -1,7 +1,7 @@
 # Video Venture Launch 🚀
 ### Agentic AI Marketing Campaign Manager
 
-**Author: JP + 2024-12-19**
+**Author: JP + 2025-06-15**
 
 > **Transform your business ideas into professional marketing campaigns using Google's ADK Framework and Gemini API**
 

@@ -1,6 +1,6 @@
 # ADR-003: Backend ADK Sequential Agent Implementation
 
-**Date**: 2024-12-19  
+**Date**: 2025-06-15  
 **Status**: Accepted  
 **Author**: JP  
 

@@ -1,7 +1,7 @@
 /**
  * API Client Configuration
  * 
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  * 
  * Centralized API client for Video Venture Launch frontend-backend communication.
  * Handles HTTP requests, error handling, and response formatting.

@@ -1,7 +1,7 @@
 /**
  * About Page - Video Venture Launch
  * 
- * Author: JP + 2024-12-19
+ * Author: JP + 2025-06-15
  * 
  * Comprehensive about page featuring solution architecture, purpose, 
  * agentic AI flow design, and dynamic release details.
@@ -54,7 +54,7 @@ const AboutPage: React.FC = () => {
         console.log('Using fallback release info (run `make release` to generate dynamic info)');
         const fallbackReleaseInfo: ReleaseInfo = {
           version: "v0.8.0-beta",
-          date: "2024-12-19",
+          date: "2025-06-15",
           status: "MVP-Ready",
           completion: "80%",
           features: [

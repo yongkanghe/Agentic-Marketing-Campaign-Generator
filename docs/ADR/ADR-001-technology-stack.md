@@ -1,8 +1,8 @@
 # ADR-001: Technology Stack Selection
 
-**Author: JP + 2024-12-19**
+**Author: JP + 2025-06-15**
 **Status**: Accepted
-**Date**: 2024-12-19
+**Date**: 2025-06-15
 
 ## Context
 
