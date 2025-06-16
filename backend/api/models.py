@@ -101,10 +101,11 @@ class ContentGenerationRequest(BaseModel):
 
 class SocialPostRegenerationRequest(BaseModel):
     """Social post regeneration request."""
-    business_context: BusinessAnalysis
     post_type: PostType
-    current_posts: List[SocialMediaPost]
     regenerate_count: int = Field(default=3, ge=1, le=5)
+    business_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    creativity_level: Optional[int] = Field(default=7, ge=1, le=10)
+    current_posts: Optional[List[SocialMediaPost]] = Field(default_factory=list)
 
 # Response Models
 class CampaignResponse(BaseModel):

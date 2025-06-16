@@ -25,15 +25,17 @@ ensure you regularly test and validate the solution architecture, before committ
 
 do not use stubs or mock data, as we target a functionally complete solution capability
 
-Priotirise
+use python3
 
-1. **SUBMISSION COMPLETENESS OVER NEW FEATURES**
-   - Focus on polishing existing 80% complete functionality
+Target production state would be a Hosted-on Google Cloud platform. Consider that in the longer solution maturity roadmpa post MVP.
+
+**SUBMISSION COMPLETENESS OVER NEW FEATURES**
+   - Focus on polishing existing complete functionality
    - No new major features - only submission-critical improvements
    - Maintain current working state - no breaking changes
    - Document first, then implement minimal changes
 
-3. **TECHNICAL REQUIREMENTS COMPLIANCE**
+**TECHNICAL REQUIREMENTS COMPLIANCE**
    - Google ADK Framework 1.0.0+ 
    - Multi-agent system 
    - Sequential workflow pattern 
