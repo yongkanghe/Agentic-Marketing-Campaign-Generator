@@ -6,7 +6,7 @@
 
 ## Context
 
-The Video Venture Launch project required a backend API service to replace the mocked AI functionality in the frontend. The backend needed to integrate with Google's ADK (Agent Development Kit) to provide real AI-powered marketing campaign generation capabilities.
+The AI Marketing Campaign Post Generator project required a backend API service to replace the mocked AI functionality in the frontend. The backend needed to integrate with Google's ADK (Agent Development Kit) to provide real AI-powered marketing campaign generation capabilities.
 
 ## Decision
 

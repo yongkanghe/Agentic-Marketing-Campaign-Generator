@@ -1,4 +1,4 @@
--- Video Venture Launch Database Schema
+-- AI Marketing Campaign Post Generator Database Schema
 -- Author: JP + 2025-06-16
 -- Description: Complete SQLite schema for MVP local database
 -- Version: 1.0.1 - Updated to align with test expectations

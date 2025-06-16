@@ -9,7 +9,7 @@ set -e  # Exit on any error
 BACKEND_URL="http://localhost:8000"
 FRONTEND_URL="http://localhost:8080"
 
-echo "🚀 Testing Video Venture Launch API Integration"
+echo "🚀 Testing AI Marketing Campaign Post Generator API Integration"
 echo "=============================================="
 echo "Backend URL: $BACKEND_URL"
 echo "Frontend URL: $FRONTEND_URL"

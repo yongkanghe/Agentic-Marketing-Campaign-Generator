@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FILENAME: test_full_stack_integration.py
-DESCRIPTION/PURPOSE: Comprehensive full-stack integration testing script for Video Venture Launch
+DESCRIPTION/PURPOSE: Comprehensive full-stack integration testing script for AI Marketing Campaign Post Generator
 Author: JP + 2025-06-16
 
 This script validates the complete application stack:
@@ -28,7 +28,7 @@ DATABASE_PATH = "database/data/database.db"
 TEST_TIMEOUT = 30
 
 class FullStackTester:
-    """Comprehensive full-stack testing suite for Video Venture Launch."""
+    """Comprehensive full-stack testing suite for AI Marketing Campaign Post Generator."""
     
     def __init__(self):
         self.test_results = {
@@ -633,7 +633,7 @@ class FullStackTester:
 def main():
     """Main execution function."""
     if len(sys.argv) > 1 and sys.argv[1] == '--help':
-        print("Full-Stack Integration Tester for Video Venture Launch")
+        print("Full-Stack Integration Tester for AI Marketing Campaign Post Generator")
         print("Usage: python test_full_stack_integration.py")
         print()
         print("This script tests:")

@@ -1,4 +1,4 @@
-# Missing Agents Implementation Plan - Video Venture Launch
+# Missing Agents Implementation Plan - AI Marketing Campaign Post Generator
 
 **Author: JP + 2025-06-16**
 **Status**: Implementation Required for MVP Completion
@@ -6,7 +6,7 @@
 
 ## 📋 Executive Summary
 
-This document outlines the **4 critical missing agentic roles** that must be implemented to complete the frontend-backend integration for Video Venture Launch. These agents are essential for delivering the full social media campaign management experience promised in the UI.
+This document outlines the **4 critical missing agentic roles** that must be implemented to complete the frontend-backend integration for AI Marketing Campaign Post Generator. These agents are essential for delivering the full social media campaign management experience promised in the UI.
 
 **Current Status**: 60% of planned agents implemented
 **Missing**: 4 critical agents (40% of total functionality)

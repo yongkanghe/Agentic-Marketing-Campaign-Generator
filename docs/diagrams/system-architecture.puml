@@ -1,6 +1,6 @@
-@startuml Video Venture Launch - System Architecture
+@startuml AI Marketing Campaign Post Generator - System Architecture
 !theme aws-orange
-title Video Venture Launch - System Architecture
+title AI Marketing Campaign Post Generator - System Architecture
 
 package "Frontend Layer" {
     [React UI] as UI

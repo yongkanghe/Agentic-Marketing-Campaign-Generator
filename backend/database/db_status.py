@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Database Status Checker for Video Venture Launch
+# Database Status Checker for AI Marketing Campaign Post Generator
 # Author: JP + 2025-06-16
 # Description: Check database status and display table information
 # Purpose: Support Makefile database operations with proper error handling

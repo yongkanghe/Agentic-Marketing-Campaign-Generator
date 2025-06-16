@@ -1,4 +1,4 @@
-# Video Venture Launch - Port Configuration & Architecture
+# AI Marketing Campaign Post Generator - Port Configuration & Architecture
 
 **Author: JP + 2025-06-16**  
 **Last Updated: 2025-06-16**  
@@ -19,7 +19,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          VIDEO VENTURE LAUNCH - PORT ARCHITECTURE               │
+│                          AI Marketing Campaign Post Generator - PORT ARCHITECTURE               │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -124,7 +124,7 @@ dev-frontend-local: ## Start frontend development server locally
 	# Starts on port 8080 via vite.config.ts
 
 dev-backend-local: ## Start backend development server locally
-	@echo "🚀 Starting Video Venture Launch backend server..."
+	@echo "🚀 Starting AI Marketing Campaign Post Generator backend server..."
 	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -246,7 +246,7 @@ cd backend && ./test_curl_commands.sh
 ```bash
 # Backend Health
 GET http://localhost:8000/
-Response: {"name": "Video Venture Launch API", "version": "1.0.0", ...}
+Response: {"name": "AI Marketing Campaign Post Generator API", "version": "1.0.0", ...}
 
 # Frontend Health  
 GET http://localhost:8080/

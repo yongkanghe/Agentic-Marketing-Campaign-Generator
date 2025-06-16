@@ -1,12 +1,12 @@
-# Agentic High-Level Design (HLD) - Video Venture Launch
+# Agentic High-Level Design (HLD) - AI Marketing Campaign Post Generator
 
 **Author: Jaroslav Pantsjoha + 2025-06-15**
-**Solution**: Video Venture Launch - Agentic AI Marketing Campaign Manager
+**Solution**: AI Marketing Campaign Post Generator - Agentic AI Marketing Campaign Manager
 **Framework**: Google ADK (Agent Development Kit)
 
 ## 📋 Executive Summary
 
-This document outlines the complete Agentic AI architecture for the Video Venture Launch platform, a comprehensive social media campaign management system powered by Google's ADK framework. The solution orchestrates multiple specialized AI agents to automate campaign creation, content generation, and social media publishing.
+This document outlines the complete Agentic AI architecture for the AI Marketing Campaign Post Generator platform, a comprehensive social media campaign management system powered by Google's ADK framework. The solution orchestrates multiple specialized AI agents to automate campaign creation, content generation, and social media publishing.
 
 ## 🏗️ Agentic Architecture Overview
 
@@ -1015,7 +1015,7 @@ graph LR
 ```python
 # Root agent configuration
 async def create_video_venture_launch_system():
-    """Create the complete Video Venture Launch agent system."""
+    """Create the complete AI Marketing Campaign Post Generator agent system."""
     
     # Initialize all agents
     campaign_orchestrator = await create_campaign_orchestrator_agent()
@@ -1081,4 +1081,4 @@ async def get_monitoring_status(campaign_id: str):
 **Author**: Jaroslav Pantsjoha  
 **Date**: 2025-06-15  
 **Framework**: Google ADK (Agent Development Kit)  
-**Solution**: Video Venture Launch - Agentic AI Marketing Campaign Manager 
+**Solution**: AI Marketing Campaign Post Generator - Agentic AI Marketing Campaign Manager 

@@ -7,7 +7,7 @@
 
 ## Context
 
-The Video Venture Launch (VVL) application required a consistent, professional design system to replace the inconsistent Material Design components and create a cohesive user experience across all pages. The application needed a modern, scalable design framework that would support the AI-powered marketing platform's professional requirements.
+The AI Marketing Campaign Post Generator (VVL) application required a consistent, professional design system to replace the inconsistent Material Design components and create a cohesive user experience across all pages. The application needed a modern, scalable design framework that would support the AI-powered marketing platform's professional requirements.
 
 ## Decision
 

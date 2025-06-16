@@ -1,10 +1,10 @@
-# EPIC Tracking - Video Venture Launch
+# EPIC Tracking - AI Marketing Campaign Post Generator
 
 **Author: JP + 2025-06-15**
 
 ## Overview
 
-This document tracks major feature epics for the Video Venture Launch marketing campaign generator. Each epic represents a significant functionality block that contributes to the overall solution maturity.
+This document tracks major feature epics for the AI Marketing Campaign Post Generator marketing campaign generator. Each epic represents a significant functionality block that contributes to the overall solution maturity.
 
 ---
 

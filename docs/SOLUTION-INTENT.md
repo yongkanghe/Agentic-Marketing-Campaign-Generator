@@ -1,4 +1,4 @@
-# Video Venture Launch - Agentic AI Marketing Campaign Manager
+# AI Marketing Campaign Post Generator - Agentic AI Marketing Campaign Manager
 
 **Author: JP + 2024-03-13**
 **Version**: 2.0
@@ -19,7 +19,7 @@
 
 ## Solution Overview
 
-The Video Venture Launch platform is an advanced AI-powered marketing campaign manager that leverages Google's ADK framework to enable marketers to:
+The AI Marketing Campaign Post Generator platform is an advanced AI-powered marketing campaign manager that leverages Google's ADK framework to enable marketers to:
 
 1. **Create Campaigns**: Define business objectives, target audience, and campaign parameters
 2. **Generate Ideas**: AI-powered campaign concept generation using Gemini

@@ -1,4 +1,4 @@
-# MVP Roadmap - Video Venture Launch
+# MVP Roadmap - AI Marketing Campaign Post Generator
 **Marketing Campaign Manager Solution**
 
 **Author: JP + 2025-06-15**  
@@ -9,7 +9,7 @@
 
 ## 🎯 Executive Summary
 
-**Mission**: Transform Video Venture Launch from MVP-ready (75%) to production-grade hosted marketing campaign manager solution with wide user adoption and scale.
+**Mission**: Transform AI Marketing Campaign Post Generator from MVP-ready (75%) to production-grade hosted marketing campaign manager solution with wide user adoption and scale.
 
 **Current Maturity**: Late Alpha / Early Beta  
 **Target Maturity**: Production Release (100%)  

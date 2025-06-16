@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder contains project management documentation to track the development progress of the Video Venture Launch marketing campaign generator. The solution is currently at POC maturity level and intended to be runnable with Makefile targets following the 2 Musketeers pattern.
+This folder contains project management documentation to track the development progress of the AI Marketing Campaign Post Generator marketing campaign generator. The solution is currently at POC maturity level and intended to be runnable with Makefile targets following the 2 Musketeers pattern.
 
 ## Structure
 

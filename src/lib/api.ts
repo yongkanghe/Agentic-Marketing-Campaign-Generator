@@ -3,7 +3,7 @@
  * 
  * Author: JP + 2025-06-15
  * 
- * Centralized API client for Video Venture Launch frontend-backend communication.
+ * Centralized API client for AI Marketing Campaign Post Generator frontend-backend communication.
  * Handles HTTP requests, error handling, and response formatting.
  */
 

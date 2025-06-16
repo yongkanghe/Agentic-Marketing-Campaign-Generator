@@ -6,7 +6,7 @@
 
 ## Context
 
-The Video Venture Launch platform requires a modern, scalable technology stack that can support AI-powered marketing content generation. The solution needs to:
+The AI Marketing Campaign Post Generator platform requires a modern, scalable technology stack that can support AI-powered marketing content generation. The solution needs to:
 
 1. Handle real-time AI content generation with Gemini and Veo APIs
 2. Provide a responsive, modern user interface

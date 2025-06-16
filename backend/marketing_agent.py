@@ -1,4 +1,4 @@
-"""Video Venture Launch - Agentic AI Marketing Campaign Manager
+"""AI Marketing Campaign Post Generator - Agentic AI Marketing Campaign Manager
 
 This module implements a sophisticated marketing campaign management system using
 Google's ADK framework. It orchestrates a workflow to create, manage, and generate

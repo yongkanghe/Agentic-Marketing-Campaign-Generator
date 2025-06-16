@@ -1,4 +1,4 @@
-# Video Venture Launch - Makefile
+# AI Marketing Campaign Post Generator - Makefile
 # Author: JP + 2025-06-16
 # 3 Musketeers pattern for consistent development workflow
 # Uses Docker, Docker Compose, and Make for environment consistency
@@ -14,7 +14,7 @@ PYTHON_AVAILABLE := $(shell command -v python3 2> /dev/null)
 
 # Default target
 help: ## Show this help message
-	@echo "Video Venture Launch - Available Commands:"
+	@echo "AI Marketing Campaign Post Generator - Available Commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
@@ -23,7 +23,7 @@ help: ## Show this help message
 # =============================================================================
 
 launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Frontend)
-	@echo "🚀 Launching Video Venture Launch - Full Application Stack"
+	@echo "🚀 Launching AI Marketing Campaign Post Generator - Full Application Stack"
 	@echo "=========================================================="
 	@echo ""
 	@echo "📋 Pre-flight checks..."
@@ -248,7 +248,7 @@ dev-local: ## Start both frontend and backend locally
 	@make dev-frontend-local
 
 dev-with-env: ## Start both frontend and backend with .env file loaded
-	@echo "🚀 Starting Video Venture Launch with environment variables..."
+	@echo "🚀 Starting AI Marketing Campaign Post Generator with environment variables..."
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
 		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
@@ -298,7 +298,7 @@ dev-backend: ## Start backend development server (Docker-first)
 	fi
 
 dev-backend-local: ## Start backend development server locally
-	@echo "🚀 Starting Video Venture Launch backend server..."
+	@echo "🚀 Starting AI Marketing Campaign Post Generator backend server..."
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
 		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
@@ -371,7 +371,7 @@ test-api-regression: ## Run regression test suite
 
 # Runtime and UI Testing targets
 launch: ## Launch complete development environment and run health checks
-	@echo "🚀 Launching Video Venture Launch development environment..."
+	@echo "🚀 Launching AI Marketing Campaign Post Generator development environment..."
 	@echo "=========================================================="
 	@make status
 	@echo ""
@@ -767,7 +767,7 @@ test-coverage:
 
 # Release Management & Documentation Generation
 release: ## Generate release documentation and artifacts
-	@echo "🚀 Generating Video Venture Launch Release Documentation..."
+	@echo "🚀 Generating AI Marketing Campaign Post Generator Release Documentation..."
 	@echo "========================================================"
 	@make generate-about
 	@make generate-uml
@@ -781,7 +781,7 @@ release: ## Generate release documentation and artifacts
 generate-about: ## Generate comprehensive ABOUT.md page
 	@echo "📝 Generating ABOUT.md page..."
 	@mkdir -p docs
-	@echo "# About Video Venture Launch 🚀" > docs/ABOUT.md
+	@echo "# About AI Marketing Campaign Post Generator 🚀" > docs/ABOUT.md
 	@echo "" >> docs/ABOUT.md
 	@echo "**Author: JP + $$(date +%Y-%m-%d)**" >> docs/ABOUT.md
 	@echo "**Version**: 1.0.0-alpha (80% Complete - MVP Ready)" >> docs/ABOUT.md
@@ -789,7 +789,7 @@ generate-about: ## Generate comprehensive ABOUT.md page
 	@echo "" >> docs/ABOUT.md
 	@echo "## 🎯 Purpose & Vision" >> docs/ABOUT.md
 	@echo "" >> docs/ABOUT.md
-	@echo "Video Venture Launch is an **AI-powered marketing campaign generator** that transforms business ideas into professional marketing campaigns using Google's Advanced Development Kit (ADK) Framework and Gemini API." >> docs/ABOUT.md
+	@echo "AI Marketing Campaign Post Generator is an **AI-powered marketing campaign generator** that transforms business ideas into professional marketing campaigns using Google's Advanced Development Kit (ADK) Framework and Gemini API." >> docs/ABOUT.md
 	@echo "" >> docs/ABOUT.md
 	@echo "### Core Mission" >> docs/ABOUT.md
 	@echo "Empower marketers, entrepreneurs, and businesses to create compelling social media campaigns through intelligent AI assistance, reducing campaign creation time from days to minutes while maintaining professional quality." >> docs/ABOUT.md
@@ -840,9 +840,9 @@ generate-uml: ## Generate UML diagrams for architecture documentation
 	@echo "📊 Generating UML diagrams..."
 	@mkdir -p docs/diagrams
 	@echo "Creating system architecture diagram..."
-	@echo "@startuml Video Venture Launch - System Architecture" > docs/diagrams/system-architecture.puml
+	@echo "@startuml AI Marketing Campaign Post Generator - System Architecture" > docs/diagrams/system-architecture.puml
 	@echo "!theme aws-orange" >> docs/diagrams/system-architecture.puml
-	@echo "title Video Venture Launch - System Architecture" >> docs/diagrams/system-architecture.puml
+	@echo "title AI Marketing Campaign Post Generator - System Architecture" >> docs/diagrams/system-architecture.puml
 	@echo "" >> docs/diagrams/system-architecture.puml
 	@echo "package \"Frontend Layer\" {" >> docs/diagrams/system-architecture.puml
 	@echo "    [React UI] as UI" >> docs/diagrams/system-architecture.puml
@@ -891,7 +891,7 @@ generate-uml: ## Generate UML diagrams for architecture documentation
 generate-release-notes: ## Generate release notes based on current state
 	@echo "📋 Generating release notes..."
 	@mkdir -p docs
-	@echo "# Release Notes - Video Venture Launch" > docs/RELEASE-NOTES.md
+	@echo "# Release Notes - AI Marketing Campaign Post Generator" > docs/RELEASE-NOTES.md
 	@echo "" >> docs/RELEASE-NOTES.md
 	@echo "**Version**: 1.0.0-alpha" >> docs/RELEASE-NOTES.md
 	@echo "**Release Date**: $$(date +%Y-%m-%d)" >> docs/RELEASE-NOTES.md
@@ -930,7 +930,7 @@ generate-release-notes: ## Generate release notes based on current state
 	@echo "" >> docs/RELEASE-NOTES.md
 	@echo "---" >> docs/RELEASE-NOTES.md
 	@echo "" >> docs/RELEASE-NOTES.md
-	@echo "**🎉 This release represents a major milestone in Video Venture Launch development, establishing a solid MVP foundation with professional-grade backend infrastructure and comprehensive testing capabilities.**" >> docs/RELEASE-NOTES.md
+	@echo "**🎉 This release represents a major milestone in AI Marketing Campaign Post Generator development, establishing a solid MVP foundation with professional-grade backend infrastructure and comprehensive testing capabilities.**" >> docs/RELEASE-NOTES.md
 	@echo "✅ Release notes generated successfully!"
 
 docs-serve: ## Serve documentation locally
@@ -1045,7 +1045,7 @@ db-upgrade: ## Upgrade existing database to latest schema
 
 # MVP setup with database
 setup-mvp: ## Complete MVP setup with database initialization
-	@echo "🚀 Setting up Video Venture Launch MVP..."
+	@echo "🚀 Setting up AI Marketing Campaign Post Generator MVP..."
 	@echo "========================================"
 	@$(MAKE) install-all
 	@$(MAKE) db-init

@@ -43,7 +43,7 @@ class TestFrontendBackendIntegration:
             backend_response = requests.get(f"{BACKEND_URL}/", timeout=5)
             assert backend_response.status_code == 200, f"Backend server not responding: {backend_response.status_code}"
             backend_data = backend_response.json()
-            assert "Video Venture Launch API" in backend_data.get("name", ""), "Backend API not properly configured"
+            assert "AI Marketing Campaign Post Generator API" in backend_data.get("name", ""), "Backend API not properly configured"
             print("✅ Backend server is running and responding")
         except requests.exceptions.RequestException as e:
             pytest.fail(f"❌ Backend server not accessible at {BACKEND_URL}: {e}")

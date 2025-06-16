@@ -86,7 +86,7 @@ const Footer: React.FC = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">VVL</span>
               </div>
-              <h3 className="text-xl font-bold vvl-text-primary">Video Venture Launch</h3>
+              <h3 className="text-xl font-bold vvl-text-primary">AI Marketing Campaign Post Generator</h3>
             </div>
             <p className="vvl-text-secondary text-sm leading-relaxed mb-6">
               AI-powered marketing campaigns that transform your business. Create, optimize, and publish 
@@ -135,7 +135,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-white/10 mt-12 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm vvl-text-secondary">
-              <span>© {currentYear} Video Venture Launch. All rights reserved.</span>
+              <span>© {currentYear} AI Marketing Campaign Post Generator. All rights reserved.</span>
               <span className="hidden md:inline">•</span>
               <span className="flex items-center gap-1">
                 Made with <Heart className="w-4 h-4 text-red-400" /> using Google ADK & Gemini AI

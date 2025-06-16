@@ -1,4 +1,4 @@
-# Database Models for Video Venture Launch
+# Database Models for AI Marketing Campaign Post Generator
 # Author: JP + 2025-06-16
 # Description: Pydantic models corresponding to SQLite database schema
 # Purpose: Type safety, validation, and ORM-like functionality for database operations

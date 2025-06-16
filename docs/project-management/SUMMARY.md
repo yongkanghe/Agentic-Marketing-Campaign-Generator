@@ -1,11 +1,11 @@
-# Project Summary - Video Venture Launch
+# Project Summary - AI Marketing Campaign Post Generator
 
 **Author: JP + 2025-06-15**
 **Last Updated**: 2025-06-15
 
 ## Executive Summary
 
-The Video Venture Launch platform is an AI-powered marketing campaign generator currently at **POC maturity level (~30% complete)**. The solution enables marketers to create campaigns, generate social posts, and produce video content using Google's Gemini and Veo APIs.
+The AI Marketing Campaign Post Generator platform is an AI-powered marketing campaign generator currently at **POC maturity level (~30% complete)**. The solution enables marketers to create campaigns, generate social posts, and produce video content using Google's Gemini and Veo APIs.
 
 ### Current State
 - ✅ **Frontend**: Complete React UI flow with professional SaaS design

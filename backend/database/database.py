@@ -1,6 +1,6 @@
 """
 FILENAME: database.py
-DESCRIPTION/PURPOSE: Database initialization and management for Video Venture Launch
+DESCRIPTION/PURPOSE: Database initialization and management for AI Marketing Campaign Post Generator
 Author: JP + 2025-06-16
 
 This module provides database initialization, connection management, and schema setup

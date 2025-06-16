@@ -6,7 +6,7 @@
 
 ## Context
 
-The Video Venture Launch platform requires persistent data storage for the MVP phase. The solution needs to be self-contained, easy to deploy locally, and scalable to cloud-based solutions in the future. We need to define the database schema, data structures, and storage strategy that aligns with our Agentic AI architecture and campaign management requirements.
+The AI Marketing Campaign Post Generator platform requires persistent data storage for the MVP phase. The solution needs to be self-contained, easy to deploy locally, and scalable to cloud-based solutions in the future. We need to define the database schema, data structures, and storage strategy that aligns with our Agentic AI architecture and campaign management requirements.
 
 ## Decision
 

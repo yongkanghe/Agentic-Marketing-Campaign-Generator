@@ -35,6 +35,7 @@ const IdeationPage: React.FC = () => {
   const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([
     '#marketing', '#business', '#growth', '#innovation', '#success', '#entrepreneur'
   ]);
+  const [isRegeneratingAnalysis, setIsRegeneratingAnalysis] = useState(false);
   
   // Mock social media columns data
   const [socialMediaColumns, setSocialMediaColumns] = useState([
@@ -85,12 +86,9 @@ const IdeationPage: React.FC = () => {
       if (suggestedTags.length > 0) selectTag(suggestedTags[0]);
     }
     
-    // Generate posts for all columns
-    await Promise.all([
-      generateColumnPosts('text-only'),
-      generateColumnPosts('text-image'),
-      generateColumnPosts('text-video')
-    ]);
+    // Only auto-generate Text+URL posts on page load (basic tier)
+    // Enhanced and Premium content requires user action
+    await generateColumnPosts('text-only');
   };
 
   const generateColumnPosts = async (columnId: string) => {
@@ -99,60 +97,118 @@ const IdeationPage: React.FC = () => {
     ));
     
     try {
-      // Mock post generation - would be replaced with real API calls
-      const mockPosts = Array(5).fill(null).map((_, idx) => ({
+      // Real API call to backend for content generation
+      const postType = columnId === 'text-only' ? 'text_url' : 
+                      columnId === 'text-image' ? 'text_image' : 'text_video';
+      
+      const response = await fetch('/api/v1/content/regenerate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          post_type: postType,
+          regenerate_count: 5,
+          business_context: {
+            company_name: currentCampaign?.name || 'Your Company',
+            objective: currentCampaign?.objective || 'increase sales',
+            campaign_type: currentCampaign?.campaignType || 'service',
+            target_audience: 'business professionals', // TODO: Add target_audience to Campaign interface
+            business_description: currentCampaign?.businessDescription || '',
+            business_website: currentCampaign?.businessUrl || '',
+            product_service_url: currentCampaign?.productServiceUrl || ''
+          },
+          creativity_level: currentCampaign?.creativityLevel || 7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Transform API response to match frontend format
+      const transformedPosts = data.new_posts.map((post: any, idx: number) => ({
+        id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
+        type: columnId as 'text-only' | 'text-with-image' | 'text-with-video',
+        platform: 'linkedin' as const,
+        content: {
+          text: post.content || `Generated ${postType.replace('_', ' + ')} content for ${currentCampaign?.objective}`,
+          hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
+          imageUrl: columnId === 'text-image' ? post.image_url || `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=AI+Generated+${idx + 1}` : undefined,
+          videoUrl: columnId === 'text-video' ? post.video_url || `https://placeholder-videos.s3.amazonaws.com/sample${idx + 1}.mp4` : undefined,
+          productUrl: columnId === 'text-only' ? currentCampaign?.productServiceUrl || currentCampaign?.businessUrl || 'https://example.com/product' : undefined
+        },
+        generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
+        selected: false,
+        engagement_score: post.engagement_score || (7.0 + idx * 0.1),
+        platform_optimized: post.platform_optimized || {}
+      }));
+      
+      setSocialMediaColumns(prev => prev.map(col => 
+        col.id === columnId ? { ...col, posts: transformedPosts, isGenerating: false } : col
+      ));
+
+      toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`);
+      
+    } catch (error) {
+      console.error(`Failed to generate ${columnId} posts:`, error);
+      
+      // Fallback to enhanced mock data on API failure
+      const fallbackPosts = Array(5).fill(null).map((_, idx) => ({
         id: `${columnId}-post-${Date.now()}-${idx}`,
         type: columnId as 'text-only' | 'text-with-image' | 'text-with-video',
         platform: 'linkedin' as const,
         content: {
           text: generateMockPostText(columnId, idx),
           hashtags: suggestedHashtags.slice(0, 3),
-          imageUrl: columnId === 'text-image' ? `https://via.placeholder.com/400x300?text=Image+${idx + 1}` : undefined,
+          imageUrl: columnId === 'text-image' ? `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=AI+Generated+${idx + 1}` : undefined,
           videoUrl: columnId === 'text-video' ? `https://placeholder-videos.s3.amazonaws.com/sample${idx + 1}.mp4` : undefined,
-          productUrl: columnId === 'text-only' ? currentCampaign?.productServiceUrl || 'https://example.com/product' : undefined
+          productUrl: columnId === 'text-only' ? currentCampaign?.productServiceUrl || currentCampaign?.businessUrl || 'https://example.com/product' : undefined
         },
         generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
         selected: false
       }));
       
       setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, posts: mockPosts, isGenerating: false } : col
+        col.id === columnId ? { ...col, posts: fallbackPosts, isGenerating: false } : col
       ));
       
-    } catch (error) {
-      toast.error(`Failed to generate ${columnId} posts`);
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, isGenerating: false } : col
-      ));
+      toast.error(`API unavailable - using enhanced mock content for ${columnId} posts`);
     }
   };
 
   const generateMockPostText = (type: string, index: number) => {
+    const objective = currentCampaign?.objective || 'increase sales';
+    const campaignType = currentCampaign?.campaignType || 'service';
+    const businessName = currentCampaign?.name || 'Your Business';
+    
     const baseTexts = {
       'text-only': [
-        `🚀 Exciting news! We're launching something amazing that will transform how you ${currentCampaign?.objective}. Check out the details below and let us know what you think!`,
-        `💡 Innovation meets excellence in our latest offering. Designed specifically for businesses looking to ${currentCampaign?.objective}. What's your biggest challenge in this area?`,
-        `🎯 Ready to take your business to the next level? Our new solution addresses exactly what you need to ${currentCampaign?.objective}. Link in comments!`,
-        `✨ Behind the scenes: Here's how we're helping companies like yours ${currentCampaign?.objective}. The results speak for themselves.`,
-        `🔥 Game-changer alert! This is what happens when innovation meets real business needs. Perfect for anyone looking to ${currentCampaign?.objective}.`
+        `🚀 Exciting news! We're launching something amazing that will transform how you ${objective}. Our innovative ${campaignType} solution has been designed with your success in mind. After months of development and testing, we're ready to share the results with you. Check out the details below and let us know what you think! This could be the game-changer your business has been waiting for.`,
+        `💡 Innovation meets excellence in our latest ${campaignType} offering. Designed specifically for businesses looking to ${objective}, this solution addresses the core challenges we've identified in the market. What's your biggest challenge in this area? We'd love to hear from you and show how our approach can make a real difference in your business outcomes.`,
+        `🎯 Ready to take your business to the next level? Our new ${campaignType} solution addresses exactly what you need to ${objective}. We've worked with companies just like yours to understand the pain points and create something truly valuable. The early results have been incredible, and we're excited to share this opportunity with you. Link in comments!`,
+        `✨ Behind the scenes: Here's how we're helping companies like ${businessName} ${objective}. The results speak for themselves - our clients are seeing measurable improvements in their business metrics. This isn't just another ${campaignType}; it's a comprehensive approach that delivers real value. Want to learn more about how this could work for your business?`,
+        `🔥 Game-changer alert! This is what happens when innovation meets real business needs. Perfect for anyone looking to ${objective}, our ${campaignType} solution has been tested and proven in real-world scenarios. The feedback from our beta users has been overwhelmingly positive, and we're confident this can help transform your business too.`
       ],
       'text-image': [
-        `🎨 Visual storytelling at its finest! See how we're revolutionizing ${currentCampaign?.campaignType} marketing.`,
-        `📸 A picture is worth a thousand words. Here's our approach to ${currentCampaign?.objective}.`,
-        `🌟 Sneak peek at what's coming! This is how we're changing the game.`,
-        `💫 Design meets functionality. Check out this amazing visual representation.`,
-        `🎭 Creative meets strategic. This image tells our whole story.`
+        `🎨 Visual storytelling at its finest! See how we're revolutionizing ${campaignType} marketing with this powerful image that captures the essence of what it means to ${objective}. Every element in this visual has been carefully crafted to communicate our value proposition and connect with businesses like yours. This isn't just a pretty picture - it's a strategic communication tool designed to inspire action.`,
+        `📸 A picture is worth a thousand words. Here's our approach to helping businesses ${objective} through innovative ${campaignType} solutions. This image represents months of research, development, and real-world testing. We believe that visual communication is key to understanding complex business solutions, and this image tells the story of transformation and success.`,
+        `🌟 Sneak peek at what's coming! This is how we're changing the game for businesses looking to ${objective}. The visual you see here represents our commitment to excellence and innovation in the ${campaignType} space. We're not just talking about change - we're showing you what it looks like when businesses embrace new possibilities.`,
+        `💫 Design meets functionality. Check out this amazing visual representation of how our ${campaignType} solution helps businesses ${objective}. Every color, shape, and element has been chosen to communicate our core message: that success is achievable when you have the right tools and approach. This image is just the beginning of what we can accomplish together.`,
+        `🎭 Creative meets strategic. This image tells our whole story about helping businesses ${objective} through innovative ${campaignType} solutions. We believe that great design isn't just about aesthetics - it's about communication, connection, and creating meaningful experiences that drive real business results.`
       ],
       'text-video': [
-        `🎬 Watch this! 60 seconds that will change how you think about ${currentCampaign?.objective}.`,
-        `📹 Video speaks louder than words. See our solution in action!`,
-        `🎥 Behind the scenes: The making of something extraordinary.`,
-        `🎪 Lights, camera, action! Here's our story in motion.`,
-        `🎨 Motion graphics meet real results. Watch the magic happen.`
+        `🎬 Watch this! 60 seconds that will change how you think about ${objective}. This video showcases our ${campaignType} solution in action, demonstrating real results from real businesses. We've packed this short video with insights, examples, and proof points that show exactly how our approach can transform your business. Don't just take our word for it - see the results for yourself.`,
+        `📹 Video speaks louder than words. See our ${campaignType} solution in action and discover how we're helping businesses ${objective} with measurable results. This isn't just a promotional video - it's a demonstration of real value, real solutions, and real outcomes. Watch how other businesses have transformed their operations and achieved their goals.`,
+        `🎥 Behind the scenes: The making of something extraordinary. This video takes you inside our process of developing ${campaignType} solutions that help businesses ${objective}. From concept to implementation, you'll see the dedication, innovation, and expertise that goes into every solution we create. This is what happens when passion meets purpose.`,
+        `🎪 Lights, camera, action! Here's our story in motion - how we're revolutionizing the way businesses approach ${objective} through innovative ${campaignType} solutions. This video captures the energy, excitement, and results that come from working with a team that truly understands your challenges and has the expertise to solve them.`,
+        `🎨 Motion graphics meet real results. Watch the magic happen as we demonstrate how our ${campaignType} solution transforms the way businesses ${objective}. This video combines stunning visuals with compelling data to show you exactly what's possible when you choose the right partner for your business transformation journey.`
       ]
     };
     
-    return baseTexts[type as keyof typeof baseTexts][index] || `Great content for ${type} post ${index + 1}`;
+    return baseTexts[type as keyof typeof baseTexts][index] || `Comprehensive ${type.replace('-', ' + ')} content for ${businessName} focusing on ${objective} through innovative ${campaignType} solutions. This post demonstrates our commitment to delivering real value and measurable results for businesses like yours.`;
   };
 
   const togglePostSelection = (postId: string) => {
@@ -177,6 +233,30 @@ const IdeationPage: React.FC = () => {
     
     toast.success(`${selectedPosts.length} posts selected for scheduling!`);
     navigate('/scheduling');
+  };
+
+  const regenerateAIAnalysis = async () => {
+    setIsRegeneratingAnalysis(true);
+    try {
+      // TODO: Replace with real API call to backend
+      // const response = await fetch(`/api/v1/campaigns/${currentCampaign.id}/regenerate-analysis`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' }
+      // });
+      // const data = await response.json();
+      
+      // Mock regeneration for now
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success('AI analysis regenerated successfully!');
+      
+      // In real implementation, this would update the aiSummary in context
+      // updateAISummary(data.analysis);
+      
+    } catch (error) {
+      toast.error('Failed to regenerate AI analysis');
+    } finally {
+      setIsRegeneratingAnalysis(false);
+    }
   };
   
   if (!currentCampaign) return null;
@@ -367,8 +447,13 @@ const IdeationPage: React.FC = () => {
 
                   {/* Quick Actions */}
                   <div className="mt-4 pt-3 border-t border-white/10">
-                    <button className="w-full text-xs bg-blue-500/20 text-blue-400 px-3 py-2 rounded-lg hover:bg-blue-500/30 transition-colors">
-                      Regenerate Analysis
+                    <button 
+                      onClick={regenerateAIAnalysis}
+                      disabled={isRegeneratingAnalysis}
+                      className="w-full text-xs bg-blue-500/20 text-blue-400 px-3 py-2 rounded-lg hover:bg-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw size={12} className={isRegeneratingAnalysis ? 'animate-spin' : ''} />
+                      {isRegeneratingAnalysis ? 'Regenerating...' : 'Regenerate Analysis'}
                     </button>
                   </div>
                 </div>
@@ -439,34 +524,108 @@ const IdeationPage: React.FC = () => {
             />
           </div>
 
-          {/* Social Media Post Columns */}
-          <div className="grid lg:grid-cols-3 gap-8 mb-8">
-            {socialMediaColumns.map(column => (
-              <div key={column.id} className="vvl-card">
-                <div className="p-6 border-b border-white/20">
-                  <div className="flex items-center gap-3 mb-2">
-                    {column.id === 'text-only' && <Hash className="text-blue-400" size={20} />}
-                    {column.id === 'text-image' && <Image className="text-green-400" size={20} />}
-                    {column.id === 'text-video' && <Video className="text-purple-400" size={20} />}
-                    <h3 className="font-semibold vvl-text-primary">{column.title}</h3>
-                  </div>
-                  <p className="text-sm vvl-text-secondary">{column.description}</p>
-                  <button
-                    onClick={() => generateColumnPosts(column.id)}
-                    disabled={column.isGenerating}
-                    className="mt-4 vvl-button-secondary text-sm flex items-center gap-2 w-full justify-center disabled:opacity-50"
-                  >
-                    <RefreshCw size={14} className={column.isGenerating ? 'animate-spin' : ''} />
-                    {column.isGenerating ? 'Generating...' : 'Regenerate'}
-                  </button>
-                </div>
+          {/* Suggested Marketing Post Ideas - Main Section */}
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold vvl-text-primary mb-4 flex items-center justify-center gap-3">
+                <Sparkles className="text-blue-400" size={32} />
+                Suggested Marketing Post Ideas
+              </h2>
+              <p className="text-lg vvl-text-secondary">
+                AI-generated social media content tailored to your campaign objectives
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              {socialMediaColumns.map(column => {
+                const isBasic = column.id === 'text-only';
+                const isEnhanced = column.id === 'text-image';
+                const isPremium = column.id === 'text-video';
                 
-                <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                return (
+                  <div 
+                    key={column.id} 
+                    className={`vvl-card relative overflow-hidden ${
+                      isBasic ? 'ring-2 ring-blue-400/30 shadow-lg shadow-blue-400/20' :
+                      isEnhanced ? 'ring-2 ring-green-400/30 shadow-lg shadow-green-400/20' :
+                      'ring-2 ring-purple-400/30 shadow-lg shadow-purple-400/20'
+                    }`}
+                  >
+                    {/* Glow Effect */}
+                    <div className={`absolute inset-0 opacity-20 ${
+                      isBasic ? 'bg-gradient-to-br from-blue-400/20 to-cyan-400/20' :
+                      isEnhanced ? 'bg-gradient-to-br from-green-400/20 to-emerald-400/20' :
+                      'bg-gradient-to-br from-purple-400/20 to-orange-400/20'
+                    }`}></div>
+                    
+                    {/* Tier Badge */}
+                    <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold ${
+                      isBasic ? 'bg-blue-500/30 text-blue-300 border border-blue-400/50' :
+                      isEnhanced ? 'bg-green-500/30 text-green-300 border border-green-400/50' :
+                      'bg-gradient-to-r from-purple-500/30 to-orange-500/30 text-orange-300 border border-purple-400/50'
+                    }`}>
+                      {isBasic ? 'BASIC' : isEnhanced ? 'ENHANCED' : 'PREMIUM'}
+                    </div>
+
+                    <div className="relative z-10 p-6 border-b border-white/20">
+                      <div className="flex items-center gap-3 mb-2">
+                        {column.id === 'text-only' && <Hash className="text-blue-400" size={24} />}
+                        {column.id === 'text-image' && <Image className="text-green-400" size={24} />}
+                        {column.id === 'text-video' && <Video className="text-purple-400" size={24} />}
+                        <h3 className="text-lg font-bold vvl-text-primary">{column.title}</h3>
+                      </div>
+                      <p className="text-sm vvl-text-secondary mb-4">{column.description}</p>
+                      
+                      {/* Generate Button */}
+                      {isBasic ? (
+                        <button
+                          onClick={() => generateColumnPosts(column.id)}
+                          disabled={column.isGenerating}
+                          className="w-full vvl-button-secondary text-sm flex items-center gap-2 justify-center disabled:opacity-50"
+                        >
+                          <RefreshCw size={14} className={column.isGenerating ? 'animate-spin' : ''} />
+                          {column.isGenerating ? 'Generating...' : 'Regenerate'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => generateColumnPosts(column.id)}
+                          disabled={column.isGenerating}
+                          className={`w-full text-sm flex items-center gap-2 justify-center disabled:opacity-50 transition-all duration-300 ${
+                            column.posts.length === 0 && !column.isGenerating
+                              ? `animate-pulse ${
+                                  isEnhanced 
+                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-green-500/30' 
+                                    : 'bg-gradient-to-r from-purple-500 to-orange-500 hover:from-purple-400 hover:to-orange-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-purple-500/30'
+                                }`
+                              : 'vvl-button-secondary'
+                          }`}
+                        >
+                          {column.isGenerating ? (
+                            <>
+                              <RefreshCw size={14} className="animate-spin" />
+                              Generating...
+                            </>
+                          ) : column.posts.length === 0 ? (
+                            <>
+                              <Wand2 size={16} />
+                              Generate {isEnhanced ? 'Enhanced' : 'Premium'} Content
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={14} />
+                              Regenerate
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="relative z-10 p-4 space-y-4 min-h-[600px] overflow-y-auto">
                   {column.posts.map((post: any) => (
                     <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-grow">
-                          <p className="text-sm vvl-text-secondary mb-3 line-clamp-3">{post.content.text}</p>
+                          <p className="text-sm vvl-text-secondary mb-3 leading-relaxed">{post.content.text}</p>
                           
                           {post.content.imageUrl && (
                             <img 
@@ -528,9 +687,11 @@ const IdeationPage: React.FC = () => {
                       <p className="text-xs mt-1">Click "Regenerate" to create content</p>
                     </div>
                   )}
-                </div>
-              </div>
-            ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Action Bar */}
@@ -549,7 +710,21 @@ const IdeationPage: React.FC = () => {
               
               <div className="flex items-center gap-3">
                 <button
-                  onClick={generateAllPosts}
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      await Promise.all([
+                        generateColumnPosts('text-only'),
+                        generateColumnPosts('text-image'),
+                        generateColumnPosts('text-video')
+                      ]);
+                      toast.success('All posts regenerated successfully!');
+                    } catch (error) {
+                      toast.error('Failed to regenerate posts');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
                   disabled={isLoading}
                   className="vvl-button-secondary flex items-center gap-2"
                 >

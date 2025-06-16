@@ -3,7 +3,7 @@
 **Author: JP + 2025-06-15**
 **Last Updated**: 2025-06-15
 
-This document summarizes the current state and target architecture of the Video Venture Launch platform. It reconciles the code with the solution intent of enabling marketers to create campaigns, generate social posts, and produce video content via Gemini/Veo APIs.
+This document summarizes the current state and target architecture of the AI Marketing Campaign Post Generator platform. It reconciles the code with the solution intent of enabling marketers to create campaigns, generate social posts, and produce video content via Gemini/Veo APIs.
 
 > **📋 Note**: For comprehensive solution intent, data flow patterns, and best practices, see [`SOLUTION-INTENT.md`](./SOLUTION-INTENT.md)
 

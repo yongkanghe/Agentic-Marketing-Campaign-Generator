@@ -4,7 +4,7 @@ DESCRIPTION/PURPOSE: Pytest configuration and fixtures for API testing
 Author: JP + 2025-06-15
 
 This module provides shared fixtures and configuration for testing the
-Video Venture Launch backend API.
+AI Marketing Campaign Post Generator backend API.
 """
 
 import pytest

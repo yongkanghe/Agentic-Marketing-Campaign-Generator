@@ -1,5 +1,5 @@
 /**
- * About Page - Video Venture Launch
+ * About Page - AI Marketing Campaign Post Generator
  * 
  * Author: JP + 2025-06-15
  * 
@@ -250,7 +250,7 @@ const AboutPage: React.FC = () => {
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold vvl-text-primary">About Video Venture Launch</h1>
+                <h1 className="text-xl font-bold vvl-text-primary">About AI Marketing Campaign Post Generator</h1>
                 <p className="text-xs vvl-text-secondary">Solution Architecture & Release Information</p>
               </div>
             </div>
@@ -273,7 +273,7 @@ const AboutPage: React.FC = () => {
               The Modern AI Marketing Platform
             </h1>
             <p className="text-xl vvl-text-secondary mb-6 leading-relaxed">
-              Video Venture Launch is an agentic AI-powered marketing campaign generator that transforms 
+              AI Marketing Campaign Post Generator is an agentic AI-powered marketing campaign generator that transforms 
               your marketing workflow. Built with Google's ADK framework and Gemini AI, we reduce 
               campaign creation time from days to minutes.
             </p>
@@ -585,6 +585,115 @@ const AboutPage: React.FC = () => {
                 <h4 className="font-semibold text-red-300 mb-2">❌ Critical Gaps (2 components)</h4>
                 <p className="text-sm vvl-text-secondary">Data persistence and production deployment needed</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Creator & Hackathon Context */}
+        <section className="mb-16">
+          <div className="vvl-card p-8 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border-purple-500/20">
+            <h2 className="text-3xl font-bold vvl-text-primary mb-8 flex items-center gap-3">
+              <Users className="w-8 h-8 text-purple-400" />
+              Creator & Hackathon Context
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Creator Profile */}
+              <div className="bg-white/5 p-6 rounded-lg border border-purple-500/20">
+                <h3 className="text-xl font-semibold vvl-text-primary mb-4 flex items-center gap-2">
+                  <Brain className="w-6 h-6 text-purple-400" />
+                  Jaroslav Pantsjoha
+                </h3>
+                <div className="space-y-4">
+                  <p className="vvl-text-secondary">
+                    <strong className="text-purple-300">ML Certified Google Cloud Developer Expert</strong> with 2 decades 
+                    of experience in technology, specializing in ML and AI rapid accelerators since the early days of the GenAI era.
+                  </p>
+                  
+                  <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20">
+                    <h4 className="font-semibold text-purple-300 mb-2">Expertise & Vision</h4>
+                    <ul className="space-y-2 text-sm vvl-text-secondary">
+                      <li>• Google Cloud Developer Expert (GDE) in Machine Learning</li>
+                      <li>• 20+ years in technology consulting and architecture</li>
+                      <li>• Early adopter of Generative AI and Agentic systems</li>
+                      <li>• Advocate for AI democratization and business transformation</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <a 
+                      href="https://www.linkedin.com/pulse/embracing-generative-ai-technology-consultants-age-jaroslav-pantsjoha"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-purple-300 hover:text-purple-200 transition-colors text-sm"
+                    >
+                      <Globe className="w-4 h-4" />
+                      Read: "Embracing Generative AI: A Technology Consultant's Perspective"
+                    </a>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Hackathon Context */}
+              <div className="bg-white/5 p-6 rounded-lg border border-indigo-500/20">
+                <h3 className="text-xl font-semibold vvl-text-primary mb-4 flex items-center gap-2">
+                  <Rocket className="w-6 h-6 text-indigo-400" />
+                  Google ADK Hackathon Entry
+                </h3>
+                <div className="space-y-4">
+                  <p className="vvl-text-secondary">
+                    This <strong className="text-indigo-300">Agentic AI Marketing Solution</strong> was envisioned and created 
+                    as part of the Agent Development Kit Hackathon with Google Cloud.
+                  </p>
+                  
+                  <div className="bg-indigo-500/10 p-4 rounded-lg border border-indigo-500/20">
+                    <h4 className="font-semibold text-indigo-300 mb-2">Hackathon Details</h4>
+                    <ul className="space-y-2 text-sm vvl-text-secondary">
+                      <li>• <strong>Contest:</strong> Agent Development Kit Hackathon with Google Cloud</li>
+                      <li>• <strong>Category:</strong> Content Creation and Generation</li>
+                      <li>• <strong>Region:</strong> North America</li>
+                      <li>• <strong>Prize Pool:</strong> $50,000+ in cash and Google Cloud credits</li>
+                      <li>• <strong>Deadline:</strong> June 23, 2025 @ 5:00 PM PDT</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 p-4 rounded-lg border border-blue-500/20">
+                    <h4 className="font-semibold text-blue-300 mb-2">Innovation Focus</h4>
+                    <p className="text-sm vvl-text-secondary">
+                      Demonstrating the power of <strong className="text-green-300">Google's ADK Framework</strong> for 
+                      real-world business challenges through advanced multi-agent collaboration and sequential workflows.
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <a 
+                      href="https://devpost.com/submit-to/24728-agent-development-kit-hackathon-with-google-cloud"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors text-sm"
+                    >
+                      <Globe className="w-4 h-4" />
+                      View Hackathon Details on Devpost
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Vision Statement */}
+            <div className="mt-8 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 p-6 rounded-lg border border-purple-500/20">
+              <h3 className="text-lg font-semibold vvl-text-primary mb-3 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                Vision Statement
+              </h3>
+              <blockquote className="italic vvl-text-secondary text-center">
+                "The future of marketing is agentic, intelligent, and accessible to everyone. This project demonstrates 
+                how specialized AI agents can collaborate to solve complex creative workflows, democratizing professional 
+                marketing for technical teams and bootstrapped projects worldwide."
+              </blockquote>
+              <p className="text-center mt-4 text-sm text-purple-300">
+                — Jaroslav Pantsjoha, Creator of AI Marketing Campaign Post Generator
+              </p>
             </div>
           </div>
         </section>

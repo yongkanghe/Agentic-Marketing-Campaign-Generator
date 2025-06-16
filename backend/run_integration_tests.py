@@ -24,7 +24,7 @@ BACKEND_URL = "http://localhost:8000"
 TEST_TIMEOUT = 30
 
 class IntegrationTestRunner:
-    """Comprehensive integration test runner for Video Venture Launch."""
+    """Comprehensive integration test runner for AI Marketing Campaign Post Generator."""
     
     def __init__(self):
         self.results = []
@@ -54,7 +54,7 @@ class IntegrationTestRunner:
             
             if response.status_code == 200:
                 data = response.json()
-                if "Video Venture Launch API" in data.get("name", ""):
+                if "AI Marketing Campaign Post Generator API" in data.get("name", ""):
                     self.log_result("Backend Server", True, f"API responding correctly", duration)
                 else:
                     self.log_result("Backend Server", False, "API not properly configured", duration)
@@ -258,7 +258,7 @@ class IntegrationTestRunner:
     
     def run_all_tests(self):
         """Run all integration tests."""
-        print("🚀 Starting Video Venture Launch Integration Tests")
+        print("🚀 Starting AI Marketing Campaign Post Generator Integration Tests")
         print("=" * 60)
         print(f"Frontend URL: {FRONTEND_URL}")
         print(f"Backend URL: {BACKEND_URL}")

@@ -1,6 +1,6 @@
 """
 FILENAME: main.py
-DESCRIPTION/PURPOSE: FastAPI application entry point for Video Venture Launch backend
+DESCRIPTION/PURPOSE: FastAPI application entry point for AI Marketing Campaign Post Generator backend
 Author: JP + 2025-06-15
 
 This module provides the main FastAPI application with ADK agent integration,
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager for ADK agent initialization."""
     global marketing_agent
     
-    logger.info("Initializing Video Venture Launch backend...")
+    logger.info("Initializing AI Marketing Campaign Post Generator backend...")
     
     # Validate environment
     if not os.getenv("GEMINI_API_KEY"):
@@ -63,11 +63,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     yield
     
-    logger.info("Shutting down Video Venture Launch backend...")
+    logger.info("Shutting down AI Marketing Campaign Post Generator backend...")
 
 # Create FastAPI application
 app = FastAPI(
-    title="Video Venture Launch API",
+    title="AI Marketing Campaign Post Generator API",
     description="Agentic AI Marketing Campaign Manager - Backend API",
     version="1.0.0",
     docs_url="/api/docs",
@@ -105,7 +105,7 @@ app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"]
 async def root():
     """Root endpoint providing API information."""
     return {
-        "name": "Video Venture Launch API",
+        "name": "AI Marketing Campaign Post Generator API",
         "version": "1.0.0",
         "description": "Agentic AI Marketing Campaign Manager",
         "framework": "Google ADK",

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder contains Architecture Decision Records (ADRs) that document the significant architectural decisions made during the development of the Video Venture Launch platform. Each ADR captures the context, decision, and consequences of important technical choices.
+This folder contains Architecture Decision Records (ADRs) that document the significant architectural decisions made during the development of the AI Marketing Campaign Post Generator platform. Each ADR captures the context, decision, and consequences of important technical choices.
 
 ## ADR Format
 

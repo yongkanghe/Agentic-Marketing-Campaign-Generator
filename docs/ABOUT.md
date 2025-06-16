@@ -1,4 +1,4 @@
-# About Video Venture Launch 🚀
+# About AI Marketing Campaign Post Generator 🚀
 
 **Author: JP + 2025-06-16**
 **Version**: 1.0.0-alpha (80% Complete - MVP Ready)
@@ -6,7 +6,7 @@
 
 ## 🎯 Purpose & Vision
 
-Video Venture Launch is an **AI-powered marketing campaign generator** that transforms business ideas into professional marketing campaigns using Google's Advanced Development Kit (ADK) Framework and Gemini API.
+AI Marketing Campaign Post Generator is an **AI-powered marketing campaign generator** that transforms business ideas into professional marketing campaigns using Google's Advanced Development Kit (ADK) Framework and Gemini API.
 
 ### Core Mission
 Empower marketers, entrepreneurs, and businesses to create compelling social media campaigns through intelligent AI assistance, reducing campaign creation time from days to minutes while maintaining professional quality.

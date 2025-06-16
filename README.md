@@ -1,4 +1,4 @@
-# Video Venture Launch 🚀
+# AI Marketing Campaign Post Generator 🚀
 ### Agentic AI Marketing Campaign Manager
 
 **Author: JP + 2025-06-15**
@@ -16,7 +16,7 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 
 ## 🤖 About This Agentic AI Solution
 
-**Video Venture Launch** showcases a **production-ready Agentic AI architecture** using Google's Agent Development Kit (ADK). Unlike traditional AI applications that rely on single LLM calls, this system orchestrates **multiple specialized AI agents** that collaborate to solve complex marketing challenges.
+**AI Marketing Campaign Post Generator** showcases a **production-ready Agentic AI architecture** using Google's Agent Development Kit (ADK). Unlike traditional AI applications that rely on single LLM calls, this system orchestrates **multiple specialized AI agents** that collaborate to solve complex marketing challenges.
 
 ### 🎯 What Makes This Special
 
@@ -44,7 +44,7 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          VIDEO VENTURE LAUNCH - AGENTIC AI ARCHITECTURE         │
+│                          AI Marketing Campaign Post Generator - AGENTIC AI ARCHITECTURE         │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────┐

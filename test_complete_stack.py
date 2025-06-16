@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 FILENAME: test_complete_stack.py
-DESCRIPTION/PURPOSE: Comprehensive full-stack validation script for Video Venture Launch
+DESCRIPTION/PURPOSE: Comprehensive full-stack validation script for AI Marketing Campaign Post Generator
 Author: JP + 2025-06-16
 
-This script provides complete validation of the Video Venture Launch application:
+This script provides complete validation of the AI Marketing Campaign Post Generator application:
 - Environment validation
 - Database setup and testing
 - Backend API testing
@@ -517,7 +517,7 @@ class StackValidator:
     
     def run_validation(self) -> bool:
         """Run complete stack validation."""
-        self.log(f"{Colors.BOLD}{Colors.CYAN}🧪 Video Venture Launch - Complete Stack Validation{Colors.END}")
+        self.log(f"{Colors.BOLD}{Colors.CYAN}🧪 AI Marketing Campaign Post Generator - Complete Stack Validation{Colors.END}")
         self.log("=" * 60)
         self.log(f"⏰ Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
@@ -583,7 +583,7 @@ def main():
     """Main execution function."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Video Venture Launch - Complete Stack Validation")
+    parser = argparse.ArgumentParser(description="AI Marketing Campaign Post Generator - Complete Stack Validation")
     parser.add_argument('--setup', action='store_true', help='Automatically setup missing components')
     parser.add_argument('--verbose', action='store_true', help='Show detailed output')
     

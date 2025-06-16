@@ -29,7 +29,7 @@ MAIN_DATABASE_PATH = "data/video_venture_launch.db"
 TEST_RESULTS_FILE = "backend/comprehensive_test_results.json"
 
 class ComprehensiveTestRunner:
-    """Comprehensive test runner for Video Venture Launch."""
+    """Comprehensive test runner for AI Marketing Campaign Post Generator."""
     
     def __init__(self):
         self.results = []
@@ -542,7 +542,7 @@ class ComprehensiveTestRunner:
     
     def run_all_tests(self) -> bool:
         """Run all comprehensive tests."""
-        print("🚀 Starting Comprehensive Test Suite for Video Venture Launch")
+        print("🚀 Starting Comprehensive Test Suite for AI Marketing Campaign Post Generator")
         print(f"⏰ Start time: {self.start_time}")
         
         # Setup

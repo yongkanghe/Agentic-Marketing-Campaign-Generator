@@ -23,7 +23,7 @@ const DashboardPage: React.FC = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">VVL</span>
               </div>
-              <h1 className="text-xl font-bold vvl-text-primary">Video Venture Launch</h1>
+              <h1 className="text-xl font-bold vvl-text-primary">AI Marketing Campaign Post Generator</h1>
             </div>
             <nav className="flex items-center space-x-4">
               <Link to="/about" className="vvl-button-secondary text-sm">

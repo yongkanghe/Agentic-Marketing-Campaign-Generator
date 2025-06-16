@@ -1,4 +1,4 @@
-"""Test suite for Video Venture Launch Marketing Agent.
+"""Test suite for AI Marketing Campaign Post Generator Marketing Agent.
 
 Author: JP + 2024-03-13
 """

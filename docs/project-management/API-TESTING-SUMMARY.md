@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document summarizes the comprehensive API testing infrastructure implemented for the Video Venture Launch backend service. The testing framework provides regression testing capabilities to ensure API stability and reliability as the project evolves.
+This document summarizes the comprehensive API testing infrastructure implemented for the AI Marketing Campaign Post Generator backend service. The testing framework provides regression testing capabilities to ensure API stability and reliability as the project evolves.
 
 ---
 

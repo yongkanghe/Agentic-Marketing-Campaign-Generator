@@ -1,4 +1,4 @@
-# Video Venture Launch - Landing Page Video Generation Prompts
+# AI Marketing Campaign Post Generator - Landing Page Video Generation Prompts
 
 **FILENAME:** landing-page-video-prompts.md  
 **DESCRIPTION/PURPOSE:** LLM prompts for generating marketing videos showcasing the VVL agentic AI solution  
@@ -14,7 +14,7 @@
 ### **LLM Prompt for Video Generation:**
 
 ```
-Create a dynamic 30-second marketing video showcasing an AI-powered marketing campaign management platform called "Video Venture Launch" (VVL).
+Create a dynamic 30-second marketing video showcasing an AI-powered marketing campaign management platform called "AI Marketing Campaign Post Generator" (VVL).
 
 SCENE SETUP:
 - Modern, sleek office environment with glass walls and contemporary furniture
@@ -31,7 +31,7 @@ TECHNICAL DETAILS:
 - Camera movements: Smooth dolly shots, subtle zoom-ins, dynamic angles
 - Color palette: Professional blues (#1e293b, #334155), clean whites, modern grays
 - Screen content: Show actual VVL interface with glassmorphism cards, blue gradient backgrounds, and AI-generated marketing content
-- Text overlays: "AI-Powered Marketing Campaigns" (5s), "From URLs to Content in Minutes" (15s), "Video Venture Launch" (25s)
+- Text overlays: "AI-Powered Marketing Campaigns" (5s), "From URLs to Content in Minutes" (15s), "AI Marketing Campaign Post Generator" (25s)
 
 AUDIO SUGGESTIONS:
 - Upbeat, modern corporate music with subtle tech undertones
@@ -63,7 +63,7 @@ EMOTIONAL TONE:
 ### **LLM Prompt for Video Generation:**
 
 ```
-Create a compelling 45-second behind-the-scenes video demonstrating the Video Venture Launch (VVL) agentic AI marketing platform in real-world use.
+Create a compelling 45-second behind-the-scenes video demonstrating the AI Marketing Campaign Post Generator (VVL) agentic AI marketing platform in real-world use.
 
 SCENE SETUP:
 - Contemporary marketing agency office with multiple workstations
@@ -136,7 +136,7 @@ CALL-TO-ACTION ENDING:
 ### **LLM Prompt for Video Generation:**
 
 ```
-Create a premium 60-second product demonstration video for Video Venture Launch (VVL), combining live product demo with authentic user testimonials.
+Create a premium 60-second product demonstration video for AI Marketing Campaign Post Generator (VVL), combining live product demo with authentic user testimonials.
 
 SCENE COMPOSITION:
 - Split between high-end marketing agency office and clean product demo environment
