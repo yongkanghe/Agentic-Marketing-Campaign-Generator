@@ -89,7 +89,7 @@ class ImageGenerationAgent:
             image_response = self.client.models.generate_images(
                 model="imagen-3.0-generate-001",  # Using Imagen 3.0
                 prompt=prompt,
-                number_of_images=1,
+                # Note: Removed number_of_images parameter as it may not be supported
                 safety_filter_level="block_some",
                 person_generation="allow_adult"
             )
