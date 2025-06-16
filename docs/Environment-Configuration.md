@@ -4,125 +4,311 @@
 
 ## Overview
 
-The AI Marketing Campaign Post Generator uses intelligent environment-based API URL resolution to work seamlessly from local development to Google Cloud Platform production deployment.
+This document outlines the comprehensive environment configuration for the AI Marketing Campaign Post Generator, including API keys, model selection, cost controls, and deployment settings.
 
-## How It Works
+## Environment Variables
 
-The frontend automatically detects and configures the backend API URL based on the environment:
+### Google AI Configuration
 
-### 1. Development Environment
-- **No configuration needed** 
-- Auto-detects `http://localhost:8000` for local development
-- Supports network development (e.g., `http://192.168.1.100:8000` for mobile testing)
-
-### 2. Production Environment
-- Uses `VITE_API_BASE_URL` environment variable
-- Fallback to `/api` for same-origin deployments
-
-## Environment Variable Configuration
-
-### Local Development (MVP)
+#### Gemini API Configuration
 ```bash
-# No configuration needed - auto-detects backend
-# Frontend: http://localhost:8080
-# Backend:  http://localhost:8000 (auto-detected)
+# Required: Your Google AI API key
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Model Selection: Choose your preferred Gemini model
+GEMINI_MODEL=gemini-2.5-flash-preview-05-20
+# Alternatives: gemini-1.5-pro, gemini-1.5-flash
 ```
 
-### Staging Environment
+#### Image Generation Configuration
 ```bash
-VITE_API_BASE_URL=https://staging-api.run.app
+# Image Model: Configure which Imagen model to use
+IMAGE_MODEL=imagen-3.0-generate-001
+# Alternatives: imagen-2.0-generate, imagen-3.0-fast
+
+# Video Model: Configure which Veo model to use
+VIDEO_MODEL=veo-2
+# Alternatives: veo-1, video-generation-experimental
 ```
 
-### Production Environment (GCP Cloud Run)
+### Content Generation Limits & Cost Control
+
+#### Post Generation Limits
 ```bash
-VITE_API_BASE_URL=https://ai-marketing-api-[hash]-uc.a.run.app
+# Text + URL Posts: Higher limit (text-only generation)
+MAX_TEXT_URL_POSTS=10
+
+# Text + Image Posts: Limited for cost control
+MAX_TEXT_IMAGE_POSTS=4
+
+# Text + Video Posts: Limited for cost control  
+MAX_TEXT_VIDEO_POSTS=4
 ```
 
-### Same-Origin Production Deployment
+**Cost Management Strategy:**
+- **Text + URL**: Higher limits (10 posts) as these only use Gemini text generation
+- **Text + Image**: Limited to 4 posts to control Imagen API costs
+- **Text + Video**: Limited to 4 posts to control Veo API costs
+
+#### API Rate Limiting
 ```bash
-VITE_API_BASE_URL=/api
+# Daily Usage Limits
+DAILY_GEMINI_REQUESTS=1000
+DAILY_IMAGE_GENERATIONS=100
+DAILY_VIDEO_GENERATIONS=50
+
+# Rate Limiting (requests per minute)
+GEMINI_RATE_LIMIT=100
+IMAGE_GENERATION_RATE_LIMIT=20
+VIDEO_GENERATION_RATE_LIMIT=10
 ```
 
-## Deployment Scenarios
+### API Configuration
 
-### 1. Google Cloud Platform (Recommended)
-
-**Cloud Run Deployment:**
+#### Backend API Settings
 ```bash
-# Frontend Cloud Run
-VITE_API_BASE_URL=https://your-backend-service-[hash]-uc.a.run.app
+# Backend API Configuration
+API_BASE_URL=http://localhost:8000
+API_TIMEOUT=15000
 
-# Same Cloud Run (frontend + backend)
-VITE_API_BASE_URL=/api
+# Frontend Configuration  
+VITE_API_BASE_URL=http://localhost:8000
+VITE_APP_NAME=Agentic-Marketing-Campaign-Generator
+VITE_APP_VERSION=1.0.0
 ```
 
-### 2. Alternative Hosting
+### Database Configuration
 
-**Heroku:**
+#### SQLite (Development)
 ```bash
-VITE_API_BASE_URL=https://your-app-name.herokuapp.com
+# Local SQLite Database
+DATABASE_URL=sqlite:///./data/campaigns.db
+DATABASE_BACKUP_INTERVAL=3600
 ```
 
-**Custom Domain:**
+#### PostgreSQL (Production)
 ```bash
-VITE_API_BASE_URL=https://api.yourdomain.com
+# Production Database (Google Cloud SQL)
+# DATABASE_URL=postgresql://user:password@host:port/database
 ```
 
-## Benefits of This Approach
+### Development Configuration
 
-1. **Zero Configuration Development**: Developers can start immediately with `make dev`
-2. **Environment Flexibility**: Same codebase works across all environments
-3. **Production Ready**: Proper environment variable usage for cloud deployment
-4. **Network Development**: Automatic support for mobile device testing
-5. **Graceful Fallbacks**: Intelligent defaults for different scenarios
+#### Debug & Logging
+```bash
+DEBUG=true
+LOG_LEVEL=INFO
 
-## Error Handling
-
-- **No Mock Fallbacks**: Real API failures show proper error messages
-- **Connection Issues**: Clear error messages guide users to troubleshoot
-- **Environment Misconfig**: Console logging helps debug configuration issues
-
-## Testing Configuration
-
-Check current configuration in browser console (development mode):
-```
-🔗 API Base URL: http://localhost:8000
-🌍 Environment: development
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:8081
 ```
 
-## Makefile Integration
+#### Security
+```bash
+SECRET_KEY=your_secret_key_here
+JWT_SECRET=your_jwt_secret_here
+```
 
-The `make dev` command is optimized for this configuration:
-- Starts backend on port 8000
-- Starts frontend on port 8080 (or 8081 if occupied)
-- Automatic environment detection and connection
+### Production Configuration (Google Cloud)
 
-## Best Practices
+#### Google Cloud Platform Settings
+```bash
+# Google Cloud Project Configuration
+# GOOGLE_CLOUD_PROJECT=your_project_id
+# GOOGLE_CLOUD_REGION=us-central1
+# CLOUD_RUN_SERVICE_NAME=ai-marketing-generator
 
-1. **Development**: Use `make dev` for consistent local environment
-2. **Staging**: Set `VITE_API_BASE_URL` to staging backend
-3. **Production**: Use Cloud Run with proper environment variables
-4. **Monitoring**: Check browser console for API configuration confirmation
-5. **Testing**: Use network IP for mobile device testing
+# Production API URLs
+# API_BASE_URL=https://your-domain.run.app
+# VITE_API_BASE_URL=https://your-domain.run.app
+```
+
+### Monitoring & Analytics
+
+#### Optional Services
+```bash
+# Google Analytics
+# VITE_GA_TRACKING_ID=your_ga_tracking_id
+
+# Error Tracking
+# SENTRY_DSN=your_sentry_dsn
+```
+
+## Configuration Files
+
+### Create .env File
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your values
+nano .env
+```
+
+### Environment Validation
+The application validates required environment variables on startup:
+
+1. **GEMINI_API_KEY**: Required for AI functionality
+2. **Model configurations**: Use defaults if not specified
+3. **Cost limits**: Use defaults if not specified
+
+## Model Selection Guide
+
+### Gemini Models
+- **gemini-2.5-flash-preview-05-20**: Latest preview with AFC support
+- **gemini-1.5-pro**: Stable, high-quality responses
+- **gemini-1.5-flash**: Faster, cost-effective option
+
+### Imagen Models
+- **imagen-3.0-generate-001**: Latest, highest quality (recommended)
+- **imagen-2.0-generate**: Stable, lower cost option
+- **imagen-3.0-fast**: Faster generation, slightly lower quality
+
+### Veo Models
+- **veo-2**: Latest video generation model (recommended)
+- **veo-1**: Previous generation, stable
+- **video-generation-experimental**: Experimental features
+
+## Cost Management Best Practices
+
+### 1. Monitor Usage
+```bash
+# Set up daily monitoring
+DAILY_GEMINI_REQUESTS=1000
+DAILY_IMAGE_GENERATIONS=100
+DAILY_VIDEO_GENERATIONS=50
+```
+
+### 2. Adjust Limits Based on Budget
+```bash
+# Conservative settings
+MAX_TEXT_IMAGE_POSTS=2
+MAX_TEXT_VIDEO_POSTS=2
+
+# Standard settings (recommended)
+MAX_TEXT_IMAGE_POSTS=4
+MAX_TEXT_VIDEO_POSTS=4
+
+# Higher volume settings
+MAX_TEXT_IMAGE_POSTS=6
+MAX_TEXT_VIDEO_POSTS=6
+```
+
+### 3. Model Cost Comparison
+- **Text Generation**: Lowest cost (Gemini only)
+- **Image Generation**: Medium cost (Gemini + Imagen)
+- **Video Generation**: Highest cost (Gemini + Veo)
+
+## Environment-Specific Configurations
+
+### Local Development
+```bash
+# .env.local
+DEBUG=true
+LOG_LEVEL=DEBUG
+API_BASE_URL=http://localhost:8000
+```
+
+### Staging
+```bash
+# .env.staging
+DEBUG=false
+LOG_LEVEL=INFO
+API_BASE_URL=https://staging-api.your-domain.com
+```
+
+### Production
+```bash
+# .env.production
+DEBUG=false
+LOG_LEVEL=WARNING
+API_BASE_URL=https://api.your-domain.com
+```
 
 ## Troubleshooting
 
-### API Connection Issues
-1. Check browser console for API base URL
-2. Verify backend is running on expected port
-3. Check CORS configuration in backend
-4. Validate environment variable setting
+### Common Issues
 
-### Development Setup
+1. **Missing GEMINI_API_KEY**
+   - Application runs in mock mode
+   - Add valid API key to enable AI features
+
+2. **Model Not Found Errors**
+   - Check model names against Google AI documentation
+   - Ensure API key has access to specified models
+
+3. **Rate Limiting**
+   - Adjust rate limit settings
+   - Implement exponential backoff
+
+4. **Cost Overruns**
+   - Reduce post generation limits
+   - Monitor daily usage limits
+
+### Environment Validation Script
 ```bash
-# Start complete development environment
-make dev
+# Check environment configuration
+make doctor
 
-# Check health
-curl http://localhost:8000/health
-
-# Check frontend
-curl http://localhost:8080
+# Validate API connectivity
+make health-check
 ```
 
-This configuration ensures seamless transition from MVP development to production GCP deployment while maintaining best practices for environment management. 
+## Security Considerations
+
+### 1. API Key Management
+- Never commit .env files to version control
+- Use environment-specific API keys
+- Rotate keys regularly
+
+### 2. Production Security
+- Use secrets management (Google Secret Manager)
+- Enable API key restrictions
+- Monitor API usage for anomalies
+
+### 3. Access Control
+- Implement proper CORS settings
+- Use HTTPS in production
+- Validate all user inputs
+
+## Deployment Guide
+
+### Local Deployment
+```bash
+# Install dependencies
+make install
+
+# Setup environment
+cp .env.example .env
+# Edit .env with your values
+
+# Start application
+make launch
+```
+
+### Google Cloud Deployment
+```bash
+# Set production environment variables
+gcloud run services update ai-marketing-generator \
+  --set-env-vars="GEMINI_API_KEY=$GEMINI_API_KEY" \
+  --set-env-vars="IMAGE_MODEL=imagen-3.0-generate-001" \
+  --set-env-vars="VIDEO_MODEL=veo-2"
+```
+
+## Configuration Updates
+
+When updating environment configuration:
+
+1. **Update .env.example** with new variables
+2. **Update this documentation**
+3. **Update application validation logic**
+4. **Test in all environments**
+5. **Update deployment scripts**
+
+## Support
+
+For configuration issues:
+1. Check this documentation
+2. Run `make doctor` for diagnostics
+3. Review application logs
+4. Consult Google AI API documentation 

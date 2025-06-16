@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -196,4 +195,56 @@
   .vvl-header-blur {
     @apply bg-slate-900/80 backdrop-blur-md border-b border-white/10;
   }
+}
+
+/* Custom animation delays for loading indicators */
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animation-delay-600 {
+  animation-delay: 600ms;
+}
+
+.animation-delay-900 {
+  animation-delay: 900ms;
+}
+
+/* Enhanced pulse animation for AI processing */
+@keyframes ai-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.animate-ai-pulse {
+  animation: ai-pulse 1.5s ease-in-out infinite;
+}
+
+/* Progress bar animation */
+@keyframes progress {
+  0% {
+    width: 0%;
+  }
+  25% {
+    width: 25%;
+  }
+  50% {
+    width: 50%;
+  }
+  75% {
+    width: 75%;
+  }
+  100% {
+    width: 90%;
+  }
+}
+
+.animate-progress {
+  animation: progress 8s ease-in-out;
 }

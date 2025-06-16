@@ -57,7 +57,9 @@ class SocialMediaPost(BaseModel):
     content: str
     url: Optional[str] = None
     image_prompt: Optional[str] = None
+    image_url: Optional[str] = None
     video_prompt: Optional[str] = None
+    video_url: Optional[str] = None
     hashtags: List[str] = Field(default_factory=list)
     platform_optimized: Dict[str, str] = Field(default_factory=dict)
     engagement_score: Optional[float] = None
@@ -102,7 +104,7 @@ class ContentGenerationRequest(BaseModel):
 class SocialPostRegenerationRequest(BaseModel):
     """Social post regeneration request."""
     post_type: PostType
-    regenerate_count: int = Field(default=3, ge=1, le=5)
+    regenerate_count: int = Field(default=3, ge=1, le=10)
     business_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
     creativity_level: Optional[int] = Field(default=7, ge=1, le=10)
     current_posts: Optional[List[SocialMediaPost]] = Field(default_factory=list)

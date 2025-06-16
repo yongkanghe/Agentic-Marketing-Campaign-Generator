@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
 import { MaterialVideoCard } from '@/components/MaterialVideoCard';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoVentureLaunchAPI from '../lib/api';
 
@@ -123,11 +123,12 @@ const IdeationPage: React.FC = () => {
         type: columnId as 'text-only' | 'text-with-image' | 'text-with-video',
         platform: 'linkedin' as const,
         content: {
-          text: post.content || `Generated ${postType.replace('_', ' + ')} content for ${currentCampaign?.objective}`,
+          text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
           hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-          imageUrl: columnId === 'text-image' ? post.image_url : undefined,
-          videoUrl: columnId === 'text-video' ? post.video_url : undefined,
-          productUrl: columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined
+          imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
+          videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
+          productUrl: (columnId === 'text-only' && post.url) ? post.url : 
+                     (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
         },
         generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
         selected: false,
@@ -416,6 +417,54 @@ const IdeationPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Business Logic & Cost Control Information */}
+          <div className="vvl-card p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Info className="text-blue-400" size={24} />
+              <h3 className="text-lg font-semibold vvl-text-primary">Content Generation Limits & Cost Control</h3>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Hash className="text-blue-400" size={16} />
+                  <span className="text-sm font-medium text-blue-400">Text + URL Posts</span>
+                </div>
+                <p className="text-lg font-bold vvl-text-primary">Up to 10 posts</p>
+                <p className="text-xs vvl-text-secondary">Optimized for link sharing and traffic generation</p>
+              </div>
+              
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Image className="text-green-400" size={16} />
+                  <span className="text-sm font-medium text-green-400">Text + Image Posts</span>
+                </div>
+                <p className="text-lg font-bold vvl-text-primary">Up to 4 posts</p>
+                <p className="text-xs vvl-text-secondary">Limited to control Imagen API costs</p>
+              </div>
+              
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Video className="text-purple-400" size={16} />
+                  <span className="text-sm font-medium text-purple-400">Text + Video Posts</span>
+                </div>
+                <p className="text-lg font-bold vvl-text-primary">Up to 4 posts</p>
+                <p className="text-xs vvl-text-secondary">Limited to control Veo API costs</p>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="text-yellow-400 mt-0.5" size={16} />
+                <div className="text-xs vvl-text-secondary">
+                  <strong className="text-yellow-400">Cost Management:</strong> Generation limits are enforced to prevent 
+                  exceeding model context limits and manage API costs. Text + URL posts have higher limits as they use only 
+                  text generation, while visual content is limited due to compute-intensive image/video generation.
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Theme and Tag Selection */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="vvl-card p-6">
@@ -480,161 +529,201 @@ const IdeationPage: React.FC = () => {
               </p>
             </div>
 
+            {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-8">
-              {socialMediaColumns.map(column => {
-                const isBasic = column.id === 'text-only';
-                const isEnhanced = column.id === 'text-image';
-                const isPremium = column.id === 'text-video';
-                
-                return (
-                  <div 
-                    key={column.id} 
-                    className={`vvl-card relative overflow-hidden ${
-                      isBasic ? 'ring-2 ring-blue-400/30 shadow-lg shadow-blue-400/20' :
-                      isEnhanced ? 'ring-2 ring-green-400/30 shadow-lg shadow-green-400/20' :
-                      'ring-2 ring-purple-400/30 shadow-lg shadow-purple-400/20'
-                    }`}
-                  >
-                    {/* Glow Effect */}
-                    <div className={`absolute inset-0 opacity-20 ${
-                      isBasic ? 'bg-gradient-to-br from-blue-400/20 to-cyan-400/20' :
-                      isEnhanced ? 'bg-gradient-to-br from-green-400/20 to-emerald-400/20' :
-                      'bg-gradient-to-br from-purple-400/20 to-orange-400/20'
-                    }`}></div>
-                    
-                    {/* Tier Badge */}
-                    <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold ${
-                      isBasic ? 'bg-blue-500/30 text-blue-300 border border-blue-400/50' :
-                      isEnhanced ? 'bg-green-500/30 text-green-300 border border-green-400/50' :
-                      'bg-gradient-to-r from-purple-500/30 to-orange-500/30 text-orange-300 border border-purple-400/50'
-                    }`}>
-                      {isBasic ? 'BASIC' : isEnhanced ? 'ENHANCED' : 'PREMIUM'}
-                    </div>
-
-                    <div className="relative z-10 p-6 border-b border-white/20">
-                      <div className="flex items-center gap-3 mb-2">
-                        {column.id === 'text-only' && <Hash className="text-blue-400" size={24} />}
-                        {column.id === 'text-image' && <Image className="text-green-400" size={24} />}
-                        {column.id === 'text-video' && <Video className="text-purple-400" size={24} />}
-                        <h3 className="text-lg font-bold vvl-text-primary">{column.title}</h3>
+              {socialMediaColumns.map((column) => (
+                <div key={column.id} className="vvl-card p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {column.id === 'text-only' && <Hash className="text-blue-400" size={20} />}
+                        {column.id === 'text-image' && <Image className="text-green-400" size={20} />}
+                        {column.id === 'text-video' && <Video className="text-purple-400" size={20} />}
+                        <h3 className="text-lg font-semibold vvl-text-primary">{column.title}</h3>
                       </div>
-                      <p className="text-sm vvl-text-secondary mb-4">{column.description}</p>
-                      
-                      {/* Generate Button */}
-                      {isBasic ? (
-                        <button
-                          onClick={() => generateColumnPosts(column.id)}
-                          disabled={column.isGenerating}
-                          className="w-full vvl-button-secondary text-sm flex items-center gap-2 justify-center disabled:opacity-50"
-                        >
-                          <RefreshCw size={14} className={column.isGenerating ? 'animate-spin' : ''} />
-                          {column.isGenerating ? 'Generating...' : 'Regenerate'}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => generateColumnPosts(column.id)}
-                          disabled={column.isGenerating}
-                          className={`w-full text-sm flex items-center gap-2 justify-center disabled:opacity-50 transition-all duration-300 ${
-                            column.posts.length === 0 && !column.isGenerating
-                              ? `animate-pulse ${
-                                  isEnhanced 
-                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-green-500/30' 
-                                    : 'bg-gradient-to-r from-purple-500 to-orange-500 hover:from-purple-400 hover:to-orange-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-purple-500/30'
-                                }`
-                              : 'vvl-button-secondary'
-                          }`}
-                        >
-                          {column.isGenerating ? (
-                            <>
-                              <RefreshCw size={14} className="animate-spin" />
-                              Generating...
-                            </>
-                          ) : column.posts.length === 0 ? (
-                            <>
-                              <Wand2 size={16} />
-                              Generate {isEnhanced ? 'Enhanced' : 'Premium'} Content
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw size={14} />
-                              Regenerate
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="relative z-10 p-4 space-y-4 min-h-[600px] overflow-y-auto">
-                  {column.posts.map((post: any) => (
-                    <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-grow">
-                          <p className="text-sm vvl-text-secondary mb-3 leading-relaxed">{post.content.text}</p>
-                          
-                          {post.content.imageUrl && (
-                            <img 
-                              src={post.content.imageUrl} 
-                              alt="Generated content" 
-                              className="w-full h-32 object-cover rounded mb-3"
-                            />
-                          )}
-                          
-                          {post.content.hashtags && (
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {post.content.hashtags.map((tag: string, idx: number) => (
-                                <span key={idx} className="text-xs text-blue-400">#{tag.replace('#', '')}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <button
-                          onClick={() => togglePostSelection(post.id)}
-                          className={`ml-3 p-2 rounded-lg transition-all duration-200 ${
-                            selectedPosts.includes(post.id)
-                              ? 'bg-blue-500/30 text-blue-400'
-                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                          }`}
-                        >
-                          <Heart size={16} className={selectedPosts.includes(post.id) ? 'fill-current' : ''} />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs vvl-text-secondary">
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1">
-                            <Heart size={12} />
-                            {Math.floor(Math.random() * 100) + 10}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageCircle size={12} />
-                            {Math.floor(Math.random() * 20) + 2}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Share size={12} />
-                            {Math.floor(Math.random() * 10) + 1}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => regeneratePost(column.id, post.id)}
-                          className="text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          <RefreshCw size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {column.posts.length === 0 && !column.isGenerating && (
-                    <div className="text-center py-8 vvl-text-secondary">
-                      <p className="text-sm">No posts generated yet</p>
-                      <p className="text-xs mt-1">Click "Regenerate" to create content</p>
-                    </div>
-                  )}
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        column.id === 'text-only' ? 'bg-blue-500/20 text-blue-400' :
+                        column.id === 'text-image' ? 'bg-green-500/20 text-green-400' :
+                        'bg-purple-500/20 text-purple-400'
+                      }`}>
+                        {column.id === 'text-only' ? 'BASIC' : 
+                         column.id === 'text-image' ? 'ENHANCED' : 'PREMIUM'}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <p className="text-sm vvl-text-secondary mb-4">{column.description}</p>
+                  
+                  <button
+                    onClick={() => generateColumnPosts(column.id)}
+                    disabled={column.isGenerating}
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      column.isGenerating
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : column.id === 'text-only'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : column.id === 'text-image'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gradient-to-r from-purple-600 to-orange-500 hover:from-purple-700 hover:to-orange-600 text-white'
+                    }`}
+                  >
+                    {column.isGenerating ? (
+                      <>
+                        {/* AI Processing Animation */}
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
+                          </div>
+                          <span className="text-sm">AI Processing...</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw size={16} />
+                        {column.id === 'text-only' ? 'Regenerate' :
+                         column.id === 'text-image' ? 'Generate Enhanced Content' :
+                         'Generate Premium Content'}
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Loading State with AI Indicators */}
+                  {column.isGenerating && (
+                    <div className="mt-4 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-sm text-blue-400">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                          <span>Analyzing business context with Gemini AI...</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-green-400">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse animation-delay-300"></div>
+                          <span>Generating creative content variations...</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-purple-400">
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse animation-delay-600"></div>
+                          <span>Optimizing for platform engagement...</span>
+                        </div>
+                        {column.id !== 'text-only' && (
+                          <div className="flex items-center gap-3 text-sm text-orange-400">
+                            <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse animation-delay-900"></div>
+                            <span>Preparing visual content prompts...</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-700 rounded-full h-1">
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full animate-pulse w-3/4 transition-all duration-1000"></div>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2 text-center">Expected completion: ~5-10 seconds</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Posts Display */}
+                  <div className="mt-6 space-y-4">
+                    {column.posts.length === 0 && !column.isGenerating ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <div className="text-4xl mb-2">🎯</div>
+                        <p className="text-sm">No posts generated yet</p>
+                        <p className="text-xs text-gray-500 mt-1">Click "Regenerate" to create content</p>
+                      </div>
+                    ) : (
+                      column.posts.map((post, index) => (
+                        <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            {/* Post Content */}
+                            <p className="text-sm vvl-text-secondary mb-3 leading-relaxed whitespace-pre-line">{post.content.text}</p>
+                            
+                            {/* URL Display for Text + URL Posts */}
+                            {post.content.productUrl && (
+                              <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <div className="flex items-center gap-2 text-blue-400">
+                                  <ExternalLink size={14} />
+                                  <a 
+                                    href={post.content.productUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-sm hover:text-blue-300 transition-colors truncate"
+                                  >
+                                    {post.content.productUrl}
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Image Display for Text + Image Posts */}
+                            {post.content.imageUrl && (
+                              <div className="mb-3">
+                                <img 
+                                  src={post.content.imageUrl} 
+                                  alt="AI Generated Marketing Image" 
+                                  className="w-full h-40 object-cover rounded-lg border border-white/10"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = "https://picsum.photos/400/200?random=999&blur=1";
+                                  }}
+                                />
+                                <p className="text-xs text-gray-400 mt-1">AI-Generated Image</p>
+                              </div>
+                            )}
+                            
+                            {/* Video Display for Text + Video Posts */}
+                            {post.content.videoUrl && (
+                              <div className="mb-3">
+                                <div className="relative bg-purple-500/10 border border-purple-500/20 rounded-lg h-32 flex items-center justify-center">
+                                  <div className="text-center">
+                                    <Video className="text-purple-400 mx-auto mb-2" size={24} />
+                                    <p className="text-xs text-purple-400">AI-Generated Video</p>
+                                    <p className="text-xs text-gray-400 mt-1">Veo API Integration</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Hashtags */}
+                            {post.content.hashtags && post.content.hashtags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {post.content.hashtags.map((tag: string, idx: number) => (
+                                  <span 
+                                    key={idx} 
+                                    className="text-xs text-blue-400 bg-blue-400/10 px-2 py-1 rounded"
+                                  >
+                                    {tag.startsWith('#') ? tag : `#${tag}`}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Engagement Score */}
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  post.engagement_score >= 8 ? 'bg-green-400' :
+                                  post.engagement_score >= 7 ? 'bg-yellow-400' : 'bg-red-400'
+                                }`}></div>
+                                  Engagement Score: {post.engagement_score.toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => togglePostSelection(post.id)}
+                            className={`ml-3 p-2 rounded-lg transition-all duration-200 ${
+                              selectedPosts.includes(post.id)
+                                ? 'bg-blue-500/30 text-blue-400'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                            }`}
+                          >
+                            <Heart size={16} className={selectedPosts.includes(post.id) ? 'fill-current' : ''} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
