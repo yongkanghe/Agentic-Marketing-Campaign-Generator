@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
     {
       name: 'GitHub',
       icon: <Github className="w-5 h-5" />,
-      href: 'https://github.com/video-venture-launch',
+      href: 'https://github.com/Agentic-Marketing-Campaign-Generator',
       color: 'hover:text-gray-300'
     },
     {
@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
     {
       name: 'LinkedIn',
       icon: <Linkedin className="w-5 h-5" />,
-      href: 'https://linkedin.com/company/video-venture-launch',
+      href: 'https://linkedin.com/company/Agentic-Marketing-Campaign-Generator',
       color: 'hover:text-blue-500'
     },
     {

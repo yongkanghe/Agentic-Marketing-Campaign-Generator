@@ -37,7 +37,7 @@
 
 #### **A. Project URL (Hosted)**
 ```
-https://video-venture-launch.herokuapp.com
+https://Agentic-Marketing-Campaign-Generator.herokuapp.com
 ```
 *Note: Deploy to Heroku/Google Cloud before submission*
 
@@ -88,7 +88,7 @@ This approach reduces hallucination, improves content relevance, and enables com
 
 #### **C. Public Code Repository**
 ```
-https://github.com/jp-wright/video-venture-launch
+https://github.com/jp-wright/Agentic-Marketing-Campaign-Generator
 ```
 *Ensure repository is public before submission*
 

@@ -293,8 +293,8 @@ Before you begin, ensure you have:
 
 1. **Clone and Navigate**
    ```bash
-   git clone https://github.com/jpantsjoha/video-venture-launch.git
-   cd video-venture-launch
+   git clone https://github.com/jpantsjoha/Agentic-Marketing-Campaign-Generator.git
+   cd Agentic-Marketing-Campaign-Generator
    ```
 
 2. **One-Command Setup**
@@ -349,7 +349,7 @@ make release            # Generate release documentation
 #### Project Structure
 
 ```
-video-venture-launch/
+Agentic-Marketing-Campaign-Generator/
 ├── 🎨 Frontend (React + TypeScript)
 │   ├── src/
 │   │   ├── components/      # Reusable UI components
@@ -509,7 +509,7 @@ make test-coverage-db     # Database coverage reporting
 We welcome contributions from the developer community! Here's how to get involved:
 
 ### 🐛 Found a Bug?
-1. Check existing [issues](https://github.com/jpantsjoha/video-venture-launch/issues)
+1. Check existing [issues](https://github.com/jpantsjoha/Agentic-Marketing-Campaign-Generator/issues)
 2. Create a detailed bug report
 3. Include steps to reproduce
 
@@ -525,7 +525,7 @@ We welcome contributions from the developer community! Here's how to get involve
 4. Submit a pull request
 
 ### 📚 Improve Documentation?
-1. Check [documentation issues](https://github.com/jpantsjoha/video-venture-launch/labels/documentation)
+1. Check [documentation issues](https://github.com/jpantsjoha/Agentic-Marketing-Campaign-Generator/labels/documentation)
 2. Update relevant `.md` files
 3. Test with `make docs-build`
 

@@ -54,7 +54,7 @@
 │  │  CORS Configuration:                                                       │ │
 │  │  • http://localhost:8080 (Frontend Dev)                                   │ │
 │  │  • http://localhost:8081 (Alt Frontend)                                   │ │
-│  │  • https://video-venture-launch.web.app (Production)                      │ │
+│  │  • https://Agentic-Marketing-Campaign-Generator.web.app (Production)                      │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -97,7 +97,7 @@ app.add_middleware(
         "http://localhost:3000",  # React dev server (legacy)
         "http://localhost:8080",  # ✅ Vite dev server (current)
         "http://localhost:8081",  # Alternative Vite port
-        "https://video-venture-launch.web.app",  # Production frontend
+        "https://Agentic-Marketing-Campaign-Generator.web.app",  # Production frontend
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -205,12 +205,12 @@ Based on integration testing results (2025-06-16):
 Frontend (Cloud Run):
   - External: 443 (HTTPS)
   - Internal: 8080
-  - Domain: https://video-venture-launch.web.app
+  - Domain: https://Agentic-Marketing-Campaign-Generator.web.app
 
 Backend (Cloud Run):
   - External: 443 (HTTPS) 
   - Internal: 8000
-  - Domain: https://api.video-venture-launch.web.app
+  - Domain: https://api.Agentic-Marketing-Campaign-Generator.web.app
 
 Database (Firestore):
   - Port: 443 (HTTPS)
@@ -293,7 +293,7 @@ kill $(lsof -ti :8000)
 
 - ✅ **Localhost Development**: `http://localhost:8080` allowed
 - ✅ **Alternative Ports**: `http://localhost:8081` allowed  
-- ✅ **Production Domain**: `https://video-venture-launch.web.app` allowed
+- ✅ **Production Domain**: `https://Agentic-Marketing-Campaign-Generator.web.app` allowed
 - ❌ **Wildcard Origins**: Not used (security best practice)
 
 ### Network Security

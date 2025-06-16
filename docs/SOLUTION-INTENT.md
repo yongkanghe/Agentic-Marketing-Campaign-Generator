@@ -375,7 +375,7 @@ Session       Password      Refresh      Middleware     Permissions
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
-cd video-venture-launch
+cd Agentic-Marketing-Campaign-Generator
 
 # 2. Check environment status
 make status
@@ -415,7 +415,7 @@ make format                # Format code
 ### Project Structure Navigation
 
 ```
-video-venture-launch/
+Agentic-Marketing-Campaign-Generator/
 ├── src/                   # Frontend React application
 ├── backend/               # Python backend services
 ├── docs/                  # Documentation
