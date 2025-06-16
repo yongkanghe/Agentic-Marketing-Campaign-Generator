@@ -14,6 +14,8 @@ from ..models import (
     SocialMediaPost, PostType
 )
 
+logger = logging.getLogger(__name__)
+
 # Import visual content generation
 try:
     from agents.visual_content_agent import generate_visual_content_for_posts
@@ -21,8 +23,6 @@ try:
 except ImportError as e:
     logger.warning(f"Visual content agent not available: {e}")
     generate_visual_content_for_posts = None
-
-logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/generate", response_model=ContentGenerationResponse)
