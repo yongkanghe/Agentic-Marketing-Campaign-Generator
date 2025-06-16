@@ -1,0 +1,152 @@
+{
+  "timestamp": "2025-06-16T14:57:01.333728",
+  "duration": "12.65s",
+  "overall_success_rate": "37.5%",
+  "total_tests": 16,
+  "total_passed": 6,
+  "statistics": {
+    "database": {
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "total": 4,
+      "success_rate": 0.0
+    },
+    "backend": {
+      "passed": 3,
+      "failed": 1,
+      "skipped": 2,
+      "total": 6,
+      "success_rate": 50.0
+    },
+    "frontend": {
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "total": 1,
+      "success_rate": 0.0
+    },
+    "integration": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "total": 3,
+      "success_rate": 100.0
+    },
+    "e2e": {
+      "passed": 0,
+      "failed": 1,
+      "skipped": 1,
+      "total": 2,
+      "success_rate": 0.0
+    }
+  },
+  "detailed_results": {
+    "database": [
+      {
+        "test": "Database File Exists",
+        "status": "FAIL",
+        "details": "Database not found at data/database.db",
+        "timestamp": "2025-06-16T14:56:48.679212"
+      },
+      {
+        "test": "Database Connectivity",
+        "status": "FAIL",
+        "details": "No tables found",
+        "timestamp": "2025-06-16T14:56:48.681031"
+      },
+      {
+        "test": "Required Tables Exist",
+        "status": "FAIL",
+        "details": "Missing tables: {'users', 'posts', 'campaigns', 'media_files'}",
+        "timestamp": "2025-06-16T14:56:48.681214"
+      },
+      {
+        "test": "Basic CRUD Operations",
+        "status": "FAIL",
+        "details": "no such table: users",
+        "timestamp": "2025-06-16T14:56:48.681311"
+      }
+    ],
+    "backend": [
+      {
+        "test": "Backend Server Running",
+        "status": "PASS",
+        "details": "",
+        "timestamp": "2025-06-16T14:56:48.689213"
+      },
+      {
+        "test": "Health Endpoint",
+        "status": "PASS",
+        "details": "",
+        "timestamp": "2025-06-16T14:56:48.691623"
+      },
+      {
+        "test": "URL Analysis API",
+        "status": "PASS",
+        "details": "",
+        "timestamp": "2025-06-16T14:56:53.810869"
+      },
+      {
+        "test": "Campaign Creation API",
+        "status": "FAIL",
+        "details": "Invalid response structure",
+        "timestamp": "2025-06-16T14:56:53.818053"
+      },
+      {
+        "test": "Content Generation API",
+        "status": "SKIP",
+        "details": "No campaign ID available",
+        "timestamp": "2025-06-16T14:56:53.818078"
+      },
+      {
+        "test": "Visual Content Generation API",
+        "status": "SKIP",
+        "details": "No campaign ID available",
+        "timestamp": "2025-06-16T14:56:53.818085"
+      }
+    ],
+    "frontend": [
+      {
+        "test": "Frontend Server Running",
+        "status": "FAIL",
+        "details": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x101ebe2e0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "timestamp": "2025-06-16T14:56:53.819917"
+      }
+    ],
+    "integration": [
+      {
+        "test": "API Communication",
+        "status": "PASS",
+        "details": "",
+        "timestamp": "2025-06-16T14:56:56.741573"
+      },
+      {
+        "test": "Error Handling",
+        "status": "PASS",
+        "details": "",
+        "timestamp": "2025-06-16T14:56:56.744892"
+      },
+      {
+        "test": "Response Time Performance",
+        "status": "PASS",
+        "details": "0.00s",
+        "timestamp": "2025-06-16T14:56:56.747679"
+      }
+    ],
+    "e2e": [
+      {
+        "test": "Happy Path Workflow",
+        "status": "FAIL",
+        "details": "'data'",
+        "timestamp": "2025-06-16T14:57:01.333588"
+      },
+      {
+        "test": "Visual Content Workflow",
+        "status": "SKIP",
+        "details": "No campaign available",
+        "timestamp": "2025-06-16T14:57:01.333610"
+      }
+    ]
+  }
+}

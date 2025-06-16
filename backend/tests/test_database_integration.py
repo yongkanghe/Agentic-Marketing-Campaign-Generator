@@ -59,6 +59,7 @@ class TestDatabaseIntegration:
         """Provide database connection for tests."""
         conn = sqlite3.connect(test_db_path)
         conn.row_factory = sqlite3.Row  # Enable column access by name
+        conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
         yield conn
         conn.close()
     
@@ -213,7 +214,7 @@ class TestDatabaseIntegration:
             'platform': 'instagram',
             'content_data': '{"text": "Amazing product launch!", "hashtags": ["#innovation"]}',
             'ai_metadata': '{"model": "gemini-2.0-flash", "confidence": 0.95}',
-            'user_rating': 8,
+            'user_rating': 4,  # Fixed: should be 1-5 range
             'is_selected': True,
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
@@ -326,18 +327,18 @@ class TestDatabaseIntegration:
                     user_rating, is_selected, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (f'analytics-content-{i}', campaign_id, 'text_image', 'instagram',
-                  '{"text": "Test content"}', 7 + i, i == 0,
+                  '{"text": "Test content"}', min(5, 3 + i), i == 0,  # Fixed: ensure 1-5 range
                   datetime.now().isoformat(), datetime.now().isoformat()))
         
         db_connection.commit()
         
         # Test campaign_summary view
-        cursor.execute("SELECT * FROM campaign_summary WHERE campaign_id = ?", (campaign_id,))
+        cursor.execute("SELECT * FROM campaign_summary WHERE id = ?", (campaign_id,))
         summary = cursor.fetchone()
         assert summary is not None
-        assert summary['campaign_name'] == 'Analytics Campaign'
-        assert summary['total_content'] == 3
-        assert summary['selected_content'] == 1
+        assert summary['name'] == 'Analytics Campaign'  # Fixed: column is 'name', not 'campaign_name'
+        assert summary['content_count'] == 3  # Fixed: column is 'content_count', not 'total_content'
+        assert summary['selected_content_count'] == 1  # Fixed: column is 'selected_content_count', not 'selected_content'
         
         # Test content_performance view
         cursor.execute("SELECT * FROM content_performance WHERE campaign_id = ?", (campaign_id,))
@@ -345,11 +346,11 @@ class TestDatabaseIntegration:
         assert len(performance) == 3
         
         # Test user_activity_summary view
-        cursor.execute("SELECT * FROM user_activity_summary WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT * FROM user_activity_summary WHERE id = ?", (user_id,))  # Fixed: column is 'id', not 'user_id'
         activity = cursor.fetchone()
         assert activity is not None
         assert activity['total_campaigns'] == 1
-        assert activity['total_content'] == 3
+        assert activity['total_content_generated'] == 3  # Fixed: column is 'total_content_generated', not 'total_content'
     
     def test_database_constraints_and_integrity(self, db_connection):
         """Test database constraints and data integrity rules."""
@@ -385,6 +386,7 @@ class TestDatabaseIntegration:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, ('test-campaign', 'non-existent-user', 'Test Campaign', 'product', 'draft', 5,
                   datetime.now().isoformat(), datetime.now().isoformat()))
+            db_connection.commit()  # Force commit to trigger foreign key constraint check
     
     def test_database_performance_indexes(self, db_connection):
         """Test database performance with indexes."""
@@ -394,14 +396,14 @@ class TestDatabaseIntegration:
         cursor.execute("EXPLAIN QUERY PLAN SELECT * FROM users WHERE email = ?", ('test@example.com',))
         plan = cursor.fetchall()
         
-        # Should use index for email lookup
-        plan_text = ' '.join([str(row) for row in plan])
+        # Should use index for email lookup - extract actual text from Row objects
+        plan_text = ' '.join([' '.join([str(col) for col in row]) for row in plan])
         assert 'idx_users_email' in plan_text or 'USING INDEX' in plan_text
         
         # Test campaign queries use indexes
         cursor.execute("EXPLAIN QUERY PLAN SELECT * FROM campaigns WHERE user_id = ?", ('test-user',))
         plan = cursor.fetchall()
-        plan_text = ' '.join([str(row) for row in plan])
+        plan_text = ' '.join([' '.join([str(col) for col in row]) for row in plan])
         assert 'idx_campaigns_user_id' in plan_text or 'USING INDEX' in plan_text
     
     def test_database_status_utility(self, test_db_path):
@@ -606,7 +608,7 @@ class TestUserJourneyDatabase:
                 'platform': 'instagram',
                 'content_data': f'{{"text": "Journey content {i}", "hashtags": ["#journey", "#test"]}}',
                 'ai_metadata': '{"model": "gemini-2.0-flash", "generation_time": 2.5}',
-                'user_rating': 7 + (i % 3),
+                'user_rating': 3 + (i % 3),  # Valid range 1-5
                 'is_selected': i < 2,  # Select first 2 items
                 'created_at': datetime.now().isoformat(),
                 'updated_at': datetime.now().isoformat()
@@ -648,12 +650,12 @@ class TestUserJourneyDatabase:
         assert journey_summary['campaign_name'] == campaign_data['name']
         assert journey_summary['total_content'] == 5
         assert journey_summary['selected_content'] == 2
-        assert journey_summary['avg_rating'] > 7
+        assert journey_summary['avg_rating'] >= 3  # Updated for valid rating range
         
         # Verify session is active
         cursor.execute("SELECT is_active FROM user_sessions WHERE user_id = ?", (user_data['id'],))
         session = cursor.fetchone()
-        assert session['is_active'] is True
+        assert session['is_active'] == 1  # SQLite stores boolean as integer
 
 
 @pytest.mark.regression
@@ -668,7 +670,7 @@ class TestDatabaseRegression:
         version = cursor.fetchone()
         
         assert version is not None
-        assert version['version'] == '1.0.0'
+        assert version['version'] == '1.0.1'  # Updated to match current schema version
     
     def test_default_campaign_templates_exist(self, db_connection):
         """Test that default campaign templates are properly loaded."""
