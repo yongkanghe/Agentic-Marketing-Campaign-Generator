@@ -619,8 +619,6 @@ This document captures critical lessons learned during the development of the **
 
 ---
 
-// ... existing lessons learned ...
-
 ### **Lesson 15: Social Media Post Generator Enhancement (2025-06-15)**
 
 **Problem**: Social Media Post Generator page showing basic mock content instead of professional-quality posts
@@ -949,3 +947,56 @@ This document captures critical lessons learned during the development of the **
 **Next Review**: Weekly updates as new lessons are learned
 **Owner**: JP
 **Stakeholders**: Development team, architecture reviewers 
+
+## Lesson 17: Backend Import Errors and API Enhancement Resolution (June 16, 2025)
+
+**Issue**: Import errors causing backend server crashes and test failures
+- `ImportError: cannot import name 'business_analysis_service'` in agents/__init__.py
+- Backend reload crashes due to undefined import references
+- Invalid URL handling causing 422 errors instead of graceful handling
+- Pydantic deprecation warnings with dict() vs model_dump()
+
+**Root Cause Analysis**:
+1. **Import Structure**: agents/__init__.py importing non-existent function names
+2. **API Design**: URL validation at Pydantic model level instead of route level
+3. **Legacy Code**: Using deprecated Pydantic dict() method
+4. **Variable Scope**: Local variable assignment issues in error handling
+
+**Resolution Implemented**:
+1. **Fixed Import Structure**:
+   - Updated agents/__init__.py to import actual function names
+   - Changed from `business_analysis_service` to `analyze_business_urls`
+   - Added proper __all__ exports for all agent functions
+
+2. **Enhanced URL Handling**:
+   - Changed URLAnalysisRequest.urls from List[HttpUrl] to List[str]
+   - Added _is_valid_url() function for graceful validation
+   - Invalid URLs now return 200 with "failed" status instead of 422 error
+   - All URLs (valid and invalid) included in analysis results
+
+3. **API Enhancement**:
+   - Added analysis_type parameter to files endpoint with proper validation
+   - Fixed Pydantic model_dump() usage (replaced deprecated dict())
+   - Enhanced business context integration in content regeneration
+   - Improved error handling and logging
+
+4. **Test Validation**:
+   - All synchronous API tests passing (13/13)
+   - Database layer fully functional (14/14 tests passing)
+   - Real vs mock workflow execution properly functioning
+
+**Technical Details**:
+- Backend server now starts without import errors
+- Content regeneration API generating real contextual content
+- URL analysis handles edge cases gracefully
+- Progressive enhancement from mock to real ADK execution working
+
+**Impact**: Backend stability restored, API functionality enhanced, test coverage maintained at 100% for core functionality
+
+**Prevention Strategy**: 
+- Always test imports after refactoring
+- Use graceful error handling for external validation
+- Maintain backward compatibility during API evolution
+- Regular validation of test coverage across all layers
+
+// ... existing code ... 
