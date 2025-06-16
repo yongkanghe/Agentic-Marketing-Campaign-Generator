@@ -84,7 +84,7 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">VVL</span>
+                <span className="text-white font-bold text-sm">AIPG</span>
               </div>
               <h3 className="text-xl font-bold vvl-text-primary">AI Marketing Campaign Post Generator</h3>
             </div>

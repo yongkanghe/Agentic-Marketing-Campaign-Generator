@@ -247,7 +247,7 @@ const AboutPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+                <span className="text-white font-bold text-sm">AIPG</span>
               </div>
               <div>
                 <h1 className="text-xl font-bold vvl-text-primary">About AI Marketing Campaign Post Generator</h1>
@@ -336,6 +336,76 @@ const AboutPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Current Release Information - MOVED UP */}
+        <section className="mb-16">
+          <div className="vvl-card p-8">
+            <h2 className="text-3xl font-bold vvl-text-primary mb-8 flex items-center gap-3">
+              <GitBranch className="w-8 h-8 text-orange-400" />
+              Current Release Information
+            </h2>
+            
+            {releaseInfo && (
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <div className="bg-white/5 p-6 rounded-lg mb-6">
+                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Release Status</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="vvl-text-secondary">Version:</span>
+                        <span className="vvl-text-primary font-medium">{releaseInfo.version}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="vvl-text-secondary">Release Date:</span>
+                        <span className="vvl-text-primary font-medium">{releaseInfo.date}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="vvl-text-secondary">Status:</span>
+                        <span className="text-green-400 font-medium">{releaseInfo.status}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="vvl-text-secondary">Completion:</span>
+                        <span className="text-blue-400 font-medium">{releaseInfo.completion}</span>
+                      </div>
+                      {releaseInfo.lastUpdated && (
+                        <div className="flex justify-between">
+                          <span className="vvl-text-secondary">Last Updated:</span>
+                          <span className="text-gray-400 font-medium text-xs">{releaseInfo.lastUpdated}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/5 p-6 rounded-lg">
+                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Next Milestone</h3>
+                    <p className="vvl-text-secondary">{releaseInfo.nextMilestone}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="bg-white/5 p-6 rounded-lg">
+                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Latest Features</h3>
+                    <ul className="space-y-2">
+                      {releaseInfo.features.map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2 vvl-text-secondary">
+                          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <p className="text-sm vvl-text-secondary text-center">
+                <span className="vvl-text-primary font-medium">Note:</span> Release information is updated 
+                automatically when running <code className="bg-white/10 px-2 py-1 rounded text-blue-300">make release</code> command.
+              </p>
             </div>
           </div>
         </section>
@@ -589,12 +659,12 @@ const AboutPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Creator & Hackathon Context */}
+        {/* Creator & Technical Context */}
         <section className="mb-16">
           <div className="vvl-card p-8 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border-purple-500/20">
             <h2 className="text-3xl font-bold vvl-text-primary mb-8 flex items-center gap-3">
               <Users className="w-8 h-8 text-purple-400" />
-              Creator & Hackathon Context
+              Creator & Technical Context
             </h2>
             
             <div className="grid md:grid-cols-2 gap-8">
@@ -634,47 +704,34 @@ const AboutPage: React.FC = () => {
                 </div>
               </div>
               
-              {/* Hackathon Context */}
+              {/* Technical Innovation Context */}
               <div className="bg-white/5 p-6 rounded-lg border border-indigo-500/20">
                 <h3 className="text-xl font-semibold vvl-text-primary mb-4 flex items-center gap-2">
                   <Rocket className="w-6 h-6 text-indigo-400" />
-                  Google ADK Hackathon Entry
+                  Technical Innovation
                 </h3>
                 <div className="space-y-4">
                   <p className="vvl-text-secondary">
-                    This <strong className="text-indigo-300">Agentic AI Marketing Solution</strong> was envisioned and created 
-                    as part of the Agent Development Kit Hackathon with Google Cloud.
+                    This <strong className="text-indigo-300">Agentic AI Marketing Solution</strong> demonstrates 
+                    advanced multi-agent collaboration using Google's ADK Framework.
                   </p>
                   
                   <div className="bg-indigo-500/10 p-4 rounded-lg border border-indigo-500/20">
-                    <h4 className="font-semibold text-indigo-300 mb-2">Hackathon Details</h4>
+                    <h4 className="font-semibold text-indigo-300 mb-2">Innovation Highlights</h4>
                     <ul className="space-y-2 text-sm vvl-text-secondary">
-                      <li>• <strong>Contest:</strong> Agent Development Kit Hackathon with Google Cloud</li>
-                      <li>• <strong>Category:</strong> Content Creation and Generation</li>
-                      <li>• <strong>Region:</strong> North America</li>
-                      <li>• <strong>Prize Pool:</strong> $50,000+ in cash and Google Cloud credits</li>
-                      <li>• <strong>Deadline:</strong> June 23, 2025 @ 5:00 PM PDT</li>
+                      <li>• Sequential agent workflow orchestration</li>
+                      <li>• Real-time business context analysis</li>
+                      <li>• Multi-platform content optimization</li>
+                      <li>• Production-ready architecture</li>
                     </ul>
                   </div>
                   
                   <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 p-4 rounded-lg border border-blue-500/20">
-                    <h4 className="font-semibold text-blue-300 mb-2">Innovation Focus</h4>
+                    <h4 className="font-semibold text-blue-300 mb-2">Framework Showcase</h4>
                     <p className="text-sm vvl-text-secondary">
-                      Demonstrating the power of <strong className="text-green-300">Google's ADK Framework</strong> for 
-                      real-world business challenges through advanced multi-agent collaboration and sequential workflows.
+                      Built with <strong className="text-green-300">Google's ADK Framework</strong> to demonstrate 
+                      enterprise-grade agentic AI capabilities for real-world business automation.
                     </p>
-                  </div>
-                  
-                  <div className="pt-4">
-                    <a 
-                      href="https://devpost.com/submit-to/24728-agent-development-kit-hackathon-with-google-cloud"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors text-sm"
-                    >
-                      <Globe className="w-4 h-4" />
-                      View Hackathon Details on Devpost
-                    </a>
                   </div>
                 </div>
               </div>
@@ -693,76 +750,6 @@ const AboutPage: React.FC = () => {
               </blockquote>
               <p className="text-center mt-4 text-sm text-purple-300">
                 — Jaroslav Pantsjoha, Creator of AI Marketing Campaign Post Generator
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Current Release Information */}
-        <section className="mb-16">
-          <div className="vvl-card p-8">
-            <h2 className="text-3xl font-bold vvl-text-primary mb-8 flex items-center gap-3">
-              <GitBranch className="w-8 h-8 text-orange-400" />
-              Current Release Information
-            </h2>
-            
-            {releaseInfo && (
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <div className="bg-white/5 p-6 rounded-lg mb-6">
-                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Release Status</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="vvl-text-secondary">Version:</span>
-                        <span className="vvl-text-primary font-medium">{releaseInfo.version}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="vvl-text-secondary">Release Date:</span>
-                        <span className="vvl-text-primary font-medium">{releaseInfo.date}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="vvl-text-secondary">Status:</span>
-                        <span className="text-green-400 font-medium">{releaseInfo.status}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="vvl-text-secondary">Completion:</span>
-                        <span className="text-blue-400 font-medium">{releaseInfo.completion}</span>
-                      </div>
-                      {releaseInfo.lastUpdated && (
-                        <div className="flex justify-between">
-                          <span className="vvl-text-secondary">Last Updated:</span>
-                          <span className="text-gray-400 font-medium text-xs">{releaseInfo.lastUpdated}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white/5 p-6 rounded-lg">
-                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Next Milestone</h3>
-                    <p className="vvl-text-secondary">{releaseInfo.nextMilestone}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="bg-white/5 p-6 rounded-lg">
-                    <h3 className="text-xl font-semibold vvl-text-primary mb-4">Latest Features</h3>
-                    <ul className="space-y-2">
-                      {releaseInfo.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 vvl-text-secondary">
-                          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <p className="text-sm vvl-text-secondary text-center">
-                <span className="vvl-text-primary font-medium">Note:</span> Release information is updated 
-                automatically when running <code className="bg-white/10 px-2 py-1 rounded text-blue-300">make release</code> command.
               </p>
             </div>
           </div>

@@ -633,82 +633,31 @@ const IdeationPage: React.FC = () => {
                       column.posts.map((post, index) => (
                         <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
                           <div className="flex items-start justify-between mb-3">
-                            <div className="flex-grow">
-                              {/* Post Content */}
-                              <p className="text-sm vvl-text-secondary mb-3 leading-relaxed whitespace-pre-line">{post.content.text}</p>
-                              
-                              {/* URL Display for Text + URL Posts */}
-                              {post.content.productUrl && (
-                                <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                  <div className="flex items-center gap-2 text-blue-400">
-                                    <ExternalLink size={14} />
-                                    <a 
-                                      href={post.content.productUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-sm hover:text-blue-300 transition-colors truncate"
+                            {/* Post Content */}
+                            <div className="mb-4">
+                              <p className="text-gray-300 leading-relaxed">
+                                {post.content.text}
+                              </p>
+                            </div>
+
+                            {/* Hashtags */}
+                            {post.content.hashtags && post.content.hashtags.length > 0 && (
+                              <div className="mb-4">
+                                <div className="flex flex-wrap gap-2">
+                                  {post.content.hashtags.slice(0, 6).map((tag, tagIdx) => (
+                                    <span
+                                      key={tagIdx}
+                                      className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
                                     >
-                                      {post.content.productUrl}
-                                    </a>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Image Display for Text + Image Posts */}
-                              {post.content.imageUrl && (
-                                <div className="mb-3">
-                                  <img 
-                                    src={post.content.imageUrl} 
-                                    alt="AI Generated Marketing Image" 
-                                    className="w-full h-40 object-cover rounded-lg border border-white/10"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.src = "https://picsum.photos/400/200?random=999&blur=1";
-                                    }}
-                                  />
-                                  <p className="text-xs text-gray-400 mt-1">AI-Generated Image</p>
-                                </div>
-                              )}
-                              
-                              {/* Video Display for Text + Video Posts */}
-                              {post.content.videoUrl && (
-                                <div className="mb-3">
-                                  <div className="relative bg-purple-500/10 border border-purple-500/20 rounded-lg h-32 flex items-center justify-center">
-                                    <div className="text-center">
-                                      <Video className="text-purple-400 mx-auto mb-2" size={24} />
-                                      <p className="text-xs text-purple-400">AI-Generated Video</p>
-                                      <p className="text-xs text-gray-400 mt-1">Veo API Integration</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Hashtags */}
-                              {post.content.hashtags && post.content.hashtags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {post.content.hashtags.map((tag: string, idx: number) => (
-                                    <span 
-                                      key={idx} 
-                                      className="text-xs text-blue-400 bg-blue-400/10 px-2 py-1 rounded"
-                                    >
-                                      {tag.startsWith('#') ? tag : `#${tag}`}
+                                      {tag}
                                     </span>
                                   ))}
                                 </div>
-                              )}
-                              
-                              {/* Engagement Score */}
-                              <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    post.engagement_score >= 8 ? 'bg-green-400' :
-                                    post.engagement_score >= 7 ? 'bg-yellow-400' : 'bg-red-400'
-                                  }`}></div>
-                                    Engagement Score: {post.engagement_score.toFixed(1)}
-                                </span>
                               </div>
-                            </div>
-                            
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs vvl-text-secondary">
                             <button
                               onClick={() => togglePostSelection(post.id)}
                               className={`ml-3 p-2 rounded-lg transition-all duration-200 ${
@@ -718,29 +667,6 @@ const IdeationPage: React.FC = () => {
                               }`}
                             >
                               <Heart size={16} className={selectedPosts.includes(post.id) ? 'fill-current' : ''} />
-                            </button>
-                          </div>
-                          
-                          <div className="flex items-center justify-between text-xs vvl-text-secondary">
-                            <div className="flex items-center gap-4">
-                              <span className="flex items-center gap-1">
-                                <Heart size={12} />
-                                {Math.floor(post.engagement_score * 15) + 10}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MessageCircle size={12} />
-                                {Math.floor(post.engagement_score * 3) + 2}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Share size={12} />
-                                {Math.floor(post.engagement_score) + 1}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => regeneratePost(column.id, post.id)}
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
-                            >
-                              <RefreshCw size={12} />
                             </button>
                           </div>
                         </div>

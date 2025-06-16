@@ -61,7 +61,7 @@ class SocialMediaPost(BaseModel):
     video_prompt: Optional[str] = None
     video_url: Optional[str] = None
     hashtags: List[str] = Field(default_factory=list)
-    platform_optimized: Dict[str, str] = Field(default_factory=dict)
+    platform_optimized: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     engagement_score: Optional[float] = None
     selected: bool = False
 

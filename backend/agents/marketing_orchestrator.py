@@ -166,7 +166,7 @@ Input Sources:
 - Target Audience: {target_audience}
 - Creativity Level: {creativity_level}
 
-Synthesize all information to create comprehensive business context:
+Synthesize all information to create comprehensive business context with DETAILED VISUAL CONTEXT for image generation:
 
 1. **Unified Business Profile**:
    - Company overview and positioning
@@ -176,7 +176,7 @@ Synthesize all information to create comprehensive business context:
 
 2. **Target Audience Analysis**:
    - Primary and secondary segments
-   - Demographics and psychographics
+   - Demographics and psychographics (age, lifestyle, interests)
    - Pain points and motivations
    - Communication preferences
    - Decision-making factors
@@ -188,22 +188,41 @@ Synthesize all information to create comprehensive business context:
    - Content style preferences
    - Brand personality traits
 
-4. **Campaign Strategy Foundation**:
+4. **DETAILED VISUAL CONTEXT** (Critical for Image Generation):
+   - **Product/Service Visualization**: Specific visual elements that represent the business
+     * For t-shirt printing: "people wearing custom t-shirts", "design printing process", "happy customers in branded apparel"
+     * For restaurants: "food presentation", "dining atmosphere", "chef preparing dishes", "satisfied customers eating"
+     * For fitness: "people exercising", "trainer-client interactions", "gym equipment", "fitness transformations"
+     * For tech services: "professionals using technology", "modern office environments", "digital interfaces", "team collaboration"
+   
+   - **Industry-Specific Visual Elements**:
+     * Colors, textures, environments that represent the industry
+     * Typical customer scenarios and use cases
+     * Product in action or service being delivered
+     * Emotional context (joy, satisfaction, success, transformation)
+   
+   - **Target Demographic Visuals**:
+     * Age groups, lifestyle indicators, fashion/style preferences
+     * Settings where target audience would be found
+     * Activities and interests of target demographic
+     * Social and cultural context
+
+5. **Campaign Strategy Foundation**:
    - Key messaging pillars
    - Content themes and topics
    - Channel recommendations
    - Engagement strategies
    - Success metrics and KPIs
 
-5. **Creative Direction**:
-   - Visual style recommendations
-   - Content format preferences
-   - Tone and personality guidelines
-   - Innovation vs. consistency balance
-   - Risk tolerance and boundaries
+6. **Creative Direction for Visual Content**:
+   - Specific image concepts that would resonate with target audience
+   - Visual storytelling themes
+   - Photography style recommendations (lifestyle, product, portrait, etc.)
+   - Color palette and aesthetic direction
+   - Composition and framing suggestions
 
-Output a comprehensive business context that serves as the foundation for all subsequent content generation and campaign activities.""",
-        description="Synthesizes all business intelligence into comprehensive campaign context",
+Output comprehensive business context that provides SPECIFIC, ACTIONABLE visual direction for image generation agents. Focus on concrete, visual elements rather than abstract concepts.""",
+        description="Synthesizes all business intelligence into comprehensive campaign context with detailed visual direction",
         output_key="business_context"
     )
 
@@ -426,18 +445,21 @@ async def _execute_real_adk_workflow(orchestrator: SequentialAgent, context: Dic
             logger.info(f"Analyzing {len(urls_to_analyze)} URLs for business context")
             url_analysis_result = await analyze_business_urls(urls_to_analyze, "comprehensive")
             business_analysis = url_analysis_result.get("business_analysis", {})
+            # Ensure business description is included from user input
+            business_analysis["business_description"] = context["business_description"]
+            business_analysis["target_audience"] = context["target_audience"]
         else:
-            # Use provided business description for analysis
-            business_analysis = {
-                "company_name": "Your Company",
-                "industry": "Professional Services",
-                "target_audience": context["target_audience"],
-                "business_description": context["business_description"],
-                "value_propositions": ["Quality service", "Customer satisfaction", "Innovation"],
-                "brand_voice": "Professional",
-                "competitive_advantages": ["Experience", "Quality", "Service"],
-                "market_positioning": "Trusted service provider"
-            }
+            # Extract detailed business context from provided business description
+            business_description = context["business_description"]
+            logger.info(f"Analyzing business description: {business_description[:100]}...")
+            
+            # Enhanced business context extraction based on description
+            business_analysis = await _extract_business_context_from_description(
+                business_description, 
+                context["target_audience"],
+                context["objective"],
+                context["campaign_type"]
+            )
         
         # Step 2: Content Generation using real business context
         social_posts = await _generate_real_social_content(business_analysis, context)
@@ -588,9 +610,21 @@ def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, A
             "hashtags": post.get('hashtags', []),
             "url": context.get('business_website') or context.get('product_service_url', 'https://example.com'),
             "platform_optimized": {
-                "linkedin": f"Professional content optimized for LinkedIn",
-                "twitter": f"Concise content for Twitter engagement",
-                "facebook": f"Community-focused content for Facebook"
+                "linkedin": {
+                    "content": f"Professional content optimized for LinkedIn",
+                    "hashtags": ["#Business", "#Professional", "#Growth"],
+                    "character_count": 120
+                },
+                "twitter": {
+                    "content": f"Concise content for Twitter engagement",
+                    "hashtags": ["#Business", "#Growth"],
+                    "character_count": 80
+                },
+                "facebook": {
+                    "content": f"Community-focused content for Facebook",
+                    "hashtags": ["#Business", "#Community"],
+                    "character_count": 150
+                }
             },
             "engagement_score": 8.0 + (post_id_counter * 0.1),
             "selected": False,
@@ -607,9 +641,21 @@ def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, A
             "hashtags": post.get('hashtags', []),
             "image_prompt": post.get('image_prompt', ''),
             "platform_optimized": {
-                "instagram": f"Visual content optimized for Instagram",
-                "linkedin": f"Professional visual content for LinkedIn",
-                "facebook": f"Engaging visual content for Facebook"
+                "instagram": {
+                    "content": f"Visual content optimized for Instagram",
+                    "hashtags": ["#Visual", "#Instagram", "#Creative"],
+                    "character_count": 100
+                },
+                "linkedin": {
+                    "content": f"Professional visual content for LinkedIn",
+                    "hashtags": ["#Professional", "#Visual"],
+                    "character_count": 120
+                },
+                "facebook": {
+                    "content": f"Engaging visual content for Facebook",
+                    "hashtags": ["#Visual", "#Engaging"],
+                    "character_count": 140
+                }
             },
             "engagement_score": 8.2 + (post_id_counter * 0.1),
             "selected": False,
@@ -626,9 +672,21 @@ def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, A
             "hashtags": post.get('hashtags', []),
             "video_prompt": post.get('video_prompt', ''),
             "platform_optimized": {
-                "instagram": f"Dynamic video content for Instagram",
-                "tiktok": f"Trending video content for TikTok",
-                "linkedin": f"Professional video content for LinkedIn"
+                "instagram": {
+                    "content": f"Dynamic video content for Instagram",
+                    "hashtags": ["#Video", "#Dynamic", "#Instagram"],
+                    "character_count": 90
+                },
+                "tiktok": {
+                    "content": f"Trending video content for TikTok",
+                    "hashtags": ["#TikTok", "#Trending", "#Video"],
+                    "character_count": 70
+                },
+                "linkedin": {
+                    "content": f"Professional video content for LinkedIn",
+                    "hashtags": ["#Professional", "#Video"],
+                    "character_count": 110
+                }
             },
             "engagement_score": 8.5 + (post_id_counter * 0.1),
             "selected": False,
@@ -665,9 +723,21 @@ def _generate_enhanced_content_fallback(business_analysis: Dict[str, Any], conte
             "content": content,
             "hashtags": ["#Business", "#Growth", "#Innovation", "#Success", f"#{industry.replace(' ', '')}"],
             "platform_optimized": {
-                "linkedin": f"Professional {post_type} content optimized for LinkedIn",
-                "instagram": f"Visual {post_type} content for Instagram",
-                "facebook": f"Community-focused {post_type} content for Facebook"
+                "linkedin": {
+                    "content": f"Professional {post_type} content optimized for LinkedIn",
+                    "hashtags": ["#Professional", "#Business"],
+                    "character_count": 120
+                },
+                "instagram": {
+                    "content": f"Visual {post_type} content for Instagram",
+                    "hashtags": ["#Visual", "#Creative"],
+                    "character_count": 100
+                },
+                "facebook": {
+                    "content": f"Community-focused {post_type} content for Facebook",
+                    "hashtags": ["#Community", "#Business"],
+                    "character_count": 150
+                }
             },
             "engagement_score": 7.5 + (i * 0.1),
             "selected": False,
@@ -731,5 +801,131 @@ async def _enhanced_mock_workflow_execution(context: Dict[str, Any]) -> Dict[str
             "real_adk_execution": False,
             "gemini_integration": False,
             "enhancement_level": "contextual_mock"
+        }
+    }
+
+async def _extract_business_context_from_description(
+    business_description: str,
+    target_audience: str, 
+    objective: str,
+    campaign_type: str
+) -> Dict[str, Any]:
+    """Extract detailed business context from business description using AI analysis."""
+    
+    try:
+        if GEMINI_API_KEY:
+            import google.genai as genai
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+            
+            analysis_prompt = f"""
+            Analyze this business description and extract detailed business context for marketing campaign generation:
+            
+            Business Description: "{business_description}"
+            Target Audience: "{target_audience}"
+            Campaign Objective: "{objective}"
+            Campaign Type: "{campaign_type}"
+            
+            Extract and provide:
+            1. Company name (if mentioned, otherwise "Your Company")
+            2. Industry classification (be specific - e.g., "Custom T-shirt Printing", "Italian Restaurant", "Fitness Training")
+            3. Key products/services offered
+            4. Target demographic details (age, interests, lifestyle)
+            5. Brand voice and personality
+            6. Visual elements that would represent this business
+            7. Competitive advantages
+            8. Market positioning
+            
+            Format as JSON:
+            {{
+                "company_name": "extracted or inferred company name",
+                "industry": "specific industry classification",
+                "business_description": "{business_description}",
+                "target_audience": "{target_audience}",
+                "products_services": ["list of key offerings"],
+                "brand_voice": "professional/casual/creative/etc",
+                "visual_elements": ["specific visual concepts that represent this business"],
+                "competitive_advantages": ["key differentiators"],
+                "market_positioning": "how this business positions itself",
+                "demographic_details": {{
+                    "age_range": "inferred age range",
+                    "interests": ["relevant interests"],
+                    "lifestyle": "lifestyle characteristics"
+                }}
+            }}
+            """
+            
+            response = client.models.generate_content(
+                model=model,
+                contents=analysis_prompt
+            )
+            
+            # Parse JSON response
+            import json
+            import re
+            
+            response_text = response.text
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            
+            if json_match:
+                try:
+                    business_context = json.loads(json_match.group())
+                    logger.info(f"Extracted business context for {business_context.get('company_name', 'Unknown')} in {business_context.get('industry', 'Unknown')} industry")
+                    return business_context
+                except json.JSONDecodeError:
+                    logger.warning("Failed to parse business context JSON")
+        
+        # Fallback: Enhanced manual extraction
+        return _manual_business_context_extraction(business_description, target_audience, objective)
+        
+    except Exception as e:
+        logger.error(f"Business context extraction failed: {e}")
+        return _manual_business_context_extraction(business_description, target_audience, objective)
+
+def _manual_business_context_extraction(
+    business_description: str,
+    target_audience: str,
+    objective: str
+) -> Dict[str, Any]:
+    """Manual business context extraction with industry-specific logic."""
+    
+    description_lower = business_description.lower()
+    
+    # Industry detection
+    if any(keyword in description_lower for keyword in ['t-shirt', 'tshirt', 'apparel', 'clothing', 'print', 'custom']):
+        industry = "Custom T-shirt Printing"
+        visual_elements = ["people wearing custom t-shirts", "printing process", "design showcase", "happy customers in branded apparel"]
+        brand_voice = "creative and fun"
+    elif any(keyword in description_lower for keyword in ['restaurant', 'food', 'dining', 'kitchen', 'chef', 'cuisine']):
+        industry = "Restaurant & Food Service"
+        visual_elements = ["food presentation", "dining atmosphere", "chef preparing dishes", "satisfied customers eating"]
+        brand_voice = "warm and inviting"
+    elif any(keyword in description_lower for keyword in ['fitness', 'gym', 'training', 'workout', 'health']):
+        industry = "Fitness & Health"
+        visual_elements = ["people exercising", "trainer-client interactions", "gym equipment", "fitness transformations"]
+        brand_voice = "motivational and energetic"
+    elif any(keyword in description_lower for keyword in ['tech', 'software', 'digital', 'app', 'platform']):
+        industry = "Technology Services"
+        visual_elements = ["professionals using technology", "modern office environments", "digital interfaces", "team collaboration"]
+        brand_voice = "innovative and professional"
+    else:
+        industry = "Professional Services"
+        visual_elements = ["professional business environment", "team collaboration", "client satisfaction", "service delivery"]
+        brand_voice = "professional and trustworthy"
+    
+    return {
+        "company_name": "Your Company",
+        "industry": industry,
+        "business_description": business_description,
+        "target_audience": target_audience,
+        "products_services": ["Core service offering", "Customer solutions"],
+        "brand_voice": brand_voice,
+        "visual_elements": visual_elements,
+        "competitive_advantages": ["Quality service", "Customer focus", "Innovation"],
+        "market_positioning": f"Trusted {industry.lower()} provider",
+        "demographic_details": {
+            "age_range": "25-45",
+            "interests": ["quality", "value", "service"],
+            "lifestyle": "active and engaged"
         }
     } 

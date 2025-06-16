@@ -8,6 +8,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, HTTPException
 import os
+import time
 
 from ..models import (
     ContentGenerationRequest, ContentGenerationResponse,
@@ -48,15 +49,32 @@ async def generate_content(request: ContentGenerationRequest) -> ContentGenerati
         
         for i in range(request.post_count):
             post_type = post_types[i % 3]
+            
+            # Respect include_hashtags flag
+            hashtags = ["#Generated", "#Content", "#Marketing"] if request.include_hashtags else []
+            
             post = SocialMediaPost(
                 id=f"generated_post_{i+1}",
                 type=PostType(post_type),
                 content=f"Generated {post_type.replace('_', ' + ')} content for {request.campaign_objective}",
-                hashtags=["#Generated", "#Content", "#Marketing"],
+                hashtags=hashtags,
                 platform_optimized={
-                    "linkedin": f"Professional content for LinkedIn",
-                    "twitter": f"Concise content for Twitter",
-                    "instagram": f"Visual content for Instagram"
+                    "linkedin": {
+                        "content": f"Professional content for LinkedIn",
+                        "hashtags": ["#Professional", "#LinkedIn", "#Business"]
+                    },
+                    "twitter": {
+                        "content": f"Concise content for Twitter", 
+                        "hashtags": ["#Twitter", "#Social", "#Marketing"]
+                    },
+                    "instagram": {
+                        "content": f"Visual content for Instagram",
+                        "hashtags": ["#Instagram", "#Visual", "#Creative"]
+                    },
+                    "facebook": {
+                        "content": f"Engaging content for Facebook",
+                        "hashtags": ["#Facebook", "#Engagement", "#Community"]
+                    }
                 },
                 engagement_score=7.0 + (i * 0.1),
                 selected=False
@@ -71,7 +89,9 @@ async def generate_content(request: ContentGenerationRequest) -> ContentGenerati
             generation_metadata={
                 "creativity_level": request.creativity_level,
                 "post_count": len(posts),
-                "generation_method": "mock"
+                "total_posts": len(posts),  # Add this field for test compatibility
+                "generation_method": "mock",
+                "generation_time": 1.5
             },
             processing_time=1.5
         )
@@ -99,23 +119,25 @@ async def regenerate_posts(request: SocialPostRegenerationRequest) -> SocialPost
             logger.info("Using optimized batch Gemini generation for content regeneration")
             
             # Use the new batch generation function for optimal performance
-            new_posts = await _generate_batch_content_with_gemini(
+            start_time = time.time()
+            generated_posts = await _generate_batch_content_with_gemini(
                 request.post_type, 
                 request.regenerate_count, 
                 business_context
             )
             
+            # Return successful response
             return SocialPostRegenerationResponse(
-                new_posts=new_posts,
+                new_posts=generated_posts,
                 regeneration_metadata={
-                    "post_type": request.post_type,
-                    "regenerate_count": len(new_posts),
-                    "method": "optimized_batch_gemini_generation",
-                    "business_context_used": True,
-                    "single_api_call": True,
-                    "performance_optimized": True
+                    "regenerated_count": len(generated_posts),
+                    "post_type": request.post_type.value,
+                    "generation_method": "optimized_batch_gemini_generation",
+                    "creativity_level": request.creativity_level,
+                    "business_context_used": bool(business_context),
+                    "cost_controlled": len(generated_posts) < request.regenerate_count
                 },
-                processing_time=1.0  # Much faster with batch generation
+                processing_time=time.time() - start_time
             )
             
         else:
@@ -130,9 +152,22 @@ async def regenerate_posts(request: SocialPostRegenerationRequest) -> SocialPost
                     content=generate_enhanced_content(request.post_type, business_context, i),
                     hashtags=generate_contextual_hashtags(business_context),
                     platform_optimized={
-                        "linkedin": f"Professional {request.post_type.replace('_', ' + ')} content",
-                        "twitter": f"Engaging {request.post_type.replace('_', ' + ')} content",
-                        "instagram": f"Visual {request.post_type.replace('_', ' + ')} content"
+                        "linkedin": {
+                            "content": f"Professional {request.post_type.replace('_', ' + ')} content",
+                            "hashtags": ["#Professional", "#LinkedIn", "#Business"]
+                        },
+                        "twitter": {
+                            "content": f"Engaging {request.post_type.replace('_', ' + ')} content",
+                            "hashtags": ["#Twitter", "#Social", "#Marketing"]
+                        },
+                        "instagram": {
+                            "content": f"Visual {request.post_type.replace('_', ' + ')} content",
+                            "hashtags": ["#Instagram", "#Visual", "#Creative"]
+                        },
+                        "facebook": {
+                            "content": f"Community {request.post_type.replace('_', ' + ')} content",
+                            "hashtags": ["#Facebook", "#Community", "#Engagement"]
+                        }
                     },
                     engagement_score=8.0 + (i * 0.1),
                     selected=False
@@ -450,10 +485,22 @@ async def _generate_batch_content_with_gemini(
                         content=post_content,
                         hashtags=post_data.get('hashtags', [f"#{campaign_type}", "#Business", "#Growth"]),
                         platform_optimized={
-                            "linkedin": f"Professional {post_type.value} content optimized for LinkedIn",
-                            "twitter": f"Concise {post_type.value} content for Twitter engagement",
-                            "facebook": f"Community-focused {post_type.value} content for Facebook",
-                            "instagram": f"Visual {post_type.value} content for Instagram"
+                            "linkedin": {
+                                "content": f"Professional content for LinkedIn",
+                                "hashtags": ["#Professional", "#LinkedIn", "#Business"]
+                            },
+                            "twitter": {
+                                "content": f"Concise content for Twitter", 
+                                "hashtags": ["#Twitter", "#Social", "#Marketing"]
+                            },
+                            "instagram": {
+                                "content": f"Visual content for Instagram",
+                                "hashtags": ["#Instagram", "#Visual", "#Creative"]
+                            },
+                            "facebook": {
+                                "content": f"Engaging content for Facebook",
+                                "hashtags": ["#Facebook", "#Engagement", "#Community"]
+                            }
                         },
                         engagement_score=8.0 + (i * 0.1),
                         selected=False

@@ -97,7 +97,6 @@ class ImageGenerationAgent:
                 self.client.models.generate_images,
                 model=self.image_model,
                 prompt=marketing_prompt,
-                safety_filter_level="block_few",  # Marketing content needs flexibility
                 person_generation="allow_adult",   # Allow people in marketing content
                 aspect_ratio="16:9",              # Good for social media
                 negative_prompt="blurry, low quality, unprofessional, amateur, dark, poorly lit"
@@ -470,24 +469,60 @@ class VisualContentOrchestrator:
         post_content = post.get('content', '')
         company_name = business_context.get('company_name', 'Company')
         industry = business_context.get('industry', 'business')
+        business_description = business_context.get('business_description', '')
+        target_audience = business_context.get('target_audience', 'general audience')
         
-        # Extract key themes from post content
-        content_lower = post_content.lower()
+        # Extract detailed business context for visual generation
+        logger.info(f"Creating image prompt for {company_name} in {industry} industry")
         
-        if 'innovation' in content_lower or 'innovative' in content_lower:
-            theme = "innovative technology and forward-thinking concepts"
-        elif 'success' in content_lower or 'achievement' in content_lower:
-            theme = "success and achievement in business"
-        elif 'growth' in content_lower or 'expand' in content_lower:
-            theme = "business growth and expansion"
-        elif 'team' in content_lower or 'collaboration' in content_lower:
-            theme = "teamwork and professional collaboration"
+        # Industry-specific visual prompt generation
+        if any(keyword in business_description.lower() for keyword in ['t-shirt', 'tshirt', 'apparel', 'clothing', 'print', 'custom']):
+            # T-shirt/Apparel Business
+            visual_context = f"Two diverse young adults (ages 20-30) wearing custom printed t-shirts with creative designs, laughing and having fun in an urban outdoor setting, natural lighting, lifestyle photography style"
+            if 'funny' in business_description.lower() or 'humor' in business_description.lower():
+                visual_context += ", humorous and playful t-shirt designs visible"
+            
+        elif any(keyword in business_description.lower() for keyword in ['restaurant', 'food', 'dining', 'kitchen', 'chef', 'cuisine']):
+            # Restaurant/Food Business
+            visual_context = f"Professional food photography showing delicious prepared dishes, warm restaurant atmosphere with satisfied customers dining, chef preparing food in background"
+            if 'italian' in business_description.lower():
+                visual_context += ", authentic Italian pasta and pizza dishes"
+            elif 'family' in business_description.lower():
+                visual_context += ", family-friendly dining atmosphere"
+                
+        elif any(keyword in business_description.lower() for keyword in ['fitness', 'gym', 'training', 'workout', 'health', 'exercise']):
+            # Fitness/Health Business
+            visual_context = f"Dynamic fitness scene with trainer and client working out in modern gym, showing transformation and success, motivational atmosphere"
+            
+        elif any(keyword in business_description.lower() for keyword in ['tech', 'software', 'digital', 'app', 'platform', 'saas']):
+            # Technology Business
+            visual_context = f"Modern professionals collaborating with technology, clean office environment, digital interfaces and screens, innovation and productivity focus"
+            
+        elif any(keyword in business_description.lower() for keyword in ['consulting', 'service', 'professional', 'business']):
+            # Professional Services
+            visual_context = f"Professional business meeting with diverse team members, modern office setting, collaboration and success themes"
+            
+        elif any(keyword in business_description.lower() for keyword in ['retail', 'shop', 'store', 'ecommerce', 'marketplace']):
+            # Retail/E-commerce
+            visual_context = f"Happy customers shopping and discovering products, modern retail environment or online shopping experience"
+            
         else:
-            theme = f"professional {industry} business environment"
+            # Generic business fallback with more context
+            visual_context = f"Professional business environment representing {industry} industry, showing {objective} in action with satisfied customers"
         
-        prompt = f"Professional marketing image featuring {theme}, representing {company_name}'s approach to {objective}"
+        # Add target audience context
+        if 'young' in target_audience.lower() or '18-35' in target_audience:
+            visual_context += ", featuring young adults aged 18-35"
+        elif 'professional' in target_audience.lower():
+            visual_context += ", featuring business professionals"
+        elif 'family' in target_audience.lower():
+            visual_context += ", family-friendly scene"
         
-        return prompt
+        # Create final marketing-optimized prompt
+        marketing_prompt = f"{visual_context}, representing {company_name}'s approach to {objective}, 16:9 aspect ratio, commercial photography style, high quality, professional lighting"
+        
+        logger.info(f"Generated business-specific image prompt: {marketing_prompt[:100]}...")
+        return marketing_prompt
     
     def _create_video_prompt(self, post: Dict[str, Any], business_context: Dict[str, Any], objective: str) -> str:
         """Create video generation prompt based on post content and business context."""

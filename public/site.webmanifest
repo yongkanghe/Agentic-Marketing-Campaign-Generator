@@ -1,6 +1,6 @@
 {
-  "name": "AiPromoter",
-  "short_name": "AiPromoter",
+  "name": "AiPostsGen",
+  "short_name": "AiPostsGen",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

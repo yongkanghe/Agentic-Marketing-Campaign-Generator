@@ -15,6 +15,7 @@ import tempfile
 import os
 from typing import AsyncGenerator, Generator
 from fastapi.testclient import TestClient
+import httpx
 from httpx import AsyncClient
 
 from api.main import app
@@ -34,7 +35,7 @@ def client() -> TestClient:
 @pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client for the FastAPI application."""
-    async with AsyncClient(app=app, base_url="http://testserver") as ac:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as ac:
         yield ac
 
 @pytest.fixture
