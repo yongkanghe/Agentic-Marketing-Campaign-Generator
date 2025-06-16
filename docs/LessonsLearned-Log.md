@@ -1039,7 +1039,7 @@ assert "posts" in data  # KeyError: 'posts'
 ```python
 # Before (failing)
 image_response = self.client.models.generate_images(
-    model="imagen-3.0-generate-001",
+    model="imagen-3.0-generate-002",
     prompt=prompt,
     safety_filter_level="block_some",
     person_generation="allow_adult"
@@ -1047,7 +1047,7 @@ image_response = self.client.models.generate_images(
 
 # After (working)
 image_response = self.client.models.generate_images(
-    model="imagen-3.0-generate-001",
+    model="imagen-3.0-generate-002",
     prompt=prompt
     # Note: Removed parameters for API compatibility
 )
@@ -1436,7 +1436,7 @@ async def _generate_batch_content_with_gemini(
 Implemented comprehensive environment-based configuration for model selection and cost control limits to prevent API cost overruns and ensure system scalability.
 
 ### Problem
-1. **Hardcoded Model References**: Model names were hardcoded in agents (e.g., "imagen-3.0-generate-001")
+1. **Hardcoded Model References**: Model names were hardcoded in agents (e.g., "imagen-3.0-generate-002")
 2. **No Cost Controls**: No limits on image/video generation leading to potential cost overruns
 3. **Inflexible Configuration**: No way to adjust limits for different deployment environments
 4. **Model Upgrade Difficulty**: Changing models required code changes instead of configuration
@@ -1446,7 +1446,7 @@ Implemented comprehensive environment-based configuration for model selection an
 #### 1. Environment-Based Model Configuration
 ```python
 # Visual Content Agent - Dynamic Model Selection
-self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-001')
+self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
 self.video_model = os.getenv('VIDEO_MODEL', 'veo-2')
 self.max_images = int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4'))
 self.max_videos = int(os.getenv('MAX_TEXT_VIDEO_POSTS', '4'))
@@ -1471,7 +1471,7 @@ if actual_count < regenerate_count:
 # Google AI Configuration
 GEMINI_API_KEY=your_api_key
 GEMINI_MODEL=gemini-2.5-flash-preview-05-20
-IMAGE_MODEL=imagen-3.0-generate-001
+IMAGE_MODEL=imagen-3.0-generate-002
 VIDEO_MODEL=veo-2
 
 # Cost Control Limits

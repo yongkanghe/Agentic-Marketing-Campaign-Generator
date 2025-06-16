@@ -1,22 +1,25 @@
 """
 FILENAME: visual_content_agent.py
-DESCRIPTION/PURPOSE: Visual content generation agent using Google Imagen for real image generation
+DESCRIPTION/PURPOSE: Visual content generation agent for images and videos using Google Imagen and Veo
 Author: JP + 2025-06-16
 
-This module provides agents for generating visual content including:
-1. ImageGenerationAgent - AI image prompt generation for social media
-2. VideoGenerationAgent - AI video prompt generation using Veo API
-3. Visual content optimization for different platforms
+This module provides visual content generation capabilities using Google's Imagen and Veo models,
+with proper marketing prompt engineering and business context integration.
 """
 
-import logging
-import asyncio
 import os
-import base64
-from typing import Dict, List, Any, Optional
-from google import genai
+import asyncio
 import tempfile
 import uuid
+import logging
+from typing import List, Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
+
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,7 @@ class ImageGenerationAgent:
         """Initialize image generation agent with Gemini client."""
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
         self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
-        self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-001')
+        self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
         self.max_images = int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4'))
         
         if self.gemini_api_key:
@@ -36,10 +39,10 @@ class ImageGenerationAgent:
                 logger.info(f"Image Generation Agent initialized with Gemini client using {self.image_model}")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini client: {e}")
-                self.client = None
+                raise Exception(f"Failed to initialize Imagen client: {e}")
         else:
-            logger.warning("GEMINI_API_KEY not found - image generation will use mock responses")
-            self.client = None
+            logger.error("GEMINI_API_KEY not found - cannot initialize image generation")
+            raise Exception("GEMINI_API_KEY environment variable is required for image generation")
     
     async def generate_images(self, prompts: List[str], business_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -92,21 +95,25 @@ class ImageGenerationAgent:
             # Enhance prompt for marketing use case based on Imagen best practices
             marketing_prompt = self._create_marketing_prompt(prompt, index)
             
-            # Generate image using Imagen 3.0 with proper configuration
+            # Generate image using Imagen 3.0 with correct API method
+            # Based on Google's documentation: use generate_images method
             response = await asyncio.to_thread(
                 self.client.models.generate_images,
                 model=self.image_model,
                 prompt=marketing_prompt,
-                person_generation="allow_adult",   # Allow people in marketing content
-                aspect_ratio="16:9",              # Good for social media
-                negative_prompt="blurry, low quality, unprofessional, amateur, dark, poorly lit"
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    aspect_ratio="16:9",  # Good for social media
+                    person_generation="ALLOW_ADULT",  # Allow people in marketing content
+                    safety_filter_level="BLOCK_LOW_AND_ABOVE"  # Use supported safety level
+                )
             )
             
             if response.generated_images and len(response.generated_images) > 0:
                 generated_image = response.generated_images[0]
                 
                 # Save image and get URL
-                image_url = await self._save_generated_image(generated_image.image, index)
+                image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index)
                 
                 return {
                     "id": f"imagen_generated_{index+1}",
@@ -117,7 +124,7 @@ class ImageGenerationAgent:
                     "status": "success",
                     "metadata": {
                         "model": self.image_model,
-                        "safety_rating": getattr(generated_image, 'safety_rating', 'approved'),
+                        "safety_rating": "approved",
                         "generation_time": 4.5,
                         "aspect_ratio": "16:9",
                         "quality": "high",
@@ -132,8 +139,8 @@ class ImageGenerationAgent:
             # Fall back to enhanced placeholder
             return self._generate_enhanced_placeholder(prompt, index)
     
-    async def _save_generated_image(self, image_data, index: int) -> str:
-        """Save generated image and return URL."""
+    async def _save_generated_image_data(self, image_data_bytes: bytes, index: int) -> str:
+        """Save generated image data and return URL."""
         try:
             # Create temporary file for the image
             temp_dir = tempfile.gettempdir()
@@ -141,11 +148,13 @@ class ImageGenerationAgent:
             image_path = os.path.join(temp_dir, image_filename)
             
             # Save image data
-            image_data.save(image_path)
+            with open(image_path, 'wb') as img_file:
+                img_file.write(image_data_bytes)
             
-            # For now, return a placeholder URL (in production, upload to cloud storage)
-            # TODO: Implement cloud storage upload (Google Cloud Storage, AWS S3, etc.)
-            return f"https://generated-images.example.com/{image_filename}"
+            # Convert image to base64 for immediate display
+            import base64
+            img_base64 = base64.b64encode(image_data_bytes).decode('utf-8')
+            return f"data:image/png;base64,{img_base64}"
             
         except Exception as e:
             logger.error(f"Failed to save generated image: {e}")

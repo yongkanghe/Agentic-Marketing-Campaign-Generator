@@ -565,13 +565,74 @@ async def _generate_batch_content_with_gemini(
                             
                     elif post_type == PostType.TEXT_IMAGE:
                         post.image_prompt = post_data.get('image_prompt', f'Professional marketing image for {company_name} showing {objective}')
-                        # Add placeholder URLs for visual content
-                        post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
+                        # Generate real image using visual content agent
+                        try:
+                            # Create post data for visual content generation
+                            image_post_data = {
+                                "id": post.id,
+                                "type": "text_image",
+                                "content": post.content,
+                                "image_prompt": post.image_prompt
+                            }
+                            
+                            # Generate visual content using the agent
+                            visual_result = await generate_visual_content_for_posts(
+                                social_posts=[image_post_data],
+                                business_context=business_context,
+                                campaign_objective=objective,
+                                target_platforms=["instagram", "linkedin", "facebook"]
+                            )
+                            
+                            # Extract generated image URL
+                            if (visual_result and 
+                                visual_result.get("posts_with_visuals") and 
+                                len(visual_result["posts_with_visuals"]) > 0):
+                                generated_post = visual_result["posts_with_visuals"][0]
+                                post.image_url = generated_post.get("image_url", f"https://picsum.photos/1024/576?random={i+100}&blur=1")
+                                logger.info(f"Generated real image for post {i+1}: {post.image_url}")
+                            else:
+                                post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
+                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
+                                
+                        except Exception as e:
+                            logger.error(f"Image generation failed for post {i+1}: {e}")
+                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
                         
                     elif post_type == PostType.TEXT_VIDEO:
                         post.video_prompt = post_data.get('video_prompt', f'Dynamic marketing video showcasing {company_name} approach to {objective}')
-                        # Add placeholder URLs for visual content
-                        post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
+                        # Generate real video using visual content agent
+                        try:
+                            # Create post data for visual content generation
+                            video_post_data = {
+                                "id": post.id,
+                                "type": "text_video", 
+                                "content": post.content,
+                                "video_prompt": post.video_prompt
+                            }
+                            
+                            # Generate visual content using the agent
+                            visual_result = await generate_visual_content_for_posts(
+                                social_posts=[video_post_data],
+                                business_context=business_context,
+                                campaign_objective=objective,
+                                target_platforms=["tiktok", "instagram", "youtube"]
+                            )
+                            
+                            # Extract generated video URL
+                            if (visual_result and 
+                                visual_result.get("posts_with_visuals") and 
+                                len(visual_result["posts_with_visuals"]) > 0):
+                                generated_post = visual_result["posts_with_visuals"][0]
+                                post.video_url = generated_post.get("video_url", f"https://picsum.photos/1024/576?random={i+200}&grayscale")
+                                post.thumbnail_url = generated_post.get("thumbnail_url")
+                                logger.info(f"Generated real video for post {i+1}: {post.video_url}")
+                            else:
+                                post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
+                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
+                                
+                        except Exception as e:
+                            logger.error(f"Video generation failed for post {i+1}: {e}")
+                            post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
                     
                     generated_posts.append(post)
                 

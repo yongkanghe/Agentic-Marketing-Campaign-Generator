@@ -21,7 +21,7 @@ Business Context Input → Industry Analysis → Contextual Prompt Engineering �
    ```python
    class ImageGenerationAgent:
        def __init__(self):
-           self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-001')
+           self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
            self.max_images = int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4'))
        
        async def generate_images(self, prompts, business_context):

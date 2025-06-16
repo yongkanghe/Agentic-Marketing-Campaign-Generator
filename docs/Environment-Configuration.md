@@ -23,7 +23,7 @@ GEMINI_MODEL=gemini-2.5-flash-preview-05-20
 #### Image Generation Configuration
 ```bash
 # Image Model: Configure which Imagen model to use
-IMAGE_MODEL=imagen-3.0-generate-001
+IMAGE_MODEL=imagen-3.0-generate-002
 # Alternatives: imagen-2.0-generate, imagen-3.0-fast
 
 # Video Model: Configure which Veo model to use
@@ -160,7 +160,7 @@ The application validates required environment variables on startup:
 - **gemini-1.5-flash**: Faster, cost-effective option
 
 ### Imagen Models
-- **imagen-3.0-generate-001**: Latest, highest quality (recommended)
+- **imagen-3.0-generate-002**: Latest, highest quality (recommended)
 - **imagen-2.0-generate**: Stable, lower cost option
 - **imagen-3.0-fast**: Faster generation, slightly lower quality
 
@@ -291,7 +291,7 @@ make launch
 # Set production environment variables
 gcloud run services update ai-marketing-generator \
   --set-env-vars="GEMINI_API_KEY=$GEMINI_API_KEY" \
-  --set-env-vars="IMAGE_MODEL=imagen-3.0-generate-001" \
+  --set-env-vars="IMAGE_MODEL=imagen-3.0-generate-002" \
   --set-env-vars="VIDEO_MODEL=veo-2"
 ```
 

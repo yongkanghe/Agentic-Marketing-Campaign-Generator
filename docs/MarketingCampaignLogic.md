@@ -110,7 +110,7 @@ quality_modifiers = [
 ```python
 # Marketing-optimized image generation
 response = self.client.models.generate_images(
-    model="imagen-3.0-generate-001",
+    model="imagen-3.0-generate-002",
     prompt=marketing_prompt,
     safety_filter_level="block_few",
     person_generation="allow_adult", 
