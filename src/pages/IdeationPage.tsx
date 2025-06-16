@@ -631,40 +631,103 @@ const IdeationPage: React.FC = () => {
                       </div>
                     ) : (
                       column.posts.map((post, index) => (
-                        <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            {/* Post Content */}
+                        <div key={post.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 break-words">
+                          {/* Visual Content Display */}
+                          {(post.content.imageUrl || post.content.videoUrl) && (
                             <div className="mb-4">
-                              <p className="text-gray-300 leading-relaxed">
-                                {post.content.text}
-                              </p>
-                            </div>
-
-                            {/* Hashtags */}
-                            {post.content.hashtags && post.content.hashtags.length > 0 && (
-                              <div className="mb-4">
-                                <div className="flex flex-wrap gap-2">
-                                  {post.content.hashtags.slice(0, 6).map((tag, tagIdx) => (
-                                    <span
-                                      key={tagIdx}
-                                      className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
+                              {post.content.imageUrl && (
+                                <div className="relative rounded-lg overflow-hidden bg-gray-800">
+                                  <img 
+                                    src={post.content.imageUrl} 
+                                    alt="Generated marketing image"
+                                    className="w-full h-48 object-cover"
+                                    onError={(e) => {
+                                      // Fallback to placeholder if image fails to load
+                                      e.currentTarget.src = 'https://picsum.photos/400/240?blur=2';
+                                    }}
+                                  />
                                 </div>
+                              )}
+                              
+                              {post.content.videoUrl && (
+                                <div className="relative rounded-lg overflow-hidden bg-gray-800">
+                                  <video 
+                                    src={post.content.videoUrl}
+                                    className="w-full h-48 object-cover"
+                                    controls
+                                    poster="https://picsum.photos/400/240?blur=2"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Post Content */}
+                          <div className="mb-4">
+                            <p className="text-gray-300 leading-relaxed text-sm break-words whitespace-pre-wrap">
+                              {post.content.text}
+                            </p>
+                            
+                            {/* URL Display for text+url posts */}
+                            {post.content.productUrl && (
+                              <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <ExternalLink className="text-blue-400" size={14} />
+                                  <span className="text-xs font-medium text-blue-400">Call-to-Action Link</span>
+                                </div>
+                                <a 
+                                  href={post.content.productUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-300 hover:text-blue-200 text-xs break-all underline"
+                                >
+                                  {post.content.productUrl}
+                                </a>
                               </div>
                             )}
                           </div>
+
+                          {/* Hashtags */}
+                          {post.content.hashtags && post.content.hashtags.length > 0 && (
+                            <div className="mb-4">
+                              <div className="flex flex-wrap gap-2">
+                                {post.content.hashtags.slice(0, 6).map((tag, tagIdx) => (
+                                  <span
+                                    key={tagIdx}
+                                    className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs break-words"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {post.content.hashtags.length > 6 && (
+                                  <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded-full text-xs">
+                                    +{post.content.hashtags.length - 6} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           
-                          <div className="flex items-center justify-between text-xs vvl-text-secondary">
+                          {/* Post Actions */}
+                          <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <span className="capitalize">{post.type.replace('_', ' + ')}</span>
+                              {post.engagement_score && (
+                                <>
+                                  <span>•</span>
+                                  <span>Score: {post.engagement_score.toFixed(1)}</span>
+                                </>
+                              )}
+                            </div>
+                            
                             <button
                               onClick={() => togglePostSelection(post.id)}
-                              className={`ml-3 p-2 rounded-lg transition-all duration-200 ${
+                              className={`p-2 rounded-lg transition-all duration-200 ${
                                 selectedPosts.includes(post.id)
                                   ? 'bg-blue-500/30 text-blue-400'
                                   : 'bg-white/5 text-gray-400 hover:bg-white/10'
                               }`}
+                              title={selectedPosts.includes(post.id) ? 'Remove from selection' : 'Add to selection'}
                             >
                               <Heart size={16} className={selectedPosts.includes(post.id) ? 'fill-current' : ''} />
                             </button>
