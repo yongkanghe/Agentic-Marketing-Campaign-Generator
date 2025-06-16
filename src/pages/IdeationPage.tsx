@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
 import { MaterialVideoCard } from '@/components/MaterialVideoCard';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoVentureLaunchAPI from '../lib/api';
 
@@ -405,6 +405,68 @@ const IdeationPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Campaign Creative Guidance Section */}
+            <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-400/20 rounded-lg p-6 mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Palette className="text-purple-400" size={20} />
+                <h4 className="text-lg font-semibold vvl-text-primary">Campaign Creative Guidance</h4>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h5 className="text-sm font-semibold vvl-text-primary mb-2">Visual Style Direction</h5>
+                  <p className="text-sm vvl-text-secondary leading-relaxed mb-3">
+                    Professional lifestyle photography with modern, clean composition focusing on authentic customer scenarios. 
+                    Emphasize trustworthy, competent brand personality through natural lighting and business-appropriate settings.
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="vvl-text-secondary">Photography: Professional lifestyle</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <span className="vvl-text-secondary">Mood: Professional, trustworthy, competent</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="vvl-text-secondary">Environment: Business setting, professional context</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="text-sm font-semibold vvl-text-primary mb-2">Content Themes & Approach</h5>
+                  <p className="text-sm vvl-text-secondary leading-relaxed mb-3">
+                    Focus on authenticity, results, and community building. Use inspiring and action-oriented calls-to-action 
+                    that trigger aspiration, trust, and excitement in your target audience.
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {['Authenticity', 'Results', 'Community', 'Growth', 'Innovation'].map((theme) => (
+                      <span key={theme} className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
+                        {theme}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="grid md:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="font-semibold text-blue-400">Image Generation:</span>
+                    <span className="vvl-text-secondary ml-2">Following Imagen best practices with 35mm lens, natural lighting, high resolution</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-purple-400">Video Generation:</span>
+                    <span className="vvl-text-secondary ml-2">Following Veo best practices with smooth movements, 15-30 second social clips</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Campaign Validation Status */}
             <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
               <div className="flex items-center gap-3">
@@ -412,7 +474,7 @@ const IdeationPage: React.FC = () => {
                 <span className="text-sm font-medium text-green-400">Campaign Ready for Content Generation</span>
               </div>
               <p className="text-xs vvl-text-secondary mt-1 ml-5">
-                All required information has been provided. AI is ready to generate targeted social media content.
+                All required information has been provided. AI is ready to generate targeted social media content following the creative guidance above.
               </p>
             </div>
           </div>

@@ -376,37 +376,71 @@ async def _generate_batch_content_with_gemini(
         business_description = business_context.get('business_description', '')
         target_audience = business_context.get('target_audience', 'business professionals')
         
-        # Create post type specific prompt
+        # Extract campaign guidance for consistent visual content
+        campaign_guidance = business_context.get('campaign_guidance', {})
+        visual_style = campaign_guidance.get('visual_style', {})
+        imagen_prompts = campaign_guidance.get('imagen_prompts', {})
+        veo_prompts = campaign_guidance.get('veo_prompts', {})
+        content_themes = campaign_guidance.get('content_themes', {})
+        
+        # Create post type specific prompt with campaign guidance
         post_type_name = post_type.value.replace('_', ' + ').title()
         
         if post_type == PostType.TEXT_URL:
             format_instructions = f"""
             Generate {actual_count} Text + URL posts (40-120 characters each):
-            - CRITICAL: Include clear Call-To-Action with URL
+            - CRITICAL: Include ONE clear product/service URL (not multiple duplicate URLs)
             - Short, punchy, social media optimized
             - Twitter/Instagram friendly length
             - Strong action verbs (Discover, Transform, Boost, etc.)
-            - Include URL placement naturally
+            - Include URL placement naturally at the end
             - Platform: LinkedIn, Twitter, Instagram optimized
+            - Call-to-Action Style: {content_themes.get('call_to_action_style', 'inspiring and action-oriented')}
             """
         elif post_type == PostType.TEXT_IMAGE:
+            imagen_base = imagen_prompts.get('base_prompt', 'Professional lifestyle photography')
+            imagen_environment = imagen_prompts.get('environment', 'business setting')
+            imagen_technical = imagen_prompts.get('technical_specs', '35mm lens, natural lighting')
+            
             format_instructions = f"""
             Generate {actual_count} Text + Image posts (30-80 characters each):
             - Very short text to complement visuals
-            - Include detailed image generation prompts for Imagen API
-            - Visual storytelling approach
+            - Include detailed image generation prompts following Imagen best practices
+            - Visual storytelling approach focused on {company_name}'s business
             - Instagram/TikTok optimized
             - Let the image do the talking
+            
+            IMAGEN PROMPT GUIDANCE (follow exactly):
+            - Base Style: {imagen_base}
+            - Environment: {imagen_environment}  
+            - Technical Specs: {imagen_technical}
+            - Photography Style: {visual_style.get('photography_style', 'professional lifestyle')}
+            - Mood: {visual_style.get('mood', 'professional, trustworthy')}
+            - Subject Focus: People using {company_name}'s products/services in real scenarios
+            
             Cost Control: Limited to {actual_count} posts to manage Imagen API costs
             """
         else:  # TEXT_VIDEO
+            veo_base = veo_prompts.get('base_prompt', 'Dynamic lifestyle video')
+            veo_movement = veo_prompts.get('movement_style', 'smooth camera movements')
+            veo_storytelling = veo_prompts.get('storytelling', 'problem-solution narrative')
+            
             format_instructions = f"""
             Generate {actual_count} Text + Video posts (40-100 characters each):
             - Short, dynamic captions for video content
-            - Include detailed video concept descriptions for Veo API
+            - Include detailed video concept descriptions following Veo best practices
             - TikTok/Instagram Reels/YouTube Shorts optimized
             - Action-oriented language
             - Focus on movement and energy
+            
+            VEO PROMPT GUIDANCE (follow exactly):
+            - Base Concept: {veo_base}
+            - Movement Style: {veo_movement}
+            - Storytelling: {veo_storytelling}
+            - Duration Focus: {veo_prompts.get('duration_focus', '15-30 second clips')}
+            - Scene Composition: {veo_prompts.get('scene_composition', 'engaging transitions')}
+            - Show real people engaging with {company_name}'s offerings
+            
             Cost Control: Limited to {actual_count} posts to manage Veo API costs
             """
         
@@ -417,9 +451,13 @@ async def _generate_batch_content_with_gemini(
             PostType.TEXT_VIDEO: "TikTok: 40-100 chars, Instagram Reels: 60 chars, YouTube Shorts: 80 chars"
         }
         
-        # Comprehensive batch generation prompt
+        # Get primary themes for consistent messaging
+        primary_themes = content_themes.get('primary_themes', ['authenticity', 'results', 'community'])
+        emotional_triggers = content_themes.get('emotional_triggers', ['aspiration', 'trust', 'excitement'])
+        
+        # Comprehensive batch generation prompt with campaign guidance
         batch_prompt = f"""
-        As a professional social media marketing expert, generate {actual_count} high-quality {post_type_name} posts for {company_name}.
+        As a professional social media marketing expert, generate {actual_count} high-quality {post_type_name} posts for {company_name} following the established CAMPAIGN GUIDANCE.
 
         Business Context:
         - Company: {company_name}
@@ -429,18 +467,26 @@ async def _generate_batch_content_with_gemini(
         - Business Description: {business_description}
         - Website URL: {business_context.get('business_website', business_context.get('product_service_url', 'https://example.com'))}
 
+        CAMPAIGN GUIDANCE (CRITICAL - Follow Exactly):
+        - Creative Direction: {campaign_guidance.get('creative_direction', 'Create visually compelling content that showcases authenticity')}
+        - Primary Themes: {', '.join(primary_themes)}
+        - Emotional Triggers: {', '.join(emotional_triggers)}
+        - Brand Voice: {business_context.get('brand_voice', 'Professional and innovative')}
+        - Visual Mood: {visual_style.get('mood', 'professional, trustworthy')}
+
         {format_instructions}
 
         Platform Requirements: {platform_requirements[post_type]}
 
         CRITICAL Requirements for ALL posts:
         - Keep text SHORT and PUNCHY for social media
-        - For TEXT_URL: MUST include Call-To-Action with URL
-        - For TEXT_IMAGE: MUST include detailed image prompt for AI generation
-        - For TEXT_VIDEO: MUST include detailed video concept for AI generation
+        - For TEXT_URL: MUST include ONE product/service URL (no duplicates)
+        - For TEXT_IMAGE: MUST follow Imagen prompt guidance above for relevant, business-specific images
+        - For TEXT_VIDEO: MUST follow Veo prompt guidance above for relevant, business-specific videos
         - Use emojis strategically for engagement
         - Include 3-4 relevant hashtags (separate field)
         - Make content specific to {company_name} and their {objective}
+        - Follow campaign themes: {', '.join(primary_themes)}
 
         Format your response as JSON:
         {{
@@ -448,14 +494,14 @@ async def _generate_batch_content_with_gemini(
                 {{
                     "content": "Short punchy text here (follow character limits)",
                     "hashtags": ["#tag1", "#tag2", "#tag3"],
-                    {"image_prompt" if post_type == PostType.TEXT_IMAGE else "video_prompt" if post_type == PostType.TEXT_VIDEO else "call_to_action"}: "{"Detailed image description for Imagen API" if post_type == PostType.TEXT_IMAGE else "Detailed video concept for Veo API" if post_type == PostType.TEXT_VIDEO else "Strong CTA with URL"}",
-                    {"url" if post_type == PostType.TEXT_URL else "engagement_strategy"}: "{"Include website URL here" if post_type == PostType.TEXT_URL else "Brief engagement approach"}"
+                    {"image_prompt" if post_type == PostType.TEXT_IMAGE else "video_prompt" if post_type == PostType.TEXT_VIDEO else "call_to_action"}: "{"Detailed Imagen-optimized prompt for " + company_name + " business context" if post_type == PostType.TEXT_IMAGE else "Detailed Veo-optimized concept for " + company_name + " business context" if post_type == PostType.TEXT_VIDEO else "Strong CTA with URL"}",
+                    {"url" if post_type == PostType.TEXT_URL else "engagement_strategy"}: "{"Single website URL here" if post_type == PostType.TEXT_URL else "Brief engagement approach"}"
                 }},
                 // ... repeat for {actual_count} posts
             ]
         }}
 
-        Generate exactly {actual_count} unique, SHORT, social media optimized posts that will drive {objective} for {company_name}.
+        Generate exactly {actual_count} unique, SHORT, social media optimized posts that will drive {objective} for {company_name} following the campaign guidance for consistent brand experience.
         """
         
         # Generate content using Gemini
@@ -514,11 +560,8 @@ async def _generate_batch_content_with_gemini(
                             post_url = f"https://{post_url}"
                         post.url = post_url
                         
-                        # Add CTA to content if not already present
-                        cta = post_data.get('call_to_action', '')
-                        if cta and post_url:
-                            if post_url not in post_content:
-                                post.content = f"{post_content}\n\n{cta}\n{post_url}"
+                        # DO NOT add URL to content - it will be displayed separately in the UI
+                        # The frontend will handle URL display in a dedicated section
                             
                     elif post_type == PostType.TEXT_IMAGE:
                         post.image_prompt = post_data.get('image_prompt', f'Professional marketing image for {company_name} showing {objective}')
@@ -574,8 +617,7 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
             if post_url and not post_url.startswith('http'):
                 post_url = f"https://{post_url}"
             post.url = post_url
-            if post_url:
-                post.content = f"{post.content}\n\n👉 Learn more: {post_url}"
+            # DO NOT add URL to content - frontend will display it separately
                 
         elif post_type == PostType.TEXT_IMAGE:
             post.image_prompt = f'Professional marketing image for {company_name} showing {objective}'

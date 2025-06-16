@@ -175,7 +175,7 @@ class URLAnalysisAgent:
                 content_summary += f"Content: {content['text'][:1000]}...\n"
         
         prompt = f"""
-        As a business intelligence analyst, analyze the following website content and extract comprehensive business context:
+        As a business intelligence analyst and creative director, analyze the following website content and extract comprehensive business context with detailed CAMPAIGN GUIDANCE for visual content generation:
 
         {content_summary}
 
@@ -194,8 +194,47 @@ class URLAnalysisAgent:
             "key_themes": ["theme 1", "theme 2", "theme 3"],
             "business_objectives": ["likely objective 1", "likely objective 2"],
             "content_style": "description of content style and tone",
-            "visual_elements": "description of visual branding elements mentioned"
+            "visual_elements": "description of visual branding elements mentioned",
+            
+            "campaign_guidance": {{
+                "creative_direction": "2-3 sentences describing the overall creative vision and aesthetic approach for this campaign",
+                "visual_style": {{
+                    "photography_style": "specific photography approach (portrait, lifestyle, product, architectural, etc.)",
+                    "color_palette": ["primary color", "secondary color", "accent color"],
+                    "lighting": "lighting style (natural, studio, dramatic, soft, etc.)",
+                    "composition": "composition approach (close-up, wide-angle, macro, etc.)",
+                    "mood": "overall mood and feeling (professional, energetic, calm, innovative, etc.)"
+                }},
+                "imagen_prompts": {{
+                    "base_prompt": "Core visual prompt template following Imagen best practices",
+                    "style_modifiers": ["photography style", "lens type", "lighting condition"],
+                    "subject_focus": "primary subject matter for images",
+                    "environment": "typical environment/setting for visuals",
+                    "technical_specs": "camera settings, focal length, etc."
+                }},
+                "veo_prompts": {{
+                    "base_prompt": "Core video concept template following Veo best practices", 
+                    "movement_style": "camera movement and subject motion",
+                    "scene_composition": "how scenes should be structured",
+                    "duration_focus": "short-form optimized approach",
+                    "storytelling": "narrative approach for video content"
+                }},
+                "content_themes": {{
+                    "primary_themes": ["main theme 1", "main theme 2", "main theme 3"],
+                    "visual_metaphors": ["metaphor 1", "metaphor 2"],
+                    "emotional_triggers": ["emotion 1", "emotion 2", "emotion 3"],
+                    "call_to_action_style": "approach for CTAs (urgent, informative, inspiring, etc.)"
+                }},
+                "brand_consistency": {{
+                    "logo_placement": "guidelines for logo/brand element placement",
+                    "typography": "font style and text overlay approach",
+                    "brand_colors": "how to incorporate brand colors",
+                    "messaging_tone": "consistent voice across all content"
+                }}
+            }}
         }}
+
+        CRITICAL: The campaign_guidance section should provide specific, actionable direction that follows Google's Imagen and Veo prompt engineering best practices. This will be used to generate consistent, high-quality visual content across all social media posts.
 
         Focus on extracting actionable insights for marketing campaign generation. Be specific and detailed.
         """
@@ -232,7 +271,8 @@ class URLAnalysisAgent:
                 "key_themes": self._extract_list_field(ai_response, "key_themes"),
                 "business_objectives": self._extract_list_field(ai_response, "business_objectives"),
                 "content_style": self._extract_field(ai_response, "content_style"),
-                "visual_elements": self._extract_field(ai_response, "visual_elements")
+                "visual_elements": self._extract_field(ai_response, "visual_elements"),
+                "campaign_guidance": self._extract_campaign_guidance(ai_response)
             }
             
             return business_context
@@ -258,6 +298,95 @@ class URLAnalysisAgent:
             items = re.findall(r'"([^"]*)"', items_text)
             return items
         return []
+    
+    def _extract_campaign_guidance(self, text: str) -> Dict[str, Any]:
+        """Extract campaign guidance from AI response."""
+        try:
+            import re
+            import json
+            
+            # Try to extract campaign_guidance JSON block
+            guidance_pattern = r'"campaign_guidance":\s*\{(.*?)\}\s*\}'
+            match = re.search(guidance_pattern, text, re.DOTALL)
+            
+            if match:
+                guidance_json = "{" + match.group(1) + "}"
+                try:
+                    return json.loads(guidance_json)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Fallback: Generate basic campaign guidance
+            return self._generate_fallback_campaign_guidance(text)
+            
+        except Exception as e:
+            logger.error(f"Failed to extract campaign guidance: {e}")
+            return self._generate_fallback_campaign_guidance(text)
+    
+    def _generate_fallback_campaign_guidance(self, analysis_text: str) -> Dict[str, Any]:
+        """Generate fallback campaign guidance based on analysis."""
+        
+        # Analyze content for industry and style cues
+        text_lower = analysis_text.lower()
+        
+        # Determine photography style based on industry
+        if any(word in text_lower for word in ['tech', 'software', 'digital', 'app']):
+            photography_style = "modern tech lifestyle"
+            environment = "modern office, clean workspace, digital interfaces"
+            mood = "innovative, professional, forward-thinking"
+        elif any(word in text_lower for word in ['food', 'restaurant', 'cafe', 'dining']):
+            photography_style = "food and lifestyle photography"
+            environment = "restaurant setting, kitchen, dining atmosphere"
+            mood = "appetizing, warm, inviting"
+        elif any(word in text_lower for word in ['fitness', 'health', 'wellness', 'gym']):
+            photography_style = "fitness and lifestyle"
+            environment = "gym, outdoor fitness, active lifestyle"
+            mood = "energetic, motivating, healthy"
+        elif any(word in text_lower for word in ['fashion', 'clothing', 'apparel', 'style']):
+            photography_style = "fashion and portrait"
+            environment = "studio, lifestyle settings, fashion contexts"
+            mood = "stylish, trendy, aspirational"
+        else:
+            photography_style = "professional lifestyle"
+            environment = "business setting, professional context"
+            mood = "professional, trustworthy, competent"
+        
+        return {
+            "creative_direction": f"Create visually compelling content that showcases the brand's {mood} personality through {photography_style} imagery, emphasizing authenticity and connection with the target audience.",
+            "visual_style": {
+                "photography_style": photography_style,
+                "color_palette": ["#2563eb", "#64748b", "#f8fafc"],
+                "lighting": "natural, soft lighting with professional quality",
+                "composition": "clean, modern composition with focus on subject",
+                "mood": mood
+            },
+            "imagen_prompts": {
+                "base_prompt": f"Professional {photography_style}, {environment}, high quality, well-lit",
+                "style_modifiers": ["35mm lens", "natural lighting", "professional photography"],
+                "subject_focus": "people using product/service in real scenarios",
+                "environment": environment,
+                "technical_specs": "35mm lens, f/2.8, natural lighting, high resolution"
+            },
+            "veo_prompts": {
+                "base_prompt": f"Dynamic {photography_style} video showing real people engaging with the brand",
+                "movement_style": "smooth camera movements, natural subject motion",
+                "scene_composition": "multiple quick cuts, engaging transitions",
+                "duration_focus": "15-30 second social media optimized clips",
+                "storytelling": "problem-solution narrative with emotional connection"
+            },
+            "content_themes": {
+                "primary_themes": ["authenticity", "results", "community"],
+                "visual_metaphors": ["growth", "transformation", "connection"],
+                "emotional_triggers": ["aspiration", "trust", "excitement"],
+                "call_to_action_style": "inspiring and action-oriented"
+            },
+            "brand_consistency": {
+                "logo_placement": "subtle, bottom-right or integrated naturally",
+                "typography": "clean, modern sans-serif fonts",
+                "brand_colors": "consistent color palette across all content",
+                "messaging_tone": "professional yet approachable"
+            }
+        }
     
     def _generate_enhanced_mock_analysis(self, url_contents: Dict[str, Dict], analysis_type: str) -> Dict[str, Any]:
         """Generate enhanced mock analysis based on scraped content."""
@@ -319,7 +448,8 @@ class URLAnalysisAgent:
                 "Drive innovation"
             ],
             "content_style": "Professional, informative, and engaging",
-            "visual_elements": "Modern, clean design with professional imagery"
+            "visual_elements": "Modern, clean design with professional imagery",
+            "campaign_guidance": self._generate_fallback_campaign_guidance(all_text)
         }
     
     def _generate_fallback_analysis(self, urls: List[str]) -> Dict[str, Any]:
