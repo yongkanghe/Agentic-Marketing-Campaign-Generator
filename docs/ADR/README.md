@@ -18,11 +18,10 @@ Each ADR follows this structure:
 ## Current ADRs
 
 1. [ADR-001: Technology Stack Selection](./ADR-001-technology-stack.md)
-2. [ADR-002: Frontend Framework Choice](./ADR-002-frontend-framework.md)
-3. [ADR-003: Backend Architecture](./ADR-003-backend-architecture.md)
-4. [ADR-004: Database Selection](./ADR-004-database-selection.md)
-5. [ADR-005: AI Integration Strategy](./ADR-005-ai-integration.md)
-6. [ADR-006: Deployment Architecture](./ADR-006-deployment-architecture.md)
+2. [ADR-002: Enhanced Campaign Creation Workflow](./ADR-002-enhanced-campaign-creation.md)
+3. [ADR-003: Backend ADK Implementation Strategy](./ADR-003-backend-adk-implementation.md)
+4. [ADR-003: VVL Design System Framework](./ADR-003-VVL-Design-System-Framework.md)
+5. [ADR-004: Local Database Design for MVP](./ADR-004-local-database-design.md)
 
 ## Creating New ADRs
 

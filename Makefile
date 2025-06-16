@@ -764,13 +764,20 @@ update-about-page-release-info: ## Update About page with dynamic release inform
 	@echo "✅ Release information updated in src/data/releaseInfo.ts"
 
 # Database operations for local MVP
-db-init: ## Initialize local SQLite database for MVP
-	@echo "🗄️  Initializing local SQLite database..."
+db-init: ## Initialize local SQLite database with complete schema
+	@echo "🗄️  Initializing local SQLite database with complete schema..."
 	@mkdir -p data
 	@if [ ! -f data/video_venture_launch.db ]; then \
-		echo "Creating new SQLite database..."; \
-		python3 -c "import sqlite3; conn = sqlite3.connect('data/video_venture_launch.db'); conn.execute('CREATE TABLE IF NOT EXISTS campaigns (id TEXT PRIMARY KEY, name TEXT NOT NULL, business_description TEXT, objective TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id TEXT)'); conn.execute('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE, email TEXT UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_login TIMESTAMP)'); conn.execute('CREATE TABLE IF NOT EXISTS generated_content (id TEXT PRIMARY KEY, campaign_id TEXT, content_type TEXT, platform TEXT, content_data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (campaign_id) REFERENCES campaigns (id))'); conn.commit(); conn.close()"; \
-		echo "✅ Database initialized at data/video_venture_launch.db"; \
+		echo "Creating new SQLite database with complete schema..."; \
+		if [ -f "backend/database/schema.sql" ]; then \
+			sqlite3 data/video_venture_launch.db < backend/database/schema.sql; \
+			echo "✅ Database initialized with complete schema at data/video_venture_launch.db"; \
+		else \
+			echo "❌ Schema file not found at backend/database/schema.sql"; \
+			echo "Creating basic schema as fallback..."; \
+			python3 -c "import sqlite3; conn = sqlite3.connect('data/video_venture_launch.db'); conn.execute('CREATE TABLE campaigns (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); conn.execute('CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); conn.commit(); conn.close()"; \
+			echo "⚠️  Basic schema created. Run 'make db-upgrade' to apply full schema."; \
+		fi; \
 	else \
 		echo "✅ Database already exists at data/video_venture_launch.db"; \
 	fi
@@ -792,10 +799,22 @@ db-backup: ## Create backup of local database
 
 db-status: ## Check database status and show table info
 	@echo "📊 Database Status:"
+	@python3 backend/database/db_status.py
+
+db-upgrade: ## Upgrade existing database to latest schema
+	@echo "🔄 Upgrading database to latest schema..."
 	@if [ -f data/video_venture_launch.db ]; then \
-		echo "✅ Database exists at data/video_venture_launch.db"; \
-		echo "📋 Tables:"; \
-		python3 -c "import sqlite3; conn = sqlite3.connect('data/video_venture_launch.db'); cursor = conn.cursor(); cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\"'); tables = cursor.fetchall(); [print(f'  - {table[0]}') for table in tables]; cursor.execute('SELECT COUNT(*) FROM campaigns'); campaign_count = cursor.fetchone()[0]; cursor.execute('SELECT COUNT(*) FROM users'); user_count = cursor.fetchone()[0]; cursor.execute('SELECT COUNT(*) FROM generated_content'); content_count = cursor.fetchone()[0]; print(f'📊 Data counts:'); print(f'  - Campaigns: {campaign_count}'); print(f'  - Users: {user_count}'); print(f'  - Generated Content: {content_count}'); conn.close()"; \
+		if [ -f "backend/database/schema.sql" ]; then \
+			echo "⚠️  WARNING: This will recreate the database with new schema."; \
+			echo "Creating backup first..."; \
+			$(MAKE) db-backup; \
+			echo "Applying new schema..."; \
+			rm -f data/video_venture_launch.db; \
+			sqlite3 data/video_venture_launch.db < backend/database/schema.sql; \
+			echo "✅ Database upgraded to latest schema"; \
+		else \
+			echo "❌ Schema file not found at backend/database/schema.sql"; \
+		fi; \
 	else \
 		echo "❌ Database not found. Run 'make db-init' to create it."; \
 	fi
