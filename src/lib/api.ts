@@ -305,6 +305,54 @@ export class VideoVentureLaunchAPI {
     }
   }
 
+  // Visual Content Generation
+  static async generateVisualContent(request: {
+    social_posts: Array<{
+      id: string | number;
+      type: 'text_image' | 'text_video' | 'text_url';
+      content: string;
+      platform: string;
+      hashtags?: string[];
+    }>;
+    business_context: {
+      business_name?: string;
+      industry?: string;
+      objective?: string;
+      target_audience?: string;
+      brand_voice?: string;
+    };
+    campaign_objective: string;
+    target_platforms?: string[];
+  }): Promise<{
+    posts_with_visuals: Array<{
+      id: string | number;
+      type: string;
+      content: string;
+      platform: string;
+      hashtags?: string[];
+      image_prompt?: string;
+      image_url?: string;
+      video_prompt?: string;
+      video_url?: string;
+    }>;
+    visual_strategy: any;
+    generation_metadata: any;
+    created_at: string;
+  }> {
+    try {
+      const response = await apiClient.post('/api/v1/content/generate-visuals', request);
+      
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.error || 'Failed to generate visual content');
+      }
+      
+      return response.data.data;
+    } catch (error) {
+      console.error('Generate visual content error:', error);
+      throw this.handleApiError(error);
+    }
+  }
+
   // URL Analysis
   static async analyzeUrls(request: UrlAnalysisRequest): Promise<UrlAnalysisResponse> {
     try {

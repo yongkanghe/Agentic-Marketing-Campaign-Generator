@@ -3,7 +3,9 @@ description:
 globs: 
 alwaysApply: true
 ---
-use makefiles for application operations, running, testing and similar
+use makefiles for application operations, running, testing and similar.
+
+Read the documentation and readme files to understand the solution architecture and solution intent before proceeding with any further additional code improvements or functional extensions to the solution.
 
 the app is on port 8080. ensure this is consistent and well documented.
 

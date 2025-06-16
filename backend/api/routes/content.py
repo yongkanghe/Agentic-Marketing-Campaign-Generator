@@ -14,6 +14,14 @@ from ..models import (
     SocialMediaPost, PostType
 )
 
+# Import visual content generation
+try:
+    from agents.visual_content_agent import generate_visual_content_for_posts
+    logger.info("Visual content agent available for API endpoints")
+except ImportError as e:
+    logger.warning(f"Visual content agent not available: {e}")
+    generate_visual_content_for_posts = None
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -105,4 +113,59 @@ async def regenerate_posts(request: SocialPostRegenerationRequest) -> SocialPost
         raise HTTPException(
             status_code=500,
             detail=f"Post regeneration failed: {str(e)}"
+        )
+
+
+@router.post("/generate-visuals")
+async def generate_visual_content(request: dict):
+    """Generate visual content (images and videos) for social media posts."""
+    
+    try:
+        logger.info("Generating visual content for social media posts")
+        
+        # Extract request data
+        social_posts = request.get("social_posts", [])
+        business_context = request.get("business_context", {})
+        campaign_objective = request.get("campaign_objective", "")
+        target_platforms = request.get("target_platforms", ["instagram", "linkedin"])
+        
+        if not social_posts:
+            raise HTTPException(
+                status_code=400,
+                detail="No social media posts provided for visual content generation"
+            )
+        
+        # Generate visual content using the visual content agent
+        if generate_visual_content_for_posts:
+            result = await generate_visual_content_for_posts(
+                social_posts=social_posts,
+                business_context=business_context,
+                campaign_objective=campaign_objective,
+                target_platforms=target_platforms
+            )
+        else:
+            # Fallback mock implementation
+            result = {
+                "posts_with_visuals": social_posts,
+                "visual_strategy": {
+                    "total_posts": len(social_posts),
+                    "image_posts": len([p for p in social_posts if p.get("type") == "text_image"]),
+                    "video_posts": len([p for p in social_posts if p.get("type") == "text_video"]),
+                    "brand_consistency": "Professional and modern",
+                    "platform_optimization": "Multi-platform ready"
+                },
+                "generation_metadata": {
+                    "agent_used": "MockVisualContentAgent",
+                    "processing_time": 1.0,
+                    "quality_score": 8.0
+                }
+            }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Visual content generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Visual content generation failed: {str(e)}"
         ) 

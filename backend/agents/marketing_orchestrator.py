@@ -23,8 +23,16 @@ from google.adk.models import Gemini
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Model configuration
-GEMINI_MODEL = "gemini-2.0-flash-exp"
+# Import visual content generation
+try:
+    from .visual_content_agent import generate_visual_content_for_posts
+    logger.info("Visual content agent imported successfully")
+except ImportError as e:
+    logger.warning(f"Visual content agent not available: {e}")
+    generate_visual_content_for_posts = None
+
+# Model configuration - Using standardized environment variables
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -445,8 +453,10 @@ async def _mock_workflow_execution(context: Dict[str, Any]) -> Dict[str, Any]:
             post["url"] = context.get("business_website", "https://example.com")
         elif post_type == "text_image":
             post["image_prompt"] = f"Professional business image showing {context['objective']} with modern, clean design"
+            post["image_url"] = f"https://via.placeholder.com/400x400/4F46E5/FFFFFF?text=AI+Generated+Image+{i+1}"
         elif post_type == "text_video":
             post["video_prompt"] = f"Dynamic video showcasing {context['objective']} with engaging visuals and professional presentation"
+            post["video_url"] = f"https://placeholder-videos.s3.amazonaws.com/sample_{i+1}.mp4"
         
         social_posts.append(post)
     
