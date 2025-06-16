@@ -11,6 +11,7 @@ import { MaterialVideoCard } from '@/components/MaterialVideoCard';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
+import VideoVentureLaunchAPI from '../lib/api';
 
 const IdeationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -101,32 +102,20 @@ const IdeationPage: React.FC = () => {
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
       
-      const response = await fetch('/api/v1/content/regenerate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const data = await VideoVentureLaunchAPI.generateBulkContent({
+        post_type: postType,
+        regenerate_count: 5,
+        business_context: {
+          company_name: currentCampaign?.name || 'Your Company',
+          objective: currentCampaign?.objective || 'increase sales',
+          campaign_type: currentCampaign?.campaignType || 'service',
+          target_audience: 'business professionals', // TODO: Add target_audience to Campaign interface
+          business_description: currentCampaign?.businessDescription || '',
+          business_website: currentCampaign?.businessUrl || '',
+          product_service_url: currentCampaign?.productServiceUrl || ''
         },
-        body: JSON.stringify({
-          post_type: postType,
-          regenerate_count: 5,
-          business_context: {
-            company_name: currentCampaign?.name || 'Your Company',
-            objective: currentCampaign?.objective || 'increase sales',
-            campaign_type: currentCampaign?.campaignType || 'service',
-            target_audience: 'business professionals', // TODO: Add target_audience to Campaign interface
-            business_description: currentCampaign?.businessDescription || '',
-            business_website: currentCampaign?.businessUrl || '',
-            product_service_url: currentCampaign?.productServiceUrl || ''
-          },
-          creativity_level: currentCampaign?.creativityLevel || 7
-        })
+        creativity_level: currentCampaign?.creativityLevel || 7
       });
-
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
-      }
-
-      const data = await response.json();
       
       // Transform API response to match frontend format
       const transformedPosts = data.new_posts.map((post: any, idx: number) => ({
@@ -136,9 +125,9 @@ const IdeationPage: React.FC = () => {
         content: {
           text: post.content || `Generated ${postType.replace('_', ' + ')} content for ${currentCampaign?.objective}`,
           hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-          imageUrl: columnId === 'text-image' ? post.image_url || `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=AI+Generated+${idx + 1}` : undefined,
-          videoUrl: columnId === 'text-video' ? post.video_url || `https://placeholder-videos.s3.amazonaws.com/sample${idx + 1}.mp4` : undefined,
-          productUrl: columnId === 'text-only' ? currentCampaign?.productServiceUrl || currentCampaign?.businessUrl || 'https://example.com/product' : undefined
+          imageUrl: columnId === 'text-image' ? post.image_url : undefined,
+          videoUrl: columnId === 'text-video' ? post.video_url : undefined,
+          productUrl: columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined
         },
         generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
         selected: false,
@@ -155,60 +144,15 @@ const IdeationPage: React.FC = () => {
     } catch (error) {
       console.error(`Failed to generate ${columnId} posts:`, error);
       
-      // Fallback to enhanced mock data on API failure
-      const fallbackPosts = Array(5).fill(null).map((_, idx) => ({
-        id: `${columnId}-post-${Date.now()}-${idx}`,
-        type: columnId as 'text-only' | 'text-with-image' | 'text-with-video',
-        platform: 'linkedin' as const,
-        content: {
-          text: generateMockPostText(columnId, idx),
-          hashtags: suggestedHashtags.slice(0, 3),
-          imageUrl: columnId === 'text-image' ? `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=AI+Generated+${idx + 1}` : undefined,
-          videoUrl: columnId === 'text-video' ? `https://placeholder-videos.s3.amazonaws.com/sample${idx + 1}.mp4` : undefined,
-          productUrl: columnId === 'text-only' ? currentCampaign?.productServiceUrl || currentCampaign?.businessUrl || 'https://example.com/product' : undefined
-        },
-        generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
-        selected: false
-      }));
-      
+      // Reset loading state
       setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, posts: fallbackPosts, isGenerating: false } : col
+        col.id === columnId ? { ...col, isGenerating: false } : col
       ));
       
-      toast.error(`API unavailable - using enhanced mock content for ${columnId} posts`);
+      // Show proper error message without fallback to mock content
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to generate ${columnId} posts: ${errorMessage}. Please check your internet connection and try again.`);
     }
-  };
-
-  const generateMockPostText = (type: string, index: number) => {
-    const objective = currentCampaign?.objective || 'increase sales';
-    const campaignType = currentCampaign?.campaignType || 'service';
-    const businessName = currentCampaign?.name || 'Your Business';
-    
-    const baseTexts = {
-      'text-only': [
-        `🚀 Exciting news! We're launching something amazing that will transform how you ${objective}. Our innovative ${campaignType} solution has been designed with your success in mind. After months of development and testing, we're ready to share the results with you. Check out the details below and let us know what you think! This could be the game-changer your business has been waiting for.`,
-        `💡 Innovation meets excellence in our latest ${campaignType} offering. Designed specifically for businesses looking to ${objective}, this solution addresses the core challenges we've identified in the market. What's your biggest challenge in this area? We'd love to hear from you and show how our approach can make a real difference in your business outcomes.`,
-        `🎯 Ready to take your business to the next level? Our new ${campaignType} solution addresses exactly what you need to ${objective}. We've worked with companies just like yours to understand the pain points and create something truly valuable. The early results have been incredible, and we're excited to share this opportunity with you. Link in comments!`,
-        `✨ Behind the scenes: Here's how we're helping companies like ${businessName} ${objective}. The results speak for themselves - our clients are seeing measurable improvements in their business metrics. This isn't just another ${campaignType}; it's a comprehensive approach that delivers real value. Want to learn more about how this could work for your business?`,
-        `🔥 Game-changer alert! This is what happens when innovation meets real business needs. Perfect for anyone looking to ${objective}, our ${campaignType} solution has been tested and proven in real-world scenarios. The feedback from our beta users has been overwhelmingly positive, and we're confident this can help transform your business too.`
-      ],
-      'text-image': [
-        `🎨 Visual storytelling at its finest! See how we're revolutionizing ${campaignType} marketing with this powerful image that captures the essence of what it means to ${objective}. Every element in this visual has been carefully crafted to communicate our value proposition and connect with businesses like yours. This isn't just a pretty picture - it's a strategic communication tool designed to inspire action.`,
-        `📸 A picture is worth a thousand words. Here's our approach to helping businesses ${objective} through innovative ${campaignType} solutions. This image represents months of research, development, and real-world testing. We believe that visual communication is key to understanding complex business solutions, and this image tells the story of transformation and success.`,
-        `🌟 Sneak peek at what's coming! This is how we're changing the game for businesses looking to ${objective}. The visual you see here represents our commitment to excellence and innovation in the ${campaignType} space. We're not just talking about change - we're showing you what it looks like when businesses embrace new possibilities.`,
-        `💫 Design meets functionality. Check out this amazing visual representation of how our ${campaignType} solution helps businesses ${objective}. Every color, shape, and element has been chosen to communicate our core message: that success is achievable when you have the right tools and approach. This image is just the beginning of what we can accomplish together.`,
-        `🎭 Creative meets strategic. This image tells our whole story about helping businesses ${objective} through innovative ${campaignType} solutions. We believe that great design isn't just about aesthetics - it's about communication, connection, and creating meaningful experiences that drive real business results.`
-      ],
-      'text-video': [
-        `🎬 Watch this! 60 seconds that will change how you think about ${objective}. This video showcases our ${campaignType} solution in action, demonstrating real results from real businesses. We've packed this short video with insights, examples, and proof points that show exactly how our approach can transform your business. Don't just take our word for it - see the results for yourself.`,
-        `📹 Video speaks louder than words. See our ${campaignType} solution in action and discover how we're helping businesses ${objective} with measurable results. This isn't just a promotional video - it's a demonstration of real value, real solutions, and real outcomes. Watch how other businesses have transformed their operations and achieved their goals.`,
-        `🎥 Behind the scenes: The making of something extraordinary. This video takes you inside our process of developing ${campaignType} solutions that help businesses ${objective}. From concept to implementation, you'll see the dedication, innovation, and expertise that goes into every solution we create. This is what happens when passion meets purpose.`,
-        `🎪 Lights, camera, action! Here's our story in motion - how we're revolutionizing the way businesses approach ${objective} through innovative ${campaignType} solutions. This video captures the energy, excitement, and results that come from working with a team that truly understands your challenges and has the expertise to solve them.`,
-        `🎨 Motion graphics meet real results. Watch the magic happen as we demonstrate how our ${campaignType} solution transforms the way businesses ${objective}. This video combines stunning visuals with compelling data to show you exactly what's possible when you choose the right partner for your business transformation journey.`
-      ]
-    };
-    
-    return baseTexts[type as keyof typeof baseTexts][index] || `Comprehensive ${type.replace('-', ' + ')} content for ${businessName} focusing on ${objective} through innovative ${campaignType} solutions. This post demonstrates our commitment to delivering real value and measurable results for businesses like yours.`;
   };
 
   const togglePostSelection = (postId: string) => {

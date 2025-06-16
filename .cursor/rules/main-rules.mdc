@@ -29,6 +29,10 @@ use python3
 
 Target production state would be a Hosted-on Google Cloud platform. Consider that in the longer solution maturity roadmpa post MVP.
 
+do no hardcode what should be environmental values
+
+this solution should work on the local machine via makefile targets but also be accessible and compatible when deploying into google cloud runtime, as a cloud run v2 in the roadmap toward production release
+
 **SUBMISSION COMPLETENESS OVER NEW FEATURES**
    - Focus on polishing existing complete functionality
    - No new major features - only submission-critical improvements

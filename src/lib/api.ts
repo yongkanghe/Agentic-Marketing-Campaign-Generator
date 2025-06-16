@@ -9,8 +9,37 @@
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// API Configuration - Environment-based URL resolution
+const getApiBaseUrl = (): string => {
+  // Production/Cloud deployment - use environment variable
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Development environment - detect backend location
+  const isDevelopment = import.meta.env.DEV;
+  const currentHost = window.location.hostname;
+  
+  if (isDevelopment) {
+    // Local development
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
+    // Network development (e.g., testing on mobile devices)
+    return `http://${currentHost}:8000`;
+  }
+  
+  // Production fallback - same origin API
+  return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Log configuration for debugging (dev only)
+if (import.meta.env.DEV) {
+  console.log(`🔗 API Base URL: ${API_BASE_URL}`);
+  console.log(`🌍 Environment: ${import.meta.env.MODE}`);
+}
 
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
@@ -301,6 +330,50 @@ export class VideoVentureLaunchAPI {
       return response.data.data;
     } catch (error) {
       console.error('Regenerate content error:', error);
+      throw this.handleApiError(error);
+    }
+  }
+
+  // Bulk content generation for specific post types (used by IdeationPage)
+  static async generateBulkContent(request: {
+    post_type: 'text_url' | 'text_image' | 'text_video';
+    regenerate_count: number;
+    business_context: {
+      company_name: string;
+      objective: string;
+      campaign_type: string;
+      target_audience?: string;
+      business_description?: string;
+      business_website?: string;
+      product_service_url?: string;
+    };
+    creativity_level: number;
+  }): Promise<{
+    new_posts: Array<{
+      id: string;
+      type: string;
+      content: string;
+      url?: string;
+      image_prompt?: string;
+      video_prompt?: string;
+      hashtags: string[];
+      platform_optimized: any;
+      engagement_score: number;
+      selected: boolean;
+    }>;
+    regeneration_metadata: any;
+    processing_time: number;
+  }> {
+    try {
+      const response = await apiClient.post('/api/v1/content/regenerate', request);
+      
+      if (!response.data) {
+        throw new Error('No response data received');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Generate bulk content error:', error);
       throw this.handleApiError(error);
     }
   }
