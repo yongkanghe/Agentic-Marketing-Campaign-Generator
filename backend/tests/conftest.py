@@ -8,6 +8,7 @@ AI Marketing Campaign Post Generator backend API.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import sqlite3
 import tempfile
@@ -30,7 +31,7 @@ def client() -> TestClient:
     """Create a test client for the FastAPI application."""
     return TestClient(app)
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client for the FastAPI application."""
     async with AsyncClient(app=app, base_url="http://testserver") as ac:

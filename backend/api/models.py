@@ -88,7 +88,7 @@ class CampaignRequest(BaseModel):
 
 class URLAnalysisRequest(BaseModel):
     """URL analysis request."""
-    urls: List[HttpUrl] = Field(..., min_items=1, max_items=5)
+    urls: List[str] = Field(..., min_length=1, max_length=5)
     analysis_depth: str = Field(default="standard", pattern="^(basic|standard|comprehensive)$")
 
 class ContentGenerationRequest(BaseModel):

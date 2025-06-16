@@ -9,8 +9,10 @@ python-multipart>=0.0.6
 
 # HTTP and Web Scraping
 httpx>=0.25.0
+aiohttp>=3.9.0
 beautifulsoup4>=4.12.0
 requests>=2.31.0
+lxml>=4.9.0
 
 # File Processing
 python-magic>=0.4.27
