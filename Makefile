@@ -829,3 +829,51 @@ setup-mvp: ## Complete MVP setup with database initialization
 	@echo "✅ MVP setup complete!"
 	@echo "📊 Run 'make db-status' to check database"
 	@echo "🚀 Run 'make dev-with-env' to start the application"
+
+# Comprehensive Testing Framework
+test-database: ## Run database integration tests
+	@echo "🗄️  Running database integration tests..."
+	@cd backend && python3 -m pytest tests/test_database_integration.py -v --tb=short
+	@echo "✅ Database tests completed"
+
+test-api-endpoints: ## Run API endpoint tests
+	@echo "🌐 Running API endpoint tests..."
+	@cd backend && python3 -m pytest tests/test_api_*.py -v --tb=short
+	@echo "✅ API tests completed"
+
+test-gemini: ## Run Gemini integration tests (requires API key)
+	@echo "🤖 Running Gemini integration tests..."
+	@if [ -z "$$GOOGLE_API_KEY" ] && [ -z "$$GOOGLE_CLOUD_PROJECT" ]; then \
+		echo "⚠️  Skipping Gemini tests - no API configuration found"; \
+		echo "   Set GOOGLE_API_KEY or GOOGLE_CLOUD_PROJECT to run Gemini tests"; \
+	else \
+		cd backend && python3 -m pytest tests/test_gemini_*.py -v --tb=short -m integration; \
+	fi
+	@echo "✅ Gemini tests completed"
+
+test-comprehensive: ## Run comprehensive test suite with detailed reporting
+	@echo "🎯 Running comprehensive test suite..."
+	@echo "======================================"
+	@$(MAKE) test-database
+	@$(MAKE) test-api-endpoints
+	@$(MAKE) test-gemini
+	@echo "✅ Comprehensive test suite completed"
+
+test-quick: ## Run quick test suite (essential tests only)
+	@echo "⚡ Running quick test suite..."
+	@cd backend && python3 -m pytest tests/test_api_campaigns.py tests/test_database_integration.py::TestDatabaseIntegration::test_database_schema_integrity -v --tb=short -x
+	@echo "✅ Quick tests completed"
+
+test-coverage-db: ## Run tests with coverage reporting for database
+	@echo "📊 Running database tests with coverage reporting..."
+	@cd backend && python3 -m pytest tests/test_database_integration.py --cov=database --cov-report=html --cov-report=term
+	@echo "✅ Database coverage report generated in backend/htmlcov/"
+
+test-clean: ## Clean test artifacts and temporary files
+	@echo "🧹 Cleaning test artifacts..."
+	@rm -rf backend/.pytest_cache
+	@rm -rf backend/htmlcov
+	@rm -rf backend/__pycache__
+	@rm -rf backend/tests/__pycache__
+	@rm -f data/test_*.db
+	@echo "✅ Test artifacts cleaned"
