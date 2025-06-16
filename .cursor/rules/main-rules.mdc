@@ -5,6 +5,10 @@ alwaysApply: true
 ---
 use makefiles for application operations, running, testing and similar
 
+the app is on port 8080. ensure this is consistent and well documented.
+
+use system 'date' command to ascertain the latest datetime before writing date stamps into any files 
+
 always review the documentation first and evaluate the solution maturity and completeness. 
 
 assess if the functionality and features have been implemented sucessfully by running the appropriate, relevant tests. 

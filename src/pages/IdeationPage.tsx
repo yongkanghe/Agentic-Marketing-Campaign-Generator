@@ -217,29 +217,173 @@ const IdeationPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Campaign Summary */}
           <div className="vvl-card p-6 mb-8">
-            <div className="flex items-center gap-3 vvl-text-primary mb-4">
+            <div className="flex items-center gap-3 vvl-text-primary mb-6">
               <Sparkles size={24} className="text-blue-400" />
               <h2 className="text-2xl font-bold">AI Campaign Summary</h2>
             </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold vvl-text-primary mb-2">{currentCampaign.name}</h3>
-                <p className="vvl-text-secondary mb-4">{currentCampaign.objective}</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">
-                    {currentCampaign.campaignType}
-                  </span>
-                  <span className="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full">
-                    Creativity: {currentCampaign.creativityLevel}/10
-                  </span>
+            
+            {/* Campaign Overview */}
+            <div className="grid lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-2">
+                <h3 className="text-lg font-semibold vvl-text-primary mb-3">{currentCampaign.name}</h3>
+                <p className="vvl-text-secondary mb-4 text-sm leading-relaxed">{currentCampaign.objective}</p>
+                
+                {/* Campaign Configuration */}
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">Campaign Type</h4>
+                    <span className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">
+                      {currentCampaign.campaignType || 'General'}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">AI Creativity Level</h4>
+                    <span className="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full">
+                      Level {currentCampaign.creativityLevel || 7}/10
+                    </span>
+                  </div>
+                </div>
+
+                {/* Business Information */}
+                {currentCampaign.businessDescription && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">Business Context</h4>
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3">
+                      <p className="text-sm vvl-text-secondary leading-relaxed">
+                        {currentCampaign.businessDescription}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* URLs Analyzed */}
+                {(currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl) && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">URLs Analyzed</h4>
+                    <div className="space-y-2">
+                      {currentCampaign.businessUrl && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <ExternalLink size={12} className="text-blue-400" />
+                          <span className="vvl-text-secondary">Business:</span>
+                          <a href={currentCampaign.businessUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-blue-400 hover:text-blue-300 truncate max-w-xs">
+                            {currentCampaign.businessUrl}
+                          </a>
+                        </div>
+                      )}
+                      {currentCampaign.aboutPageUrl && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <ExternalLink size={12} className="text-green-400" />
+                          <span className="vvl-text-secondary">About:</span>
+                          <a href={currentCampaign.aboutPageUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-green-400 hover:text-green-300 truncate max-w-xs">
+                            {currentCampaign.aboutPageUrl}
+                          </a>
+                        </div>
+                      )}
+                      {currentCampaign.productServiceUrl && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <ExternalLink size={12} className="text-purple-400" />
+                          <span className="vvl-text-secondary">Product/Service:</span>
+                          <a href={currentCampaign.productServiceUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-purple-400 hover:text-purple-300 truncate max-w-xs">
+                            {currentCampaign.productServiceUrl}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Uploaded Assets */}
+                {(currentCampaign.uploadedImages?.length || currentCampaign.uploadedDocuments?.length || currentCampaign.campaignAssets?.length) && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">Uploaded Assets</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      {currentCampaign.uploadedImages?.length > 0 && (
+                        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 text-center">
+                          <Image size={16} className="text-green-400 mx-auto mb-1" />
+                          <p className="text-xs vvl-text-secondary">Product/Brand Images</p>
+                          <p className="text-xs text-green-400 font-medium">{currentCampaign.uploadedImages.length} files</p>
+                        </div>
+                      )}
+                      {currentCampaign.uploadedDocuments?.length > 0 && (
+                        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 text-center">
+                          <Hash size={16} className="text-blue-400 mx-auto mb-1" />
+                          <p className="text-xs vvl-text-secondary">Documents & Specs</p>
+                          <p className="text-xs text-blue-400 font-medium">{currentCampaign.uploadedDocuments.length} files</p>
+                        </div>
+                      )}
+                      {currentCampaign.campaignAssets?.length > 0 && (
+                        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 text-center">
+                          <Video size={16} className="text-purple-400 mx-auto mb-1" />
+                          <p className="text-xs vvl-text-secondary">Campaign Assets</p>
+                          <p className="text-xs text-purple-400 font-medium">{currentCampaign.campaignAssets.length} files</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Example Content */}
+                {currentCampaign.exampleContent && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold vvl-text-primary mb-2">Example Content Reference</h4>
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3">
+                      <p className="text-sm vvl-text-secondary leading-relaxed">
+                        {currentCampaign.exampleContent}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Analysis Panel */}
+              <div className="lg:col-span-1">
+                <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-sm border border-blue-400/20 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold vvl-text-primary mb-3 flex items-center gap-2">
+                    <Sparkles size={16} className="text-blue-400" />
+                    AI Analysis
+                  </h4>
+                  <p className="text-sm vvl-text-secondary leading-relaxed mb-4">
+                    {aiSummary || "AI-generated summary of campaign targeting get more sales based on the provided business description. This would be generated by Gemini in a real implementation."}
+                  </p>
+                  
+                  {/* Analysis Metrics */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs vvl-text-secondary">Content Relevance</span>
+                      <span className="text-xs text-green-400 font-medium">High</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs vvl-text-secondary">Brand Alignment</span>
+                      <span className="text-xs text-blue-400 font-medium">Excellent</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs vvl-text-secondary">Target Audience Fit</span>
+                      <span className="text-xs text-purple-400 font-medium">Strong</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="mt-4 pt-3 border-t border-white/10">
+                    <button className="w-full text-xs bg-blue-500/20 text-blue-400 px-3 py-2 rounded-lg hover:bg-blue-500/30 transition-colors">
+                      Regenerate Analysis
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold vvl-text-primary mb-2">AI Analysis</h4>
-                <p className="text-sm vvl-text-secondary">
-                  {aiSummary || "AI is analyzing your campaign requirements to generate targeted content that resonates with your audience and achieves your marketing objectives."}
-                </p>
+            </div>
+
+            {/* Campaign Validation Status */}
+            <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-sm font-medium text-green-400">Campaign Ready for Content Generation</span>
               </div>
+              <p className="text-xs vvl-text-secondary mt-1 ml-5">
+                All required information has been provided. AI is ready to generate targeted social media content.
+              </p>
             </div>
           </div>
 

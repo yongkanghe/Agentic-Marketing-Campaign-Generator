@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-06-16T09:40:12.493793",
+  "total_tests": 4,
+  "passed": 3,
+  "failed": 1,
+  "success_rate": 75.0,
+  "duration": 15.865449,
+  "frontend_url": "http://localhost:8080",
+  "backend_url": "http://localhost:8000",
+  "detailed_results": [
+    {
+      "test": "Backend Server",
+      "success": true,
+      "message": "API responding correctly",
+      "duration": 0.012562990188598633,
+      "timestamp": "2025-06-16T09:39:56.640965"
+    },
+    {
+      "test": "Frontend Server",
+      "success": true,
+      "message": "Serving HTML correctly",
+      "duration": 0.004810810089111328,
+      "timestamp": "2025-06-16T09:39:56.645801"
+    },
+    {
+      "test": "Gemini Single URL Analysis",
+      "success": false,
+      "message": "Missing analysis for https://openai.com",
+      "duration": 4.421789884567261,
+      "timestamp": "2025-06-16T09:40:01.067679"
+    },
+    {
+      "test": "Gemini Single URL Analysis",
+      "success": true,
+      "message": "Company: OpenAI, Industry: Artificial Intelligence Research and Development, Confidence: 0.95%",
+      "duration": 4.421789884567261,
+      "timestamp": "2025-06-16T09:40:01.067707"
+    },
+    {
+      "test": "Gemini Multi-URL Comprehensive Analysis",
+      "success": false,
+      "message": "Missing analysis for https://google.com",
+      "duration": 7.027700901031494,
+      "timestamp": "2025-06-16T09:40:08.095445"
+    },
+    {
+      "test": "Gemini Multi-URL Comprehensive Analysis",
+      "success": false,
+      "message": "Missing analysis for https://microsoft.com",
+      "duration": 7.027700901031494,
+      "timestamp": "2025-06-16T09:40:08.095465"
+    },
+    {
+      "test": "Gemini Multi-URL Comprehensive Analysis",
+      "success": true,
+      "message": "Company: Google (Gemini Analyzed), Industry: Technology/Digital Services, Confidence: 0.8%",
+      "duration": 7.027700901031494,
+      "timestamp": "2025-06-16T09:40:08.095471"
+    },
+    {
+      "test": "Frontend API Client",
+      "success": true,
+      "message": "All expected fields present",
+      "duration": 4.394989013671875,
+      "timestamp": "2025-06-16T09:40:12.490538"
+    },
+    {
+      "test": "CORS Configuration",
+      "success": true,
+      "message": "All CORS headers present",
+      "duration": 0.0031080245971679688,
+      "timestamp": "2025-06-16T09:40:12.493733"
+    }
+  ]
+}
