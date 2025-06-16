@@ -194,4 +194,44 @@ def sample_regeneration_request():
             }
         ],
         "regenerate_count": 3
+    }
+
+@pytest.fixture
+def sample_business_analysis():
+    """Sample business analysis data for testing."""
+    return {
+        "company_name": "TechInnovate Solutions",
+        "industry": "Technology Consulting",
+        "business_model": "B2B",
+        "target_audience": "CTOs and IT Directors at mid-size companies",
+        "value_propositions": [
+            "10+ years of proven expertise",
+            "Certified cloud architects",
+            "24/7 comprehensive support"
+        ],
+        "products_services": ["Cloud Architecture Consulting", "AI Integration Services"],
+        "brand_voice": "Professional yet innovative",
+        "competitive_advantages": [
+            "10+ years experience",
+            "Certified cloud architects",
+            "24/7 support"
+        ],
+        "market_positioning": "Leading technology transformation partner",
+        "key_themes": ["Digital Transformation", "Cloud Solutions", "AI Innovation"],
+        "business_objectives": ["Increase market share", "Expand service portfolio"],
+        "content_style": "Professional, technical, solution-focused",
+        "visual_elements": "Modern tech aesthetics, blue/white color scheme"
+    }
+
+@pytest.fixture
+def sample_context():
+    """Sample campaign context for testing."""
+    return {
+        "campaign_type": "service",
+        "objective": "Increase brand awareness and generate leads",
+        "target_audience": "CTOs and IT Directors at mid-size companies",
+        "creativity_level": 8,
+        "business_website": "https://techinnovate.com",
+        "about_page_url": "https://techinnovate.com/about",
+        "product_service_url": "https://techinnovate.com/services"
     } 

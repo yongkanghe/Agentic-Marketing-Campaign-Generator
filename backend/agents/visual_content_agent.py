@@ -88,10 +88,9 @@ class ImageGenerationAgent:
             # Generate image using Imagen model
             image_response = self.client.models.generate_images(
                 model="imagen-3.0-generate-001",  # Using Imagen 3.0
-                prompt=prompt,
-                # Note: Removed number_of_images parameter as it may not be supported
-                safety_filter_level="block_some",
-                person_generation="allow_adult"
+                prompt=prompt
+                # Note: Removed number_of_images and safety_filter_level parameters for API compatibility
+                # person_generation parameter also removed for compatibility
             )
             
             if image_response.generated_images:
