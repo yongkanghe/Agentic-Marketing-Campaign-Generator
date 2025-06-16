@@ -28,3 +28,10 @@ dist-ssr
 .env
 
 __pycache__
+
+# Local database files (MVP)
+data/
+backups/
+*.db
+*.sqlite
+*.sqlite3

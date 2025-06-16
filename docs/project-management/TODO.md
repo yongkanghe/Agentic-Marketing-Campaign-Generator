@@ -67,18 +67,108 @@ Detailed task list for implementing the Video Venture Launch marketing campaign 
 - [x] **Create `src/lib/api.ts`** - Comprehensive API client configuration
 - [x] **Update environment config** - API base URL configuration
 
-### **CURRENT TASK: Frontend-Backend Integration**
+---
+
+## 🚀 NEW EPICS - MVP Completion Phase
+
+### **EPIC 9: Frontend-Backend Integration (CRITICAL - Phase 1)**
+**Priority**: Critical | **Target**: MVP Complete | **Timeline**: 2-3 weeks
+
+#### Replace Mock Functions with Real APIs
+- [ ] **Replace `generateSummary()` in MarketingContext** - Use real `/api/v1/analysis/url` endpoint
+- [ ] **Replace `generateIdeas()` in MarketingContext** - Use real `/api/v1/content/generate` endpoint
+- [ ] **Replace `generateVideos()` in MarketingContext** - Use real video generation endpoint
+- [ ] **Add proper error handling for API failures** - User-friendly error messages and retry logic
+
+#### Implement Loading States & UX
+- [ ] **Add loading spinners during AI generation** - Visual feedback for long-running operations
+- [ ] **Add progress indicators for long-running tasks** - Step-by-step progress for campaign creation
+- [ ] **Implement proper error messages and retry options** - Graceful error handling with user actions
+- [ ] **Add success notifications and feedback** - Confirmation messages for completed actions
+
+#### Enable Real AI Integration
+- [ ] **Configure GEMINI_API_KEY in production environment** - Set up .env file with real API key
+- [ ] **Test real Gemini API calls end-to-end** - Validate AI generation quality and performance
+- [ ] **Implement rate limiting and retry logic** - Handle API limits gracefully
+- [ ] **Add AI response validation and quality checks** - Ensure generated content meets standards
+
+### **EPIC 10: Local Data Persistence (CRITICAL - Phase 1)**
+**Priority**: Critical | **Target**: MVP Complete | **Timeline**: 2-3 weeks
+
+#### Local Database Setup
+- [ ] **Choose local database solution** - SQLite recommended for MVP self-contained deployment
+- [ ] **Create database schema for campaigns and users** - Design tables for campaign data persistence
+- [ ] **Implement database initialization scripts** - Automated database setup in Makefile
+- [ ] **Add database connection and configuration** - Environment-based database configuration
+
+#### Data Layer Implementation
+- [ ] **Create data access layer (DAO/Repository pattern)** - Clean separation between business logic and data
+- [ ] **Implement campaign CRUD operations** - Create, Read, Update, Delete operations for campaigns
+- [ ] **Add data validation and sanitization** - Ensure data integrity and security
+- [ ] **Migrate localStorage data to database** - Seamless transition from browser storage
+
+#### User Management
+- [ ] **Implement simple local user authentication** - Basic user login/registration for MVP
+- [ ] **Add session management** - Secure user sessions with proper timeout
+- [ ] **Create user profile management** - Basic user settings and preferences
+- [ ] **Add campaign ownership and sharing** - Users can manage their own campaigns
+
+### **EPIC 11: Testing & Quality Assurance (HIGH - Phase 2)**
+**Priority**: High | **Target**: Production Ready | **Timeline**: 2-3 weeks
+
+#### Fix API Testing Issues
+- [ ] **Fix content API response format mismatches** - Standardize response formats
+- [ ] **Fix analysis API response format mismatches** - Ensure consistent API responses
+- [ ] **Standardize API response formats across all endpoints** - Unified response structure
+- [ ] **Achieve 90%+ test coverage for all APIs** - Comprehensive test coverage
+
+#### Frontend Testing
+- [ ] **Add unit tests for React components** - Test individual component functionality
+- [ ] **Add integration tests for user workflows** - Test complete user journeys
+- [ ] **Implement E2E testing with Playwright** - Automated browser testing
+- [ ] **Add accessibility testing** - Ensure WCAG compliance
+
+#### Performance Testing
+- [ ] **Load testing for AI generation endpoints** - Test system under load
+- [ ] **Frontend performance optimization** - Optimize bundle size and loading times
+- [ ] **Database query optimization** - Ensure efficient data access
+- [ ] **Memory usage and leak testing** - Prevent memory issues
+
+### **EPIC 12: Local Production Setup (HIGH - Phase 2)**
+**Priority**: High | **Target**: Production Ready | **Timeline**: 2-3 weeks
+
+#### Production Build Configuration
+- [ ] **Optimize frontend build for production** - Minification, tree-shaking, code splitting
+- [ ] **Configure backend for production deployment** - Production-ready Python configuration
+- [ ] **Set up environment variable management** - Secure configuration management
+- [ ] **Add production logging and monitoring** - Comprehensive logging and health monitoring
+
+#### Local Deployment
+- [ ] **Create production Docker configuration** - Multi-stage Docker builds for production
+- [ ] **Set up local production environment** - Self-contained production deployment
+- [ ] **Add database backup and restore** - Data protection and recovery procedures
+- [ ] **Implement health checks and monitoring** - System health monitoring and alerting
+
+#### Security Hardening
+- [ ] **Add API security headers** - CORS, CSP, and other security headers
+- [ ] **Implement input validation and sanitization** - Prevent injection attacks
+- [ ] **Add rate limiting and DDoS protection** - Protect against abuse
+- [ ] **Security audit and vulnerability testing** - Comprehensive security assessment
+
+---
+
+## 🔄 CURRENT TASK: Frontend-Backend Integration (EPIC 9)
 
 ### Frontend-Backend Integration (IN PROGRESS)
 - [x] **Install axios in frontend** - HTTP client for API calls ✅
 - [x] **Create `src/lib/api.ts`** - API client configuration ✅
 - [x] **Update environment config** - API base URL configuration ✅
-- [ ] **Replace `generateSummary()` in MarketingContext** - Use real API
-- [ ] **Replace `generateIdeas()` in MarketingContext** - Use real API
-- [ ] **Add loading states** - Show spinners during API calls
-- [ ] **Add error handling** - Display API errors to users
-- [ ] **Test end-to-end flow** - Campaign creation → AI generation
-- [ ] **Configure GEMINI_API_KEY** - Set up .env file with real API key
+- [ ] **Replace `generateSummary()` in MarketingContext** - Use real API (EPIC 9)
+- [ ] **Replace `generateIdeas()` in MarketingContext** - Use real API (EPIC 9)
+- [ ] **Add loading states** - Show spinners during AI calls (EPIC 9)
+- [ ] **Add error handling** - Display API errors to users (EPIC 9)
+- [ ] **Test end-to-end flow** - Campaign creation → AI generation (EPIC 9)
+- [ ] **Configure GEMINI_API_KEY** - Set up .env file with real API key (EPIC 9)
 
 ### Enhanced Development Workflow
 - [ ] **Update `make dev`** - Start both frontend and backend
