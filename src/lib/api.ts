@@ -44,7 +44,7 @@ if (import.meta.env.DEV) {
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds timeout for AI operations
+  timeout: 15000, // 15 seconds timeout for AI operations (backend typically responds in 5s)
   headers: {
     'Content-Type': 'application/json',
   },

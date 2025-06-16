@@ -220,21 +220,21 @@ def generate_enhanced_content(post_type: PostType, business_context: dict, index
         themes.append('technology')
     
     base_content = {
-        PostType.text_url: [
+        PostType.TEXT_URL: [
             f"🚀 Exciting developments at {company_name}! We're transforming how businesses {objective} through our innovative {campaign_type} approach. Our latest solution addresses the core challenges we've identified in the market, delivering measurable results for companies just like yours. Ready to see what's possible? Check out our latest insights and discover how we can help accelerate your success.",
             f"💡 Innovation meets results at {company_name}. Our {campaign_type} solution is designed specifically for businesses looking to {objective} in today's competitive landscape. What sets us apart? We understand the unique challenges you face and have developed a proven approach that delivers real value. Learn more about our methodology and see how we can help transform your business outcomes.",
             f"🎯 Success stories are being written every day with {company_name}'s {campaign_type} solutions. Companies are achieving their goals to {objective} faster than ever before. Our approach combines industry expertise with innovative thinking to create solutions that work in the real world. Want to be our next success story? Discover how we can help you achieve your business objectives.",
             f"✨ Behind the scenes at {company_name}: Here's how we're helping businesses {objective} through strategic {campaign_type} solutions. Our team has worked tirelessly to understand market dynamics and create something truly valuable. The results speak for themselves - our clients are seeing significant improvements in their key business metrics. Ready to learn more?",
             f"🔥 Game-changing results start with the right {campaign_type} partner. At {company_name}, we're committed to helping businesses {objective} through proven strategies and innovative solutions. Our approach isn't just about delivering services - it's about creating lasting partnerships that drive sustainable growth. See how we can help transform your business trajectory."
         ],
-        PostType.text_image: [
+        PostType.TEXT_IMAGE: [
             f"🎨 Visual storytelling meets business results. This image captures the essence of how {company_name} helps businesses {objective} through innovative {campaign_type} solutions. Every element represents our commitment to excellence and our understanding of what it takes to succeed in today's market. This isn't just a visual - it's a representation of the transformation possible when you partner with the right team.",
             f"📸 A picture tells the story of transformation. Here's how {company_name} approaches {campaign_type} solutions for businesses looking to {objective}. This visual represents months of research, development, and real-world application. We believe that great results start with clear vision, and this image embodies our approach to creating meaningful business impact.",
             f"🌟 Innovation in action. This image showcases our approach to helping businesses {objective} through strategic {campaign_type} solutions. Every color, shape, and element has been chosen to communicate our core values: excellence, innovation, and results. This visual is just the beginning of what we can accomplish together.",
             f"💫 Design meets strategy in this powerful representation of {company_name}'s {campaign_type} approach. We help businesses {objective} by combining creative thinking with proven methodologies. This image tells our story of transformation, growth, and success - values that drive everything we do.",
             f"🎭 Creative excellence meets business acumen. This visual represents how {company_name} helps businesses {objective} through innovative {campaign_type} solutions. We believe that great design isn't just about aesthetics - it's about communication, connection, and creating experiences that drive real business results."
         ],
-        PostType.text_video: [
+        PostType.TEXT_VIDEO: [
             f"🎬 Motion tells the story of transformation. This video showcases how {company_name} helps businesses {objective} through dynamic {campaign_type} solutions. In just seconds, you'll see the power of our approach and understand why companies choose us as their strategic partner. This isn't just a video - it's a window into the future of your business success.",
             f"📹 Dynamic storytelling for dynamic results. Watch how {company_name} approaches {campaign_type} solutions for businesses looking to {objective}. This video captures the energy, innovation, and results-driven approach that defines our work. Every frame has been crafted to communicate our commitment to your success.",
             f"🎥 Action speaks louder than words. This video demonstrates our {campaign_type} approach to helping businesses {objective} in today's competitive landscape. From concept to execution, you'll see how we turn ideas into results and challenges into opportunities. Ready to see what's possible for your business?",
@@ -243,7 +243,7 @@ def generate_enhanced_content(post_type: PostType, business_context: dict, index
         ]
     }
     
-    content_list = base_content.get(post_type, base_content[PostType.text_url])
+    content_list = base_content.get(post_type, base_content[PostType.TEXT_URL])
     selected_content = content_list[index % len(content_list)]
     
     # Add theme-specific enhancements
