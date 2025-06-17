@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
 import { MaterialVideoCard } from '@/components/MaterialVideoCard';
+import { EditableCampaignGuidance } from '@/components/EditableCampaignGuidance';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette } from 'lucide-react';
 import { toast } from 'sonner';
@@ -405,46 +406,58 @@ const IdeationPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Campaign Creative Guidance Section */}
+            {/* Campaign Creative Guidance Section - Now Editable */}
             <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-400/20 rounded-lg p-6 mb-4">
-              <div className="flex items-center gap-3 mb-4">
-                <Palette className="text-purple-400" size={20} />
-                <h4 className="text-lg font-semibold vvl-text-primary">Campaign Creative Guidance</h4>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Palette className="text-purple-400" size={20} />
+                  <h4 className="text-lg font-semibold text-white">Campaign Creative Guidance</h4>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="flex items-center gap-2 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg hover:bg-purple-500/30 transition-colors text-sm">
+                    <MessageCircle size={16} />
+                    Chat to Refine
+                  </button>
+                  <button className="flex items-center gap-2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg hover:bg-blue-500/30 transition-colors text-sm">
+                    Edit
+                  </button>
+                </div>
               </div>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h5 className="text-sm font-semibold vvl-text-primary mb-2">Visual Style Direction</h5>
-                  <p className="text-sm vvl-text-secondary leading-relaxed mb-3">
-                    Professional lifestyle photography with modern, clean composition focusing on authentic customer scenarios. 
-                    Emphasize trustworthy, competent brand personality through natural lighting and business-appropriate settings.
+                  <h5 className="text-sm font-semibold text-white mb-2">Creative Direction</h5>
+                  <p className="text-sm text-gray-200 leading-relaxed mb-3">
+                    {aiSummary?.campaign_guidance?.creative_direction || 
+                     "Professional lifestyle photography with modern, clean composition focusing on authentic customer scenarios. Emphasize trustworthy, competent brand personality through natural lighting and business-appropriate settings."}
                   </p>
                   
+                  <h5 className="text-sm font-semibold text-white mb-2 mt-4">Visual Style</h5>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-xs">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="vvl-text-secondary">Photography: Professional lifestyle</span>
+                      <span className="text-gray-300">Photography: {aiSummary?.campaign_guidance?.visual_style?.photography_style || "Professional lifestyle"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                      <span className="vvl-text-secondary">Mood: Professional, trustworthy, competent</span>
+                      <span className="text-gray-300">Mood: {aiSummary?.campaign_guidance?.visual_style?.mood || "Professional, trustworthy, competent"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="vvl-text-secondary">Environment: Business setting, professional context</span>
+                      <span className="text-gray-300">Lighting: {aiSummary?.campaign_guidance?.visual_style?.lighting || "Natural lighting"}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <h5 className="text-sm font-semibold vvl-text-primary mb-2">Content Themes & Approach</h5>
-                  <p className="text-sm vvl-text-secondary leading-relaxed mb-3">
-                    Focus on authenticity, results, and community building. Use inspiring and action-oriented calls-to-action 
-                    that trigger aspiration, trust, and excitement in your target audience.
+                  <h5 className="text-sm font-semibold text-white mb-2">Content Themes</h5>
+                  <p className="text-sm text-gray-200 leading-relaxed mb-3">
+                    {aiSummary?.campaign_guidance?.target_context || 
+                     "Focus on authenticity, results, and community building. Use inspiring and action-oriented calls-to-action that trigger aspiration, trust, and excitement in your target audience."}
                   </p>
                   
                   <div className="flex flex-wrap gap-2">
-                    {['Authenticity', 'Results', 'Community', 'Growth', 'Innovation'].map((theme) => (
+                    {(aiSummary?.campaign_guidance?.content_themes?.primary_themes || ['Authenticity', 'Results', 'Community', 'Growth', 'Innovation']).map((theme: string) => (
                       <span key={theme} className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
                         {theme}
                       </span>
@@ -457,11 +470,15 @@ const IdeationPage: React.FC = () => {
                 <div className="grid md:grid-cols-2 gap-4 text-xs">
                   <div>
                     <span className="font-semibold text-blue-400">Image Generation:</span>
-                    <span className="vvl-text-secondary ml-2">Following Imagen best practices with 35mm lens, natural lighting, high resolution</span>
+                    <span className="text-gray-300 ml-2">
+                      {aiSummary?.campaign_guidance?.imagen_prompts?.technical_specs || "Following Imagen best practices with 35mm lens, natural lighting, high resolution"}
+                    </span>
                   </div>
                   <div>
                     <span className="font-semibold text-purple-400">Video Generation:</span>
-                    <span className="vvl-text-secondary ml-2">Following Veo best practices with smooth movements, 15-30 second social clips</span>
+                    <span className="text-gray-300 ml-2">
+                      {aiSummary?.campaign_guidance?.veo_prompts?.duration_focus || "Following Veo best practices with smooth movements, 15-30 second social clips"}
+                    </span>
                   </div>
                 </div>
               </div>

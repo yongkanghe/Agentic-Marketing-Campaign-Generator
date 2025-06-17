@@ -189,4 +189,137 @@ if __name__ == "__main__":
         
     else:
         print(f"Unknown command: {command}")
-        sys.exit(1) 
+        sys.exit(1)
+
+
+# Campaign management functions for API support
+async def get_campaign_by_id(campaign_id: str, user_id: str) -> Optional[dict]:
+    """Get a campaign by ID for a specific user."""
+    try:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT * FROM campaigns 
+            WHERE id = ? AND user_id = ?
+        """, (campaign_id, user_id))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            # Convert row to dict and parse JSON fields
+            campaign = dict(row)
+            
+            # Parse JSON fields if they exist
+            if campaign.get('ai_analysis'):
+                import json
+                campaign['ai_analysis'] = json.loads(campaign['ai_analysis'])
+            
+            return campaign
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Failed to get campaign {campaign_id}: {e}")
+        return None
+
+
+async def update_campaign_analysis(campaign_id: str, user_id: str, ai_analysis: dict) -> Optional[dict]:
+    """Update the AI analysis for a campaign."""
+    try:
+        import json
+        
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # Update the campaign with new AI analysis
+        cursor.execute("""
+            UPDATE campaigns 
+            SET ai_analysis = ?, updated_at = datetime('now')
+            WHERE id = ? AND user_id = ?
+        """, (json.dumps(ai_analysis), campaign_id, user_id))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return None
+        
+        conn.commit()
+        
+        # Return the updated campaign
+        cursor.execute("""
+            SELECT * FROM campaigns 
+            WHERE id = ? AND user_id = ?
+        """, (campaign_id, user_id))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            campaign = dict(row)
+            campaign['ai_analysis'] = ai_analysis
+            return campaign
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Failed to update campaign analysis {campaign_id}: {e}")
+        return None
+
+async def save_campaign_chat_history(campaign_id: str, user_id: str, conversation_history: list) -> bool:
+    """Save conversation history for a campaign."""
+    try:
+        import json
+        
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # Check if campaign exists
+        cursor.execute("""
+            SELECT id FROM campaigns 
+            WHERE id = ? AND user_id = ?
+        """, (campaign_id, user_id))
+        
+        if not cursor.fetchone():
+            conn.close()
+            return False
+        
+        # Update or insert conversation history
+        cursor.execute("""
+            INSERT OR REPLACE INTO campaign_chat_history (
+                campaign_id, user_id, conversation_history, updated_at
+            ) VALUES (?, ?, ?, datetime('now'))
+        """, (campaign_id, user_id, json.dumps(conversation_history)))
+        
+        conn.commit()
+        conn.close()
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to save chat history for campaign {campaign_id}: {e}")
+        return False
+
+async def get_campaign_chat_history(campaign_id: str, user_id: str) -> list:
+    """Get conversation history for a campaign."""
+    try:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT conversation_history FROM campaign_chat_history 
+            WHERE campaign_id = ? AND user_id = ?
+        """, (campaign_id, user_id))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            import json
+            return json.loads(row[0])
+        
+        return []
+        
+    except Exception as e:
+        logger.error(f"Failed to get chat history for campaign {campaign_id}: {e}")
+        return [] 

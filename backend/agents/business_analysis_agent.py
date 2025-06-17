@@ -175,20 +175,45 @@ class URLAnalysisAgent:
                 content_summary += f"Content: {content['text'][:1000]}...\n"
         
         prompt = f"""
-        As a business intelligence analyst and creative director, analyze the following website content and extract comprehensive business context with detailed CAMPAIGN GUIDANCE for visual content generation:
+        As a business intelligence analyst and creative director, analyze the following website content and extract comprehensive business context with detailed CAMPAIGN GUIDANCE for visual content generation.
+
+        CRITICAL ANALYSIS FOCUS:
+        - Determine if this is an INDIVIDUAL CREATOR/ARTIST vs a COMPANY
+        - For marketplace sellers (Etsy, Redbubble, etc.), focus on the INDIVIDUAL'S work, not the platform
+        - Extract the SPECIFIC PRODUCT/SERVICE being promoted, not the marketplace platform
+        - Identify the PERSONAL BRAND and artistic style of individual creators
 
         {content_summary}
+
+        ANALYSIS INSTRUCTIONS:
+        1. **Individual vs Company Detection**: 
+           - Look for personal names, artist handles, individual portfolios
+           - Detect marketplace URLs (redbubble.com/people/X, etsy.com/shop/X)
+           - Distinguish between platform features and individual creator content
+
+        2. **Product/Service Focus**:
+           - For artists: Focus on their artwork, style, themes, not the printing service
+           - For consultants: Focus on their expertise, not their booking platform
+           - For creators: Focus on their content, not the distribution platform
+
+        3. **Brand Voice Analysis**:
+           - Individual creators: Personal, authentic, artistic expression
+           - Small businesses: Professional but approachable
+           - Corporations: Professional, structured, brand-focused
 
         Please provide a detailed analysis in the following JSON-like structure:
 
         {{
-            "company_name": "extracted company name",
-            "industry": "primary industry/sector",
-            "business_model": "B2B/B2C/marketplace/etc",
-            "target_audience": "primary target audience description",
+            "business_type": "individual_creator|small_business|corporation",
+            "creator_focus": "if individual_creator, describe their specific art/work focus",
+            "platform_context": "if marketplace seller, note the platform but focus on individual",
+            "company_name": "extracted company/creator name (individual name if artist)",
+            "industry": "primary industry/sector (be specific: 'Digital Art & Print-on-Demand' not just 'E-commerce')",
+            "business_model": "B2B/B2C/marketplace_seller/creator_economy",
+            "target_audience": "specific target audience description",
             "value_propositions": ["key value prop 1", "key value prop 2", "key value prop 3"],
             "products_services": ["main product/service 1", "main product/service 2"],
-            "brand_voice": "professional/casual/innovative/etc",
+            "brand_voice": "personal/professional/artistic/innovative/etc",
             "competitive_advantages": ["advantage 1", "advantage 2", "advantage 3"],
             "market_positioning": "positioning statement",
             "key_themes": ["theme 1", "theme 2", "theme 3"],
@@ -197,27 +222,28 @@ class URLAnalysisAgent:
             "visual_elements": "description of visual branding elements mentioned",
             
             "campaign_guidance": {{
-                "creative_direction": "2-3 sentences describing the overall creative vision and aesthetic approach for this campaign",
+                "creative_direction": "2-3 sentences describing the overall creative vision and aesthetic approach for THIS SPECIFIC creator/business",
+                "target_context": "specific context about who they're trying to reach and why",
                 "visual_style": {{
-                    "photography_style": "specific photography approach (portrait, lifestyle, product, architectural, etc.)",
+                    "photography_style": "specific photography approach matching the creator's style",
                     "color_palette": ["primary color", "secondary color", "accent color"],
-                    "lighting": "lighting style (natural, studio, dramatic, soft, etc.)",
-                    "composition": "composition approach (close-up, wide-angle, macro, etc.)",
-                    "mood": "overall mood and feeling (professional, energetic, calm, innovative, etc.)"
+                    "lighting": "lighting style that matches their artistic aesthetic",
+                    "composition": "composition approach that showcases their work effectively",
+                    "mood": "overall mood that represents their personal/brand identity"
                 }},
                 "imagen_prompts": {{
-                    "base_prompt": "Core visual prompt template following Imagen best practices",
+                    "base_prompt": "Core visual prompt template following Imagen best practices FOR THIS SPECIFIC CREATOR",
                     "style_modifiers": ["photography style", "lens type", "lighting condition"],
-                    "subject_focus": "primary subject matter for images",
-                    "environment": "typical environment/setting for visuals",
+                    "subject_focus": "primary subject matter for images (their specific work/products)",
+                    "environment": "typical environment/setting for their work",
                     "technical_specs": "camera settings, focal length, etc."
                 }},
                 "veo_prompts": {{
-                    "base_prompt": "Core video concept template following Veo best practices", 
+                    "base_prompt": "Core video concept template following Veo best practices FOR THIS CREATOR", 
                     "movement_style": "camera movement and subject motion",
-                    "scene_composition": "how scenes should be structured",
+                    "scene_composition": "how scenes should be structured to showcase their work",
                     "duration_focus": "short-form optimized approach",
-                    "storytelling": "narrative approach for video content"
+                    "storytelling": "narrative approach that tells their creator story"
                 }},
                 "content_themes": {{
                     "primary_themes": ["main theme 1", "main theme 2", "main theme 3"],
@@ -236,7 +262,7 @@ class URLAnalysisAgent:
 
         CRITICAL: The campaign_guidance section should provide specific, actionable direction that follows Google's Imagen and Veo prompt engineering best practices. This will be used to generate consistent, high-quality visual content across all social media posts.
 
-        Focus on extracting actionable insights for marketing campaign generation. Be specific and detailed.
+        Focus on extracting actionable insights for marketing campaign generation. Be specific and detailed about the INDIVIDUAL CREATOR'S work, not generic platform features.
         """
         
         return prompt
