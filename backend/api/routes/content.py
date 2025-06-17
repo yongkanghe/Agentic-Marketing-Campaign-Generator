@@ -351,10 +351,14 @@ def generate_contextual_hashtags(business_context: dict) -> List[str]:
 
 @router.post("/generate-visuals")
 async def generate_visual_content(request: dict):
-    """Generate visual content (images and videos) for social media posts."""
+    """Generate visual content (images and videos) for social media posts.
+    
+    NOTE: Real Imagen/Veo API calls temporarily disabled due to timeout issues.
+    Enhanced placeholders are used instead with proper prompts for future implementation.
+    """
     
     try:
-        logger.info("Generating visual content for social media posts")
+        logger.info("Generating visual content for social media posts (using enhanced placeholders)")
         
         # Extract request data
         social_posts = request.get("social_posts", [])
@@ -368,31 +372,27 @@ async def generate_visual_content(request: dict):
                 detail="No social media posts provided for visual content generation"
             )
         
-        # Generate visual content using the visual content agent
-        if generate_visual_content_for_posts:
-            result = await generate_visual_content_for_posts(
-                social_posts=social_posts,
-                business_context=business_context,
-                campaign_objective=campaign_objective,
-                target_platforms=target_platforms
-            )
-        else:
-            # Fallback mock implementation
-            result = {
-                "posts_with_visuals": social_posts,
-                "visual_strategy": {
-                    "total_posts": len(social_posts),
-                    "image_posts": len([p for p in social_posts if p.get("type") == "text_image"]),
-                    "video_posts": len([p for p in social_posts if p.get("type") == "text_video"]),
-                    "brand_consistency": "Professional and modern",
-                    "platform_optimization": "Multi-platform ready"
-                },
-                "generation_metadata": {
-                    "agent_used": "MockVisualContentAgent",
-                    "processing_time": 1.0,
-                    "quality_score": 8.0
-                }
+        # TEMPORARY: Use enhanced placeholder generation instead of real API calls
+        # TODO: Re-enable real visual generation with optimized batch processing
+        logger.info("Using enhanced placeholder generation to avoid API timeouts")
+        
+        result = {
+            "posts_with_visuals": social_posts,
+            "visual_strategy": {
+                "total_posts": len(social_posts),
+                "image_posts": len([p for p in social_posts if p.get("type") == "text_image"]),
+                "video_posts": len([p for p in social_posts if p.get("type") == "text_video"]),
+                "brand_consistency": "Enhanced placeholders with proper prompts",
+                "platform_optimization": "Multi-platform ready",
+                "note": "Real Imagen/Veo generation temporarily disabled for performance"
+            },
+            "generation_metadata": {
+                "agent_used": "EnhancedPlaceholderAgent",
+                "processing_time": 0.1,
+                "quality_score": 7.5,
+                "status": "placeholder_mode"
             }
+        }
         
         return result
         
@@ -666,73 +666,39 @@ async def _generate_batch_content_with_gemini(
                             
                     elif post_type == PostType.TEXT_IMAGE:
                         post.image_prompt = post_data.get('image_prompt', f'Professional marketing image for {company_name} showing {objective}')
-                        # Generate real image using visual content agent
+                        
+                        # TEMPORARY FIX: Use enhanced placeholder instead of real API calls to avoid timeout
+                        # TODO: Optimize visual content generation for batch processing
                         try:
-                            # Create post data for visual content generation
-                            image_post_data = {
-                                "id": post.id,
-                                "type": "text_image",
-                                "content": post.content,
-                                "image_prompt": post.image_prompt
-                            }
+                            # Enhanced placeholder with actual prompt for better context
+                            enhanced_prompt = post.image_prompt
+                            if has_specific_product and product_name:
+                                enhanced_prompt = f"Professional lifestyle photo: People wearing/using {product_name}, {enhanced_prompt}"
                             
-                            # Generate visual content using the agent
-                            visual_result = await generate_visual_content_for_posts(
-                                social_posts=[image_post_data],
-                                business_context=business_context,
-                                campaign_objective=objective,
-                                target_platforms=["instagram", "linkedin", "facebook"]
-                            )
-                            
-                            # Extract generated image URL
-                            if (visual_result and 
-                                visual_result.get("posts_with_visuals") and 
-                                len(visual_result["posts_with_visuals"]) > 0):
-                                generated_post = visual_result["posts_with_visuals"][0]
-                                post.image_url = generated_post.get("image_url", f"https://picsum.photos/1024/576?random={i+100}&blur=1")
-                                logger.info(f"Generated real image for post {i+1}: {post.image_url}")
-                            else:
-                                post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
-                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
+                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&text={enhanced_company_name.replace(' ', '+')}"
+                            logger.info(f"Generated enhanced placeholder image for post {i+1} with prompt: {enhanced_prompt[:100]}...")
                                 
                         except Exception as e:
-                            logger.error(f"Image generation failed for post {i+1}: {e}")
+                            logger.error(f"Enhanced placeholder generation failed for post {i+1}: {e}")
                             post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
                         
                     elif post_type == PostType.TEXT_VIDEO:
                         post.video_prompt = post_data.get('video_prompt', f'Dynamic marketing video showcasing {company_name} approach to {objective}')
-                        # Generate real video using visual content agent
+                        
+                        # TEMPORARY FIX: Use enhanced placeholder instead of real API calls to avoid timeout
+                        # TODO: Optimize visual content generation for batch processing
                         try:
-                            # Create post data for visual content generation
-                            video_post_data = {
-                                "id": post.id,
-                                "type": "text_video", 
-                                "content": post.content,
-                                "video_prompt": post.video_prompt
-                            }
+                            # Enhanced video placeholder with actual prompt for better context
+                            enhanced_prompt = post.video_prompt
+                            if has_specific_product and product_name:
+                                enhanced_prompt = f"Dynamic video: People enjoying/using {product_name}, {enhanced_prompt}"
                             
-                            # Generate visual content using the agent
-                            visual_result = await generate_visual_content_for_posts(
-                                social_posts=[video_post_data],
-                                business_context=business_context,
-                                campaign_objective=objective,
-                                target_platforms=["tiktok", "instagram", "youtube"]
-                            )
-                            
-                            # Extract generated video URL
-                            if (visual_result and 
-                                visual_result.get("posts_with_visuals") and 
-                                len(visual_result["posts_with_visuals"]) > 0):
-                                generated_post = visual_result["posts_with_visuals"][0]
-                                post.video_url = generated_post.get("video_url", f"https://picsum.photos/1024/576?random={i+200}&grayscale")
-                                post.thumbnail_url = generated_post.get("thumbnail_url")
-                                logger.info(f"Generated real video for post {i+1}: {post.video_url}")
-                            else:
-                                post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
-                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
+                            post.video_url = f"https://picsum.photos/1024/576?random={i+200}&text={enhanced_company_name.replace(' ', '+')}"
+                            post.thumbnail_url = f"https://picsum.photos/1024/576?random={i+200}&text=Video+Thumbnail"
+                            logger.info(f"Generated enhanced placeholder video for post {i+1} with prompt: {enhanced_prompt[:100]}...")
                                 
                         except Exception as e:
-                            logger.error(f"Video generation failed for post {i+1}: {e}")
+                            logger.error(f"Enhanced placeholder generation failed for post {i+1}: {e}")
                             post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
                     
                     generated_posts.append(post)

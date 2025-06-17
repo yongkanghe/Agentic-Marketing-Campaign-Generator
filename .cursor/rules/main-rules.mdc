@@ -33,6 +33,8 @@ do no hardcode what should be environmental values
 
 this solution should work on the local machine via makefile targets but also be accessible and compatible when deploying into google cloud runtime, as a cloud run v2 in the roadmap toward production release
 
+use the backend/.env environment file for gemini api keys and gemini model names
+
 **SUBMISSION COMPLETENESS OVER NEW FEATURES**
    - Focus on polishing existing complete functionality
    - No new major features - only submission-critical improvements
