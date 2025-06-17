@@ -118,7 +118,8 @@ const IdeationPage: React.FC = () => {
           target_audience: 'business professionals', // TODO: Add target_audience to Campaign interface
           business_description: currentCampaign?.businessDescription || '',
           business_website: currentCampaign?.businessUrl || '',
-          product_service_url: currentCampaign?.productServiceUrl || ''
+          product_service_url: currentCampaign?.productServiceUrl || '',
+          campaign_media_tuning: preferredDesign || '' // Include Campaign Media Tuning for visual content guidance
         },
         creativity_level: currentCampaign?.creativityLevel || 7
       });
@@ -624,14 +625,17 @@ const IdeationPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Design Preferences */}
+          {/* Campaign Media Tuning */}
           <div className="vvl-card p-6 mb-8">
-            <h3 className="text-lg font-semibold vvl-text-primary mb-4">Design Preferences (Optional)</h3>
+            <h3 className="text-lg font-semibold vvl-text-primary mb-4">Campaign Media Tuning (Optional)</h3>
+            <p className="text-sm vvl-text-secondary mb-3">
+              Fine-tune your visual content generation by specifying design preferences, visual styles, colors, moods, or specific requirements for images and videos.
+            </p>
             <Textarea
-              placeholder="Describe your preferred visual style, colors, mood, or any specific design requirements..."
+              placeholder="Example: I want vibrant, colorful t-shirt designs with creative artwork instead of generic text. Use modern, artistic styles with unique graphics that reflect creativity and personal expression..."
               value={preferredDesign}
               onChange={(e) => setPreferredDesign(e.target.value)}
-              className="vvl-input min-h-[100px] resize-none"
+              className="min-h-[100px] resize-none bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 text-white placeholder-gray-400 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25"
             />
           </div>
 

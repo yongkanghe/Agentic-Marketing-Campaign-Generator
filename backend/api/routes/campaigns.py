@@ -243,6 +243,9 @@ async def chat_with_campaign_guidance(
         # Initialize Gemini client
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         
+        # Get model from environment
+        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+        
         # Build context prompt with campaign data
         business_analysis = campaign_data.get("business_analysis", {})
         context_prompt = f"""
@@ -292,7 +295,7 @@ Provide helpful guidance and specific suggestions for improving the campaign.
         
         # Generate AI response
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model=gemini_model,
             contents=context_prompt
         )
         

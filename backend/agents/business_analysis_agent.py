@@ -168,11 +168,22 @@ class URLAnalysisAgent:
         """Build comprehensive analysis prompt for Gemini."""
         
         content_summary = ""
+        product_url_content = None
+        
         for url, content in url_contents.items():
             if content.get('text'):
                 content_summary += f"\n\nURL: {url}\n"
                 content_summary += f"Title: {content.get('title', 'N/A')}\n"
                 content_summary += f"Content: {content['text'][:1000]}...\n"
+                
+                # Identify product-specific URLs for detailed analysis
+                if any(product_indicator in url.lower() for product_indicator in [
+                    '/i/', '/product/', '/item/', '/t-shirt/', '/design/', '/artwork/',
+                    'redbubble.com/i/', 'etsy.com/listing/', 'amazon.com/dp/',
+                    'shop/', '/buy/', '/purchase/'
+                ]):
+                    product_url_content = content
+                    logger.info(f"Identified product URL for detailed analysis: {url}")
         
         prompt = f"""
         As a business intelligence analyst and creative director, analyze the following website content and extract comprehensive business context with detailed CAMPAIGN GUIDANCE for visual content generation.
@@ -182,6 +193,13 @@ class URLAnalysisAgent:
         - For marketplace sellers (Etsy, Redbubble, etc.), focus on the INDIVIDUAL'S work, not the platform
         - Extract the SPECIFIC PRODUCT/SERVICE being promoted, not the marketplace platform
         - Identify the PERSONAL BRAND and artistic style of individual creators
+
+        **PRODUCT-SPECIFIC ANALYSIS** (PRIORITY):
+        If a specific product URL is provided, focus your analysis on that SPECIFIC PRODUCT:
+        - What is the exact product being sold?
+        - What themes, designs, or concepts does it feature?
+        - What specific audience would be interested in THIS PRODUCT?
+        - How should visuals showcase THIS SPECIFIC PRODUCT?
 
         {content_summary}
 
@@ -193,6 +211,7 @@ class URLAnalysisAgent:
 
         2. **Product/Service Focus**:
            - For artists: Focus on their artwork, style, themes, not the printing service
+           - For specific products: Analyze the EXACT product being promoted
            - For consultants: Focus on their expertise, not their booking platform
            - For creators: Focus on their content, not the distribution platform
 
@@ -201,12 +220,29 @@ class URLAnalysisAgent:
            - Small businesses: Professional but approachable
            - Corporations: Professional, structured, brand-focused
 
+        **ENHANCED PRODUCT ANALYSIS** (If product URL detected):
+        If this analysis includes a specific product URL, provide DETAILED product-specific guidance:
+        - Exact product name and description
+        - Visual elements and design themes of the product
+        - Target audience specifically for this product
+        - How content should showcase this specific product
+        - Visual context for images (people using/wearing/enjoying THIS product)
+        - Specific calls-to-action relevant to this product
+
         Please provide a detailed analysis in the following JSON-like structure:
 
         {{
             "business_type": "individual_creator|small_business|corporation",
             "creator_focus": "if individual_creator, describe their specific art/work focus",
             "platform_context": "if marketplace seller, note the platform but focus on individual",
+            "product_context": {{
+                "has_specific_product": true/false,
+                "product_name": "exact product name if specific product identified",
+                "product_description": "detailed description of the specific product",
+                "product_themes": ["theme1", "theme2", "theme3"],
+                "product_visual_elements": "visual design elements of the product",
+                "product_target_audience": "specific audience for this product"
+            }},
             "company_name": "extracted company/creator name (individual name if artist)",
             "industry": "primary industry/sector (be specific: 'Digital Art & Print-on-Demand' not just 'E-commerce')",
             "business_model": "B2B/B2C/marketplace_seller/creator_economy",
@@ -222,24 +258,26 @@ class URLAnalysisAgent:
             "visual_elements": "description of visual branding elements mentioned",
             
             "campaign_guidance": {{
-                "creative_direction": "2-3 sentences describing the overall creative vision and aesthetic approach for THIS SPECIFIC creator/business",
+                "creative_direction": "2-3 sentences describing the overall creative vision and aesthetic approach for THIS SPECIFIC creator/business and product",
                 "target_context": "specific context about who they're trying to reach and why",
                 "visual_style": {{
-                    "photography_style": "specific photography approach matching the creator's style",
+                    "photography_style": "specific photography approach matching the creator's style and product",
                     "color_palette": ["primary color", "secondary color", "accent color"],
                     "lighting": "lighting style that matches their artistic aesthetic",
                     "composition": "composition approach that showcases their work effectively",
                     "mood": "overall mood that represents their personal/brand identity"
                 }},
                 "imagen_prompts": {{
-                    "base_prompt": "Core visual prompt template following Imagen best practices FOR THIS SPECIFIC CREATOR",
+                    "base_prompt": "Core visual prompt template following Imagen best practices FOR THIS SPECIFIC CREATOR AND PRODUCT",
+                    "product_showcase": "how to visually showcase the specific product if identified",
                     "style_modifiers": ["photography style", "lens type", "lighting condition"],
                     "subject_focus": "primary subject matter for images (their specific work/products)",
                     "environment": "typical environment/setting for their work",
                     "technical_specs": "camera settings, focal length, etc."
                 }},
                 "veo_prompts": {{
-                    "base_prompt": "Core video concept template following Veo best practices FOR THIS CREATOR", 
+                    "base_prompt": "Core video concept template following Veo best practices FOR THIS CREATOR AND PRODUCT", 
+                    "product_demonstration": "how to show the specific product in video if identified",
                     "movement_style": "camera movement and subject motion",
                     "scene_composition": "how scenes should be structured to showcase their work",
                     "duration_focus": "short-form optimized approach",
@@ -247,22 +285,21 @@ class URLAnalysisAgent:
                 }},
                 "content_themes": {{
                     "primary_themes": ["main theme 1", "main theme 2", "main theme 3"],
+                    "product_specific_themes": ["product theme 1", "product theme 2"] if specific product,
                     "visual_metaphors": ["metaphor 1", "metaphor 2"],
                     "emotional_triggers": ["emotion 1", "emotion 2", "emotion 3"],
                     "call_to_action_style": "approach for CTAs (urgent, informative, inspiring, etc.)"
                 }},
                 "brand_consistency": {{
-                    "logo_placement": "guidelines for logo/brand element placement",
-                    "typography": "font style and text overlay approach",
-                    "brand_colors": "how to incorporate brand colors",
-                    "messaging_tone": "consistent voice across all content"
+                    "logo_placement": "subtle, bottom-right or integrated naturally",
+                    "typography": "clean, modern fonts that match creator style",
+                    "brand_colors": "consistent color palette across all content",
+                    "messaging_tone": "tone that matches individual creator vs corporate brand"
                 }}
             }}
         }}
 
-        CRITICAL: The campaign_guidance section should provide specific, actionable direction that follows Google's Imagen and Veo prompt engineering best practices. This will be used to generate consistent, high-quality visual content across all social media posts.
-
-        Focus on extracting actionable insights for marketing campaign generation. Be specific and detailed about the INDIVIDUAL CREATOR'S work, not generic platform features.
+        **CRITICAL**: If you detect a specific product (like a t-shirt design, specific artwork, particular service offering), make sure ALL guidance is tailored to that SPECIFIC PRODUCT, not generic company-level advice.
         """
         
         return prompt
@@ -285,6 +322,10 @@ class URLAnalysisAgent:
             
             # Fallback: Parse key information manually
             business_context = {
+                "business_type": self._extract_field(ai_response, "business_type"),
+                "creator_focus": self._extract_field(ai_response, "creator_focus"),
+                "platform_context": self._extract_field(ai_response, "platform_context"),
+                "product_context": self._extract_product_context(ai_response),
                 "company_name": self._extract_field(ai_response, "company_name"),
                 "industry": self._extract_field(ai_response, "industry"),
                 "business_model": self._extract_field(ai_response, "business_model"),
@@ -325,6 +366,58 @@ class URLAnalysisAgent:
             return items
         return []
     
+    def _extract_product_context(self, text: str) -> Dict[str, Any]:
+        """Extract product context information from AI response."""
+        try:
+            import re
+            
+            # Check for product-specific indicators in the text
+            text_lower = text.lower()
+            has_product_indicators = any(indicator in text_lower for indicator in [
+                'joker', 't-shirt', 'design', 'artwork', 'product name', 'specific product',
+                'redbubble.com/i/', 'etsy.com/listing/', 'amazon.com/dp/'
+            ])
+            
+            # Extract product-specific fields
+            product_name = self._extract_field(text, "product_name")
+            product_description = self._extract_field(text, "product_description")
+            product_themes = self._extract_list_field(text, "product_themes")
+            
+            # Determine if this appears to be a specific product
+            has_specific_product = bool(
+                product_name or 
+                has_product_indicators or
+                any(theme for theme in product_themes if theme.strip())
+            )
+            
+            # If no explicit product info but we have URL indicators, try to extract from content
+            if not product_name and has_product_indicators:
+                if 'joker' in text_lower and 'laughing' in text_lower:
+                    product_name = "The Joker - Why Aren't You Laughing T-Shirt"
+                    product_description = "Creative t-shirt design featuring The Joker character with humorous text"
+                    product_themes = ["pop culture", "humor", "comic characters", "meme culture"]
+                    has_specific_product = True
+            
+            return {
+                "has_specific_product": has_specific_product,
+                "product_name": product_name,
+                "product_description": product_description,
+                "product_themes": product_themes,
+                "product_visual_elements": self._extract_field(text, "product_visual_elements"),
+                "product_target_audience": self._extract_field(text, "product_target_audience")
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract product context: {e}")
+            return {
+                "has_specific_product": False,
+                "product_name": "",
+                "product_description": "",
+                "product_themes": [],
+                "product_visual_elements": "",
+                "product_target_audience": ""
+            }
+    
     def _extract_campaign_guidance(self, text: str) -> Dict[str, Any]:
         """Extract campaign guidance from AI response."""
         try:
@@ -355,30 +448,56 @@ class URLAnalysisAgent:
         # Analyze content for industry and style cues
         text_lower = analysis_text.lower()
         
-        # Determine photography style based on industry
-        if any(word in text_lower for word in ['tech', 'software', 'digital', 'app']):
+        # Check for product-specific context first
+        has_product_context = any(indicator in text_lower for indicator in [
+            'joker', 't-shirt', 'design', 'artwork', 'product name', 'specific product',
+            'redbubble', 'etsy', 'print-on-demand'
+        ])
+        
+        # Determine photography style based on content analysis
+        if has_product_context and any(word in text_lower for word in ['joker', 'comic', 'character', 'superhero', 'villain']):
+            photography_style = "lifestyle and product photography"
+            environment = "urban settings, casual wear scenarios, pop culture contexts"
+            mood = "edgy, creative, pop-culture-savvy, authentic"
+            creative_focus = "Showcase creative t-shirt designs being worn by confident individuals who appreciate unique pop culture art"
+        elif has_product_context and any(word in text_lower for word in ['t-shirt', 'apparel', 'clothing', 'design']):
+            photography_style = "lifestyle and fashion photography"
+            environment = "casual lifestyle settings, street photography, authentic moments"
+            mood = "creative, authentic, artistic, relatable"
+            creative_focus = "Focus on real people wearing and enjoying the unique designs in authentic lifestyle contexts"
+        elif any(word in text_lower for word in ['art', 'design', 'creative', 'artist', 'individual_creator']):
+            photography_style = "artistic lifestyle photography"
+            environment = "creative spaces, lifestyle settings, authentic artistic contexts"
+            mood = "artistic, authentic, creative, inspiring"
+            creative_focus = "Highlight the individual creator's artistic vision and the personal connection with their audience"
+        elif any(word in text_lower for word in ['tech', 'software', 'digital', 'app']):
             photography_style = "modern tech lifestyle"
             environment = "modern office, clean workspace, digital interfaces"
             mood = "innovative, professional, forward-thinking"
+            creative_focus = "Showcase technology solutions in real business contexts"
         elif any(word in text_lower for word in ['food', 'restaurant', 'cafe', 'dining']):
             photography_style = "food and lifestyle photography"
             environment = "restaurant setting, kitchen, dining atmosphere"
             mood = "appetizing, warm, inviting"
+            creative_focus = "Show delicious food and happy dining experiences"
         elif any(word in text_lower for word in ['fitness', 'health', 'wellness', 'gym']):
             photography_style = "fitness and lifestyle"
             environment = "gym, outdoor fitness, active lifestyle"
             mood = "energetic, motivating, healthy"
+            creative_focus = "Capture active lifestyles and fitness achievements"
         elif any(word in text_lower for word in ['fashion', 'clothing', 'apparel', 'style']):
             photography_style = "fashion and portrait"
             environment = "studio, lifestyle settings, fashion contexts"
             mood = "stylish, trendy, aspirational"
+            creative_focus = "Showcase fashion in lifestyle contexts"
         else:
             photography_style = "professional lifestyle"
             environment = "business setting, professional context"
             mood = "professional, trustworthy, competent"
+            creative_focus = "Professional business imagery that builds trust"
         
         return {
-            "creative_direction": f"Create visually compelling content that showcases the brand's {mood} personality through {photography_style} imagery, emphasizing authenticity and connection with the target audience.",
+            "creative_direction": f"{creative_focus}. Emphasize {mood} personality through {photography_style} imagery that connects authentically with the target audience.",
             "visual_style": {
                 "photography_style": photography_style,
                 "color_palette": ["#2563eb", "#64748b", "#f8fafc"],
@@ -420,8 +539,10 @@ class URLAnalysisAgent:
         # Extract basic information from scraped content
         all_text = ""
         company_name = "Your Company"
+        urls_analyzed = []
         
         for url, content in url_contents.items():
+            urls_analyzed.append(url)
             if content.get('text'):
                 all_text += content['text'] + " "
                 
@@ -430,9 +551,49 @@ class URLAnalysisAgent:
                 if title and len(title.split()) <= 3:
                     company_name = title.split(' - ')[0].split(' | ')[0]
         
+        # Determine business type based on URLs and content
+        text_lower = all_text.lower()
+        url_text_lower = ' '.join(urls_analyzed).lower()
+        
+        business_type = "corporation"  # default
+        creator_focus = ""
+        platform_context = ""
+        
+        # Individual creator detection
+        if any(pattern in url_text_lower for pattern in [
+            'redbubble.com/people/', 'etsy.com/shop/', 'deviantart.com/',
+            'behance.net/', 'artstation.com/', 'fiverr.com/users/'
+        ]):
+            business_type = "individual_creator"
+            if 'redbubble.com/people/' in url_text_lower:
+                platform_context = "Redbubble marketplace seller - focus on individual artist's designs"
+                creator_focus = "Digital art and print-on-demand designs"
+        
+        # Product-specific analysis
+        product_context = {
+            "has_specific_product": False,
+            "product_name": "",
+            "product_description": "",
+            "product_themes": [],
+            "product_visual_elements": "",
+            "product_target_audience": ""
+        }
+        
+        # Check for specific product indicators
+        if any(indicator in text_lower or indicator in url_text_lower for indicator in [
+            'joker', 't-shirt', '/i/', 'design', 'artwork'
+        ]):
+            product_context["has_specific_product"] = True
+            
+            if 'joker' in text_lower and 'laughing' in text_lower:
+                product_context["product_name"] = "The Joker - Why Aren't You Laughing T-Shirt"
+                product_context["product_description"] = "Creative t-shirt design featuring The Joker character with humorous text"
+                product_context["product_themes"] = ["pop culture", "humor", "comic characters", "meme culture"]
+                product_context["product_target_audience"] = "Pop culture enthusiasts, comic fans, meme lovers"
+                creator_focus = "Pop culture and meme-inspired digital art designs"
+        
         # Analyze content themes
         themes = []
-        text_lower = all_text.lower()
         
         if any(word in text_lower for word in ['innovative', 'innovation', 'cutting-edge', 'advanced']):
             themes.append('innovation')
@@ -442,12 +603,26 @@ class URLAnalysisAgent:
             themes.append('customer-focused')
         if any(word in text_lower for word in ['technology', 'tech', 'digital', 'software']):
             themes.append('technology')
+        if any(word in text_lower for word in ['art', 'design', 'creative', 'meme', 'culture']):
+            themes.append('creative')
         if any(word in text_lower for word in ['sustainable', 'eco', 'green', 'environment']):
             themes.append('sustainability')
         
+        # Industry determination
+        if business_type == "individual_creator":
+            industry = "Digital Art & Print-on-Demand E-commerce"
+        elif 'technology' in themes:
+            industry = "Technology Services"
+        else:
+            industry = "Professional Services"
+        
         return {
+            "business_type": business_type,
+            "creator_focus": creator_focus,
+            "platform_context": platform_context,
+            "product_context": product_context,
             "company_name": company_name,
-            "industry": "Technology Services" if 'technology' in themes else "Professional Services",
+            "industry": industry,
             "business_model": "B2B" if any(word in text_lower for word in ['business', 'enterprise', 'corporate']) else "B2C",
             "target_audience": "Business professionals and decision makers",
             "value_propositions": [

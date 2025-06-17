@@ -189,6 +189,7 @@ Each agent must receive and use the business context:
 - [ ] Replace mock business analysis with real URL scraping + Gemini analysis
 - [ ] Replace mock visual content with Imagen/Veo integration or proper error handling
 - [ ] Add structured error responses for all failure scenarios
+- [ ] Mocked Stubs should feature real-implemented functionality, or graceful exception handling advising of the functionality gap/placeholder, making it clear that functionality is omitted.
 
 ### Phase 2: Enforce Structure (IMMEDIATE)
 - [ ] Update all API endpoints to match defined structure

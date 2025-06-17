@@ -376,12 +376,37 @@ async def _generate_batch_content_with_gemini(
         business_description = business_context.get('business_description', '')
         target_audience = business_context.get('target_audience', 'business professionals')
         
+        # NEW: Extract Campaign Media Tuning for enhanced visual guidance
+        campaign_media_tuning = business_context.get('campaign_media_tuning', '')
+        
         # Extract campaign guidance for consistent visual content
         campaign_guidance = business_context.get('campaign_guidance', {})
         visual_style = campaign_guidance.get('visual_style', {})
         imagen_prompts = campaign_guidance.get('imagen_prompts', {})
         veo_prompts = campaign_guidance.get('veo_prompts', {})
         content_themes = campaign_guidance.get('content_themes', {})
+        
+        # NEW: Extract product-specific context for enhanced targeting
+        product_context = business_context.get('product_context', {})
+        has_specific_product = product_context.get('has_specific_product', False)
+        product_name = product_context.get('product_name', '')
+        product_description = product_context.get('product_description', '')
+        product_themes = product_context.get('product_themes', [])
+        
+        # Enhanced business context with product focus
+        if has_specific_product and product_name:
+            logger.info(f"Using product-specific context for: {product_name}")
+            primary_focus = f"Promote the specific product: {product_name}"
+            target_context = f"Target audience specifically interested in: {product_description}"
+            enhanced_company_name = f"{company_name} - {product_name}"
+        else:
+            primary_focus = f"Promote {company_name}'s {campaign_type} offerings"
+            target_context = f"Target audience: {target_audience}"
+            enhanced_company_name = company_name
+        
+        # Enhanced content generation with product-specific themes
+        product_theme_text = f"\\nProduct Themes: {', '.join(product_themes)}" if product_themes else ""
+        creative_direction = campaign_guidance.get('creative_direction', f'Professional content showcasing {enhanced_company_name}')
         
         # Create post type specific prompt with campaign guidance
         post_type_name = post_type.value.replace('_', ' + ').title()
@@ -402,6 +427,9 @@ async def _generate_batch_content_with_gemini(
             imagen_environment = imagen_prompts.get('environment', 'business setting')
             imagen_technical = imagen_prompts.get('technical_specs', '35mm lens, natural lighting')
             
+            # Apply Campaign Media Tuning to Imagen prompts if provided
+            media_tuning_guidance = f"\n- Campaign Media Tuning: {campaign_media_tuning}" if campaign_media_tuning else ""
+            
             format_instructions = f"""
             Generate {actual_count} Text + Image posts (30-80 characters each):
             - Very short text to complement visuals
@@ -416,7 +444,7 @@ async def _generate_batch_content_with_gemini(
             - Technical Specs: {imagen_technical}
             - Photography Style: {visual_style.get('photography_style', 'professional lifestyle')}
             - Mood: {visual_style.get('mood', 'professional, trustworthy')}
-            - Subject Focus: People using {company_name}'s products/services in real scenarios
+            - Subject Focus: People using {company_name}'s products/services in real scenarios{media_tuning_guidance}
             
             Cost Control: Limited to {actual_count} posts to manage Imagen API costs
             """
@@ -424,6 +452,9 @@ async def _generate_batch_content_with_gemini(
             veo_base = veo_prompts.get('base_prompt', 'Dynamic lifestyle video')
             veo_movement = veo_prompts.get('movement_style', 'smooth camera movements')
             veo_storytelling = veo_prompts.get('storytelling', 'problem-solution narrative')
+            
+            # Apply Campaign Media Tuning to Veo prompts if provided
+            media_tuning_guidance = f"\n- Campaign Media Tuning: {campaign_media_tuning}" if campaign_media_tuning else ""
             
             format_instructions = f"""
             Generate {actual_count} Text + Video posts (40-100 characters each):
@@ -439,7 +470,7 @@ async def _generate_batch_content_with_gemini(
             - Storytelling: {veo_storytelling}
             - Duration Focus: {veo_prompts.get('duration_focus', '15-30 second clips')}
             - Scene Composition: {veo_prompts.get('scene_composition', 'engaging transitions')}
-            - Show real people engaging with {company_name}'s offerings
+            - Show real people engaging with {company_name}'s offerings{media_tuning_guidance}
             
             Cost Control: Limited to {actual_count} posts to manage Veo API costs
             """
@@ -457,22 +488,30 @@ async def _generate_batch_content_with_gemini(
         
         # Comprehensive batch generation prompt with campaign guidance
         batch_prompt = f"""
-        As a professional social media marketing expert, generate {actual_count} high-quality {post_type_name} posts for {company_name} following the established CAMPAIGN GUIDANCE.
+        As a professional social media marketing expert, generate {actual_count} high-quality {post_type_name} posts for {enhanced_company_name} following the established CAMPAIGN GUIDANCE.
 
         Business Context:
-        - Company: {company_name}
+        - Company: {enhanced_company_name}
+        - {primary_focus}
         - Objective: {objective}
         - Campaign Type: {campaign_type}
-        - Target Audience: {target_audience}
+        - {target_context}
         - Business Description: {business_description}
         - Website URL: {business_context.get('business_website', business_context.get('product_service_url', 'https://example.com'))}
 
+        {f"PRODUCT-SPECIFIC CONTEXT (PRIORITY):" if has_specific_product else ""}
+        {f"- Product Name: {product_name}" if product_name else ""}
+        {f"- Product Description: {product_description}" if product_description else ""}
+        {f"- Product Themes: {', '.join(product_themes)}" if product_themes else ""}
+        {f"- CRITICAL: All content must focus on promoting THIS SPECIFIC PRODUCT" if has_specific_product else ""}
+
         CAMPAIGN GUIDANCE (CRITICAL - Follow Exactly):
-        - Creative Direction: {campaign_guidance.get('creative_direction', 'Create visually compelling content that showcases authenticity')}
+        - Creative Direction: {creative_direction}
         - Primary Themes: {', '.join(primary_themes)}
         - Emotional Triggers: {', '.join(emotional_triggers)}
         - Brand Voice: {business_context.get('brand_voice', 'Professional and innovative')}
         - Visual Mood: {visual_style.get('mood', 'professional, trustworthy')}
+        {f"- Campaign Media Tuning: {campaign_media_tuning}" if campaign_media_tuning else ""}
 
         {format_instructions}
 

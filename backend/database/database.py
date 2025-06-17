@@ -148,16 +148,16 @@ def create_test_data() -> bool:
         # Insert demo campaign with business analysis for testing chat
         import json
         demo_business_analysis = {
-            "company_name": "Demo Company",
-            "industry": "Technology", 
+            "company_name": "MemeHodlr (by illustraman)",
+            "industry": "Digital Art & Print-on-Demand E-commerce", 
             "business_type": "individual_creator",
-            "target_audience": "Tech professionals and entrepreneurs",
-            "brand_voice": "Professional, innovative, approachable",
-            "creative_direction": "Modern, clean visuals with authentic storytelling",
-            "visual_style": "Professional photography with vibrant colors",
-            "content_themes": "Innovation, growth, community building",
-            "image_generation_guidance": "High-quality, professional imagery with modern aesthetics",
-            "video_generation_guidance": "Short, engaging videos with clear messaging"
+            "target_audience": "Internet-savvy individuals, cryptocurrency enthusiasts, meme lovers, pop culture aficionados",
+            "brand_voice": "Humorous, quirky, niche-specific, artistic, relatable, culturally aware, playful, authentic",
+            "creative_direction": "Digital illustrations incorporating meme culture, cryptocurrency themes, and pop culture references with modern, clean presentation",
+            "visual_style": "Clean and bright studio shots for product focus, complemented by authentic, unposed lifestyle imagery",
+            "content_themes": "Meme culture appreciation, cryptocurrency community, artistic expression, pop culture commentary",
+            "image_generation_guidance": "Creative, colorful t-shirt designs with unique artistic graphics, meme-inspired artwork, crypto-themed illustrations - avoid generic text designs",
+            "video_generation_guidance": "Authentic lifestyle videos showcasing creative t-shirt designs being worn, creative process glimpses, community engagement content"
         }
         
         cursor.execute("""
@@ -166,10 +166,10 @@ def create_test_data() -> bool:
                 campaign_type, target_audience, creativity_level,
                 business_context, created_at, updated_at
             ) VALUES (
-                'demo', 'demo_user', 'Demo Campaign', 
-                'Increase brand awareness and engagement', 
-                'A technology company focused on innovative solutions for modern businesses', 
-                'service', 'Business professionals and tech enthusiasts', 8,
+                'demo', 'demo_user', 'MemeHodlr Art Collection Campaign', 
+                'Showcase creative t-shirt designs and grow audience of meme/crypto enthusiasts', 
+                'Digital artist creating unique t-shirt designs that blend meme culture with cryptocurrency themes for the internet-savvy community', 
+                'product', 'Cryptocurrency enthusiasts, meme lovers, digital art collectors', 9,
                 ?, datetime('now'), datetime('now')
             )
         """, (json.dumps(demo_business_analysis),))
