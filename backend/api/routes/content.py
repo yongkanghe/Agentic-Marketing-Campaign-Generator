@@ -250,42 +250,104 @@ def generate_enhanced_content(post_type: PostType, business_context: dict, index
     return selected_content
 
 def generate_contextual_hashtags(business_context: dict) -> List[str]:
-    """Generate hashtags based on business context."""
+    """Generate AI-powered, context-aware hashtags based on business and product analysis."""
     
-    base_hashtags = ["#Business", "#Growth", "#Success"]
-    
+    # Extract comprehensive business context
+    company_name = business_context.get('company_name', 'YourBusiness')
+    business_type = business_context.get('business_type', 'corporation')
     campaign_type = business_context.get('campaign_type', 'service')
     objective = business_context.get('objective', 'increase sales')
-    business_description = business_context.get('business_description', '').lower()
+    industry = business_context.get('industry', 'Professional Services')
+    brand_voice = business_context.get('brand_voice', 'Professional')
     
-    # Add campaign type specific hashtags
-    if campaign_type == 'product':
-        base_hashtags.extend(["#ProductLaunch", "#Innovation", "#NewProduct"])
-    elif campaign_type == 'service':
-        base_hashtags.extend(["#Services", "#Solutions", "#Consulting"])
-    elif campaign_type == 'brand':
-        base_hashtags.extend(["#BrandAwareness", "#Marketing", "#BrandStory"])
-    elif campaign_type == 'event':
-        base_hashtags.extend(["#Event", "#Networking", "#Community"])
+    # Extract product-specific context for enhanced targeting
+    product_context = business_context.get('product_context', {})
+    has_specific_product = product_context.get('has_specific_product', False)
+    product_themes = product_context.get('product_themes', [])
     
-    # Add objective specific hashtags
-    if 'sales' in objective:
-        base_hashtags.extend(["#Sales", "#Revenue", "#ROI"])
-    elif 'awareness' in objective:
-        base_hashtags.extend(["#Awareness", "#Visibility", "#Reach"])
-    elif 'engagement' in objective:
-        base_hashtags.extend(["#Engagement", "#Community", "#Interaction"])
+    # Extract campaign themes
+    campaign_guidance = business_context.get('campaign_guidance', {})
+    content_themes = campaign_guidance.get('content_themes', {})
+    primary_themes = content_themes.get('primary_themes', [])
     
-    # Add industry specific hashtags based on business description
-    if any(word in business_description for word in ['tech', 'technology', 'software', 'digital']):
-        base_hashtags.extend(["#Technology", "#Digital", "#Tech"])
-    if any(word in business_description for word in ['marketing', 'advertising', 'promotion']):
-        base_hashtags.extend(["#Marketing", "#Advertising", "#Promotion"])
-    if any(word in business_description for word in ['consulting', 'advisory', 'strategy']):
-        base_hashtags.extend(["#Consulting", "#Strategy", "#Advisory"])
+    # Start with dynamic base hashtags
+    hashtags = []
     
-    # Return unique hashtags, limited to 6
-    return list(dict.fromkeys(base_hashtags))[:6]
+    # 1. PRODUCT-SPECIFIC HASHTAGS (Priority for specific products)
+    if has_specific_product and product_themes:
+        for theme in product_themes[:3]:  # Limit to top 3 product themes
+            clean_theme = theme.replace(' ', '').replace('&', '').replace('-', '')
+            if clean_theme and len(clean_theme) > 2:
+                hashtags.append(f"#{clean_theme}")
+    
+    # 2. BUSINESS TYPE SPECIFIC HASHTAGS
+    if business_type == "individual_creator":
+        hashtags.extend(["#Artist", "#Creator", "#IndependentArt", "#CreativeDesign"])
+    elif business_type == "small_business":
+        hashtags.extend(["#SmallBusiness", "#LocalBusiness", "#Entrepreneur"])
+    else:
+        hashtags.extend(["#Business", "#Professional"])
+    
+    # 3. INDUSTRY-SPECIFIC HASHTAGS
+    industry_lower = industry.lower()
+    if 'digital art' in industry_lower or 'print-on-demand' in industry_lower:
+        hashtags.extend(["#DigitalArt", "#PrintOnDemand", "#CustomDesign", "#ArtisticWear"])
+    elif 'technology' in industry_lower:
+        hashtags.extend(["#Technology", "#Tech", "#Innovation"])
+    elif 'marketing' in industry_lower:
+        hashtags.extend(["#Marketing", "#DigitalMarketing", "#Growth"])
+    elif 'fitness' in industry_lower:
+        hashtags.extend(["#Fitness", "#Health", "#Wellness"])
+    elif 'food' in industry_lower:
+        hashtags.extend(["#Food", "#Foodie", "#Restaurant"])
+    
+    # 4. CAMPAIGN OBJECTIVE HASHTAGS
+    objective_lower = objective.lower()
+    if 'sales' in objective_lower:
+        hashtags.extend(["#Sales", "#ShopNow", "#NewProduct"])
+    elif 'awareness' in objective_lower:
+        hashtags.extend(["#BrandAwareness", "#Discover", "#GetToKnow"])
+    elif 'engagement' in objective_lower:
+        hashtags.extend(["#Community", "#Engage", "#Connect"])
+    elif 'growth' in objective_lower:
+        hashtags.extend(["#Growth", "#Expansion", "#Success"])
+    
+    # 5. BRAND VOICE HASHTAGS
+    voice_lower = brand_voice.lower()
+    if 'artistic' in voice_lower or 'creative' in voice_lower:
+        hashtags.extend(["#Creative", "#Artistic", "#Inspiration"])
+    elif 'humorous' in voice_lower or 'funny' in voice_lower:
+        hashtags.extend(["#Humor", "#Fun", "#Entertaining"])
+    elif 'professional' in voice_lower:
+        hashtags.extend(["#Professional", "#Quality", "#Excellence"])
+    elif 'innovative' in voice_lower:
+        hashtags.extend(["#Innovation", "#Innovative", "#CuttingEdge"])
+    
+    # 6. CAMPAIGN THEME HASHTAGS
+    for theme in primary_themes[:2]:  # Limit to top 2 campaign themes
+        if theme.lower() == 'authenticity':
+            hashtags.extend(["#Authentic", "#Real", "#Genuine"])
+        elif theme.lower() == 'community':
+            hashtags.extend(["#Community", "#Together", "#Family"])
+        elif theme.lower() == 'innovation':
+            hashtags.extend(["#Innovation", "#NewIdeas", "#Creative"])
+        elif theme.lower() == 'quality':
+            hashtags.extend(["#Quality", "#Premium", "#Excellence"])
+    
+    # 7. PLATFORM-OPTIMIZED HASHTAGS
+    hashtags.extend(["#SocialMedia", "#Content", "#Trending"])
+    
+    # Clean up and prioritize hashtags
+    # Remove duplicates while preserving order
+    unique_hashtags = []
+    seen = set()
+    for tag in hashtags:
+        if tag.lower() not in seen and len(tag) > 3:  # Minimum tag length
+            unique_hashtags.append(tag)
+            seen.add(tag.lower())
+    
+    # Return top 6 most relevant hashtags
+    return unique_hashtags[:6]
 
 @router.post("/generate-visuals")
 async def generate_visual_content(request: dict):
