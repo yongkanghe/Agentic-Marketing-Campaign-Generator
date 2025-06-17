@@ -16,7 +16,8 @@ from fastapi.responses import JSONResponse
 
 from ..models import CampaignRequest, CampaignResponse, BusinessAnalysis, SocialMediaPost
 from agents.marketing_orchestrator import execute_campaign_workflow
-from utils.auth import get_current_user
+# Auth temporarily disabled for MVP
+# from utils.auth import get_current_user
 from google import genai
 from database.database import get_campaign_by_id, update_campaign_analysis
 
@@ -25,6 +26,11 @@ router = APIRouter()
 
 # In-memory storage for demo
 campaigns_store: Dict[str, Dict[str, Any]] = {}
+
+# Temporary auth placeholder for MVP
+def get_current_user() -> str:
+    """Temporary auth placeholder for MVP - returns default user"""
+    return "demo_user"
 
 @router.post("/create", response_model=CampaignResponse)
 async def create_campaign(request: CampaignRequest) -> CampaignResponse:
@@ -205,191 +211,170 @@ async def export_campaign(campaign_id: str, format: str = "json"):
             detail=f"Export format {format} not yet implemented"
         )
 
-@router.post("/api/v1/campaigns/{campaign_id}/guidance-chat", response_model=Dict[str, Any])
+@router.post("/{campaign_id}/guidance-chat", response_model=Dict[str, Any])
 async def chat_with_campaign_guidance(
     campaign_id: str,
     request: Dict[str, Any],
     current_user: str = Depends(get_current_user)
 ):
     """
-    Chat with the campaign guidance AI to refine and improve campaign guidance.
-    
-    This endpoint allows users to have a conversation with the AI to:
-    - Clarify business context and objectives
-    - Refine visual style and creative direction
-    - Adjust campaign guidance based on specific requirements
-    - Get explanations about campaign decisions
+    Chat with AI to refine campaign guidance.
+    Provides conversational interface for improving campaign strategy.
     """
     try:
-        logger.info(f"Campaign guidance chat for campaign {campaign_id}")
+        logger.info(f"Processing guidance chat for campaign {campaign_id}")
         
-        # Get current campaign from in-memory store
-        if campaign_id not in campaigns_store:
-            raise HTTPException(status_code=404, detail="Campaign not found")
+        # Get campaign data for context
+        campaign_data = await get_campaign_by_id(campaign_id, current_user)
+        if not campaign_data:
+            # Fallback to in-memory store
+            if campaign_id not in campaigns_store:
+                raise HTTPException(status_code=404, detail="Campaign not found")
+            campaign_data = campaigns_store[campaign_id]
         
-        campaign = campaigns_store[campaign_id]
+        # Extract user message
         user_message = request.get("message", "")
-        conversation_history = request.get("conversation_history", [])
-        
         if not user_message:
             raise HTTPException(status_code=400, detail="Message is required")
         
-        # Initialize Gemini client for guidance chat
-        gemini_api_key = os.getenv('GEMINI_API_KEY')
-        gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+        # Get conversation history
+        chat_history = request.get("conversation_history", [])
         
-        if not gemini_api_key:
-            raise HTTPException(status_code=500, detail="AI service not configured")
+        # Initialize Gemini client
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         
-        client = genai.Client(api_key=gemini_api_key)
+        # Build context prompt with campaign data
+        business_analysis = campaign_data.get("business_analysis", {})
+        context_prompt = f"""
+You are an AI marketing strategist helping refine campaign guidance. 
+
+CURRENT CAMPAIGN CONTEXT:
+- Company: {business_analysis.get('company_name', 'Unknown')}
+- Industry: {business_analysis.get('industry', 'Unknown')}
+- Business Type: {business_analysis.get('business_type', 'Unknown')}
+- Target Audience: {business_analysis.get('target_audience', 'Unknown')}
+- Brand Voice: {business_analysis.get('brand_voice', 'Unknown')}
+
+CURRENT CAMPAIGN GUIDANCE:
+- Creative Direction: {business_analysis.get('creative_direction', 'None set')}
+- Visual Style: {business_analysis.get('visual_style', 'None set')}
+- Content Themes: {business_analysis.get('content_themes', 'None set')}
+- Image Generation: {business_analysis.get('image_generation_guidance', 'None set')}
+- Video Generation: {business_analysis.get('video_generation_guidance', 'None set')}
+
+INSTRUCTIONS:
+1. Help the user refine their campaign guidance based on their specific needs
+2. Provide specific, actionable suggestions for improving campaign effectiveness
+3. Focus on the user's actual business/creator context, not generic advice
+4. When suggesting changes, be specific about what fields to update and how
+5. Maintain the creator's authentic voice and brand personality
+
+User's request: {user_message}
+
+Provide helpful guidance and specific suggestions for improving the campaign.
+"""
+
+        # Build conversation for Gemini
+        messages = []
         
-        # Build context-aware prompt for guidance refinement
-        business_analysis = campaign.get("business_analysis", {})
-        current_guidance = business_analysis.get("campaign_guidance", {})
+        # Add conversation history
+        for msg in chat_history:
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": msg.get("content", "")
+            })
         
-        system_prompt = f"""
-        You are a specialized marketing campaign advisor helping to refine campaign guidance.
-        
-        CURRENT CAMPAIGN CONTEXT:
-        - Company/Creator: {business_analysis.get('company_name', 'Unknown')}
-        - Industry: {business_analysis.get('industry', 'Unknown')}
-        - Business Type: {business_analysis.get('business_type', 'Unknown')}
-        - Target Audience: {business_analysis.get('target_audience', 'Unknown')}
-        
-        CURRENT CAMPAIGN GUIDANCE:
-        {json.dumps(current_guidance, indent=2)}
-        
-        CONVERSATION HISTORY:
-        {json.dumps(conversation_history, indent=2)}
-        
-        USER'S NEW MESSAGE: {user_message}
-        
-        Your role is to:
-        1. Help refine and improve the campaign guidance based on user feedback
-        2. Provide specific, actionable suggestions for visual content creation
-        3. Explain campaign decisions and reasoning
-        4. Suggest improvements to make guidance more specific and effective
-        5. Focus on the individual creator's work (not platform features for marketplace sellers)
-        
-        Respond in JSON format with:
-        {{
-            "response": "Your conversational response to the user",
-            "suggested_updates": {{
-                "field_name": "suggested new value",
-                // Only include fields that should be updated based on conversation
-            }},
-            "explanation": "Brief explanation of why these updates would improve the campaign",
-            "next_questions": ["question 1", "question 2"] // Optional follow-up questions
-        }}
-        
-        Be conversational, helpful, and focus on actionable improvements.
-        """
+        # Add current user message
+        messages.append({
+            "role": "user", 
+            "content": context_prompt
+        })
         
         # Generate AI response
         response = client.models.generate_content(
-            model=gemini_model,
-            contents=system_prompt
+            model="gemini-1.5-flash",
+            contents=context_prompt
         )
         
-        try:
-            # Parse AI response
-            import re
-            
-            ai_text = response.text
-            
-            # Try to extract JSON from response
-            json_match = re.search(r'\{.*\}', ai_text, re.DOTALL)
-            if json_match:
-                ai_response = json.loads(json_match.group())
-            else:
-                # Fallback if no JSON found
-                ai_response = {
-                    "response": ai_text,
-                    "suggested_updates": {},
-                    "explanation": "AI provided general guidance feedback",
-                    "next_questions": []
-                }
-            
-            # Update conversation history
-            updated_history = conversation_history + [
-                {"role": "user", "message": user_message, "timestamp": datetime.utcnow().isoformat()},
-                {"role": "assistant", "message": ai_response["response"], "timestamp": datetime.utcnow().isoformat()}
-            ]
-            
-            return {
-                "success": True,
-                "ai_response": ai_response,
-                "conversation_history": updated_history,
-                "campaign_id": campaign_id
+        ai_response = response.text
+        
+        # Update conversation history
+        updated_history = chat_history + [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": ai_response}
+        ]
+        
+        return {
+            "response": ai_response,
+            "conversation_history": updated_history,
+            "suggestions": {
+                "has_suggestions": True,
+                "message": "AI provided guidance refinement suggestions"
             }
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse AI response: {e}")
-            return {
-                "success": True,
-                "ai_response": {
-                    "response": response.text,
-                    "suggested_updates": {},
-                    "explanation": "AI provided guidance feedback",
-                    "next_questions": []
-                },
-                "conversation_history": conversation_history + [
-                    {"role": "user", "message": user_message, "timestamp": datetime.utcnow().isoformat()},
-                    {"role": "assistant", "message": response.text, "timestamp": datetime.utcnow().isoformat()}
-                ],
-                "campaign_id": campaign_id
-            }
+        }
         
     except Exception as e:
-        logger.error(f"Campaign guidance chat error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process guidance chat: {str(e)}")
+        logger.error(f"Guidance chat failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat processing failed: {str(e)}"
+        )
 
-@router.put("/api/v1/campaigns/{campaign_id}/guidance", response_model=Dict[str, Any])
+@router.put("/{campaign_id}/guidance", response_model=Dict[str, Any])
 async def update_campaign_guidance(
     campaign_id: str,
     guidance_updates: Dict[str, Any],
     current_user: str = Depends(get_current_user)
 ):
     """
-    Update campaign guidance with user modifications.
-    
-    Allows users to directly edit and update campaign guidance fields.
+    Update campaign guidance fields directly.
+    Allows manual editing of campaign strategy elements.
     """
     try:
-        logger.info(f"Updating campaign guidance for campaign {campaign_id}")
+        logger.info(f"Updating guidance for campaign {campaign_id}")
         
-        # Get current campaign from in-memory store
-        if campaign_id not in campaigns_store:
-            raise HTTPException(status_code=404, detail="Campaign not found")
+        # Get campaign data
+        campaign_data = await get_campaign_by_id(campaign_id, current_user)
+        if not campaign_data:
+            # Fallback to in-memory store
+            if campaign_id not in campaigns_store:
+                raise HTTPException(status_code=404, detail="Campaign not found")
+            campaign_data = campaigns_store[campaign_id]
         
-        campaign = campaigns_store[campaign_id]
-        
-        # Update guidance in campaign data
-        business_analysis = campaign.get("business_analysis", {})
-        current_guidance = business_analysis.get("campaign_guidance", {})
-        
-        # Deep merge the updates
+        # Deep merge function for nested updates
         def deep_merge(base_dict, update_dict):
+            """Recursively merge update_dict into base_dict"""
             for key, value in update_dict.items():
                 if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
                     deep_merge(base_dict[key], value)
                 else:
                     base_dict[key] = value
+            return base_dict
         
-        deep_merge(current_guidance, guidance_updates)
-        business_analysis["campaign_guidance"] = current_guidance
-        campaign["business_analysis"] = business_analysis
+        # Update business analysis with new guidance
+        if "business_analysis" not in campaign_data:
+            campaign_data["business_analysis"] = {}
         
-        # Update in store
-        campaigns_store[campaign_id] = campaign
+        # Apply updates to business analysis
+        deep_merge(campaign_data["business_analysis"], guidance_updates)
         
-        return {
-            "success": True,
-            "message": "Campaign guidance updated successfully",
-            "updated_guidance": current_guidance,
-            "campaign_id": campaign_id
-        }
-        
+        # Save updated campaign
+        update_result = await update_campaign_analysis(campaign_id, current_user, campaign_data["business_analysis"])
+        if update_result:
+            # Also update in-memory store
+            campaigns_store[campaign_id] = campaign_data
+            
+            return {
+                "success": True,
+                "message": "Campaign guidance updated successfully",
+                "updated_fields": list(guidance_updates.keys())
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save guidance updates")
+            
     except Exception as e:
-        logger.error(f"Campaign guidance update error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to update campaign guidance: {str(e)}") 
+        logger.error(f"Guidance update failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Guidance update failed: {str(e)}"
+        ) 

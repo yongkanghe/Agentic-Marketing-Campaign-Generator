@@ -9,8 +9,9 @@ import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
 import { MaterialVideoCard } from '@/components/MaterialVideoCard';
 import { EditableCampaignGuidance } from '@/components/EditableCampaignGuidance';
+import { CampaignGuidanceChat } from '@/components/CampaignGuidanceChat';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoVentureLaunchAPI from '../lib/api';
 
@@ -38,6 +39,10 @@ const IdeationPage: React.FC = () => {
     '#marketing', '#business', '#growth', '#innovation', '#success', '#entrepreneur'
   ]);
   const [isRegeneratingAnalysis, setIsRegeneratingAnalysis] = useState(false);
+  
+  // Campaign Guidance Chat State
+  const [showGuidanceChat, setShowGuidanceChat] = useState(false);
+  const [showGuidanceEdit, setShowGuidanceEdit] = useState(false);
   
   // Mock social media columns data
   const [socialMediaColumns, setSocialMediaColumns] = useState([
@@ -414,11 +419,18 @@ const IdeationPage: React.FC = () => {
                   <h4 className="text-lg font-semibold text-white">Campaign Creative Guidance</h4>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-2 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg hover:bg-purple-500/30 transition-colors text-sm">
+                  <button 
+                    onClick={() => setShowGuidanceChat(!showGuidanceChat)}
+                    className="flex items-center gap-2 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg hover:bg-purple-500/30 transition-colors text-sm"
+                  >
                     <MessageCircle size={16} />
                     Chat to Refine
                   </button>
-                  <button className="flex items-center gap-2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg hover:bg-blue-500/30 transition-colors text-sm">
+                  <button 
+                    onClick={() => setShowGuidanceEdit(!showGuidanceEdit)}
+                    className="flex items-center gap-2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg hover:bg-blue-500/30 transition-colors text-sm"
+                  >
+                    <Edit size={16} />
                     Edit
                   </button>
                 </div>
@@ -483,6 +495,33 @@ const IdeationPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Campaign Guidance Chat Interface */}
+            {showGuidanceChat && (
+              <div className="mt-6">
+                <CampaignGuidanceChat 
+                  campaignId={currentCampaign?.id || 'demo'}
+                  onClose={() => setShowGuidanceChat(false)}
+                />
+              </div>
+            )}
+
+            {/* Campaign Guidance Edit Interface */}
+            {showGuidanceEdit && (
+              <div className="mt-6">
+                <EditableCampaignGuidance 
+                  campaignId={currentCampaign?.id || 'demo'}
+                  currentGuidance={aiSummary || {}}
+                  onClose={() => setShowGuidanceEdit(false)}
+                  onUpdate={(updatedGuidance) => {
+                    // Update the aiSummary in context
+                    // This would normally update through the context
+                    console.log('Updated guidance:', updatedGuidance);
+                    toast.success('Campaign guidance updated successfully!');
+                  }}
+                />
+              </div>
+            )}
 
             {/* Campaign Validation Status */}
             <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">

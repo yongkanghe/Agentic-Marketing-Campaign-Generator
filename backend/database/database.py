@@ -121,8 +121,14 @@ def create_test_data() -> bool:
         
         # Insert test user
         cursor.execute("""
-            INSERT OR REPLACE INTO users (id, email, created_at, updated_at) 
-            VALUES ('test-user-1', 'test@example.com', datetime('now'), datetime('now'))
+            INSERT OR REPLACE INTO users (id, username, email, password_hash, first_name, last_name, created_at, updated_at) 
+            VALUES ('test-user-1', 'testuser', 'test@example.com', 'dummy_hash', 'Test', 'User', datetime('now'), datetime('now'))
+        """)
+        
+        # Insert demo user for demo campaigns
+        cursor.execute("""
+            INSERT OR REPLACE INTO users (id, username, email, password_hash, first_name, last_name, created_at, updated_at) 
+            VALUES ('demo_user', 'demouser', 'demo@example.com', 'dummy_hash', 'Demo', 'User', datetime('now'), datetime('now'))
         """)
         
         # Insert test campaign
@@ -138,6 +144,35 @@ def create_test_data() -> bool:
                 datetime('now'), datetime('now')
             )
         """)
+        
+        # Insert demo campaign with business analysis for testing chat
+        import json
+        demo_business_analysis = {
+            "company_name": "Demo Company",
+            "industry": "Technology", 
+            "business_type": "individual_creator",
+            "target_audience": "Tech professionals and entrepreneurs",
+            "brand_voice": "Professional, innovative, approachable",
+            "creative_direction": "Modern, clean visuals with authentic storytelling",
+            "visual_style": "Professional photography with vibrant colors",
+            "content_themes": "Innovation, growth, community building",
+            "image_generation_guidance": "High-quality, professional imagery with modern aesthetics",
+            "video_generation_guidance": "Short, engaging videos with clear messaging"
+        }
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO campaigns (
+                id, user_id, name, objective, business_description, 
+                campaign_type, target_audience, creativity_level,
+                business_context, created_at, updated_at
+            ) VALUES (
+                'demo', 'demo_user', 'Demo Campaign', 
+                'Increase brand awareness and engagement', 
+                'A technology company focused on innovative solutions for modern businesses', 
+                'service', 'Business professionals and tech enthusiasts', 8,
+                ?, datetime('now'), datetime('now')
+            )
+        """, (json.dumps(demo_business_analysis),))
         
         conn.commit()
         conn.close()
@@ -212,9 +247,9 @@ async def get_campaign_by_id(campaign_id: str, user_id: str) -> Optional[dict]:
             campaign = dict(row)
             
             # Parse JSON fields if they exist
-            if campaign.get('ai_analysis'):
+            if campaign.get('business_context'):
                 import json
-                campaign['ai_analysis'] = json.loads(campaign['ai_analysis'])
+                campaign['business_analysis'] = json.loads(campaign['business_context'])
             
             return campaign
         
@@ -236,7 +271,7 @@ async def update_campaign_analysis(campaign_id: str, user_id: str, ai_analysis: 
         # Update the campaign with new AI analysis
         cursor.execute("""
             UPDATE campaigns 
-            SET ai_analysis = ?, updated_at = datetime('now')
+            SET business_context = ?, updated_at = datetime('now')
             WHERE id = ? AND user_id = ?
         """, (json.dumps(ai_analysis), campaign_id, user_id))
         
@@ -257,7 +292,7 @@ async def update_campaign_analysis(campaign_id: str, user_id: str, ai_analysis: 
         
         if row:
             campaign = dict(row)
-            campaign['ai_analysis'] = ai_analysis
+            campaign['business_analysis'] = ai_analysis
             return campaign
         
         return None
