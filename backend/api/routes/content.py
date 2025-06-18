@@ -39,64 +39,61 @@ router = APIRouter()
 
 @router.post("/generate", response_model=ContentGenerationResponse)
 async def generate_content(request: ContentGenerationRequest) -> ContentGenerationResponse:
-    """Generate social media content based on business context."""
-    
+    """
+    Generate social media content by executing the real ADK agent workflow.
+    This endpoint no longer uses mock data.
+    """
+    if not execute_campaign_workflow:
+        logger.error("Marketing orchestrator not available.")
+        raise HTTPException(status_code=500, detail="AI services are not configured.")
+
     try:
-        logger.info(f"Generating {request.post_count} social media posts")
+        logger.info(f"Executing real AI workflow to generate content for campaign: {request.campaign_id}")
+        start_time = time.time()
+
+        # Call the orchestrator to execute the real end-to-end workflow
+        # The orchestrator will handle analysis (from URL or description) and content generation
+        workflow_result = await execute_campaign_workflow(
+            business_description=request.business_context.get("business_description", ""),
+            objective=request.campaign_objective,
+            target_audience=request.business_context.get("target_audience", ""),
+            campaign_type=request.campaign_type,
+            creativity_level=request.creativity_level,
+            business_website=request.business_context.get("business_website"),
+            about_page_url=request.business_context.get("about_page_url"),
+            product_service_url=request.business_context.get("product_service_url")
+        )
+
+        processing_time = time.time() - start_time
+
+        if "error" in workflow_result:
+            logger.error(f"Workflow execution failed: {workflow_result['error']}")
+            raise HTTPException(status_code=500, detail=workflow_result["error"])
+
+        # Extract generated posts and other relevant data from the result
+        generated_posts = workflow_result.get("generated_content", [])
+        business_analysis = workflow_result.get("business_analysis", {})
         
-        # Mock content generation (replace with real ADK agent call)
-        posts = []
-        post_types = ["text_url", "text_image", "text_video"]
-        
-        for i in range(request.post_count):
-            post_type = post_types[i % 3]
-            
-            # Respect include_hashtags flag
-            hashtags = ["#Generated", "#Content", "#Marketing"] if request.include_hashtags else []
-            
-            post = SocialMediaPost(
-                id=f"generated_post_{i+1}",
-                type=PostType(post_type),
-                content=f"Generated {post_type.replace('_', ' + ')} content for {request.campaign_objective}",
-                hashtags=hashtags,
-                platform_optimized={
-                    "linkedin": {
-                        "content": f"Professional content for LinkedIn",
-                        "hashtags": ["#Professional", "#LinkedIn", "#Business"]
-                    },
-                    "twitter": {
-                        "content": f"Concise content for Twitter", 
-                        "hashtags": ["#Twitter", "#Social", "#Marketing"]
-                    },
-                    "instagram": {
-                        "content": f"Visual content for Instagram",
-                        "hashtags": ["#Instagram", "#Visual", "#Creative"]
-                    },
-                    "facebook": {
-                        "content": f"Engaging content for Facebook",
-                        "hashtags": ["#Facebook", "#Engagement", "#Community"]
-                    }
-                },
-                engagement_score=7.0 + (i * 0.1),
-                selected=False
-            )
-            posts.append(post)
-        
-        hashtag_suggestions = ["#Innovation", "#Business", "#Growth", "#Marketing", "#Success"]
-        
+        # Suggest hashtags from the campaign guidance
+        hashtag_suggestions = business_analysis.get("campaign_guidance", {}).get("suggested_tags", [])
+        if not hashtag_suggestions:
+             hashtag_suggestions = ["#Innovation", "#Business", "#Growth", "#Marketing", "#Success"]
+
         return ContentGenerationResponse(
-            posts=posts,
+            posts=generated_posts,
             hashtag_suggestions=hashtag_suggestions,
             generation_metadata={
                 "creativity_level": request.creativity_level,
-                "post_count": len(posts),
-                "total_posts": len(posts),  # Add this field for test compatibility
-                "generation_method": "mock",
-                "generation_time": 1.5
+                "post_count": len(generated_posts),
+                "total_posts": len(generated_posts),
+                "generation_method": "real_adk_workflow",
+                "generation_time": processing_time,
+                "real_ai_used": True
             },
-            processing_time=1.5
+            processing_time=processing_time,
+            business_analysis=business_analysis # Pass the analysis back to the frontend
         )
-        
+
     except Exception as e:
         logger.error(f"Content generation failed: {e}", exc_info=True)
         raise HTTPException(

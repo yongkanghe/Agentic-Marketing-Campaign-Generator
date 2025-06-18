@@ -20,6 +20,9 @@ from google.adk.agents.invocation_context import InvocationContext
 # from google.adk.telemetry import tracer  # Commented out due to compatibility issues
 from google.adk.models import Gemini
 
+# Import business analysis agent for direct use
+from .business_analysis_agent import URLAnalysisAgent
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -382,128 +385,111 @@ async def execute_campaign_workflow(
     product_service_url: Optional[str] = None,
     uploaded_files: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
-    """Execute the complete marketing campaign workflow."""
-    
-    logger.info("Starting marketing campaign workflow execution...")
-    
-    try:
-        # Get the orchestrator agent
-        orchestrator = await create_marketing_orchestrator_agent()
-        
-        # Prepare workflow context
-        workflow_context = {
-            "business_description": business_description,
-            "objective": objective,
-            "target_audience": target_audience,
-            "campaign_type": campaign_type,
-            "creativity_level": creativity_level,
-            "business_website": business_website,
-            "about_page_url": about_page_url,
-            "product_service_url": product_service_url,
-            "uploaded_files": uploaded_files or [],
-            "post_count": 9,  # 3 per format type
-            "workflow_id": f"campaign_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # Execute workflow with real ADK agents
-        if GEMINI_API_KEY:
-            logger.info("Executing real ADK workflow with Gemini integration")
-            result = await _execute_real_adk_workflow(orchestrator, workflow_context)
-        else:
-            logger.info("Executing enhanced mock workflow (GEMINI_API_KEY not configured)")
-            result = await _enhanced_mock_workflow_execution(workflow_context)
-        
-        logger.info("Marketing campaign workflow completed successfully")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Marketing campaign workflow failed: {e}", exc_info=True)
-        raise
+    """
+    Executes the full campaign generation workflow using real AI agents.
 
-async def _execute_real_adk_workflow(orchestrator: SequentialAgent, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute real ADK workflow with Gemini integration."""
-    
+    This function orchestrates business analysis and content generation.
+    It will first attempt to get business context from URLs if provided.
+    If no URLs are available, it will use the provided business_description
+    for analysis.
+
+    This workflow no longer uses mock data for initial content generation.
+    """
+    logger.info("Starting real AI campaign workflow...")
+
+    # Ensure API key is available
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY not configured. Cannot execute real AI workflow.")
+        # In a real app, you'd return a proper error response
+        return {"error": "AI services are not configured."}
+
+    # Prepare the context for the ADK workflow
+    workflow_context = {
+        "business_description": business_description,
+        "objective": objective,
+        "target_audience": target_audience,
+        "campaign_type": campaign_type,
+        "creativity_level": creativity_level,
+        "business_website": business_website,
+        "about_page_url": about_page_url,
+        "product_service_url": product_service_url,
+        "uploaded_files": uploaded_files,
+        "post_count": 10,
+        "timestamp": datetime.now().isoformat(),
+    }
+
     try:
-        from .business_analysis_agent import analyze_business_urls
-        from .visual_content_agent import generate_visual_content_for_posts
-        
-        logger.info("Starting real ADK workflow execution")
-        
-        # Step 1: Business Analysis
-        business_analysis = {}
-        urls_to_analyze = []
-        
-        if context.get("business_website"):
-            urls_to_analyze.append(context["business_website"])
-        if context.get("about_page_url"):
-            urls_to_analyze.append(context["about_page_url"])
-        if context.get("product_service_url"):
-            urls_to_analyze.append(context["product_service_url"])
-        
+        # STEP 1: Business Analysis
+        business_analysis_result = {}
+        urls_to_analyze = [url for url in [business_website, about_page_url, product_service_url] if url]
+
         if urls_to_analyze:
-            logger.info(f"Analyzing {len(urls_to_analyze)} URLs for business context")
-            url_analysis_result = await analyze_business_urls(urls_to_analyze, "comprehensive")
-            business_analysis = url_analysis_result.get("business_analysis", {})
-            # Ensure business description is included from user input
-            business_analysis["business_description"] = context["business_description"]
-            business_analysis["target_audience"] = context["target_audience"]
+            logger.info(f"Performing URL-based analysis on: {urls_to_analyze}")
+            url_agent = URLAnalysisAgent()
+            # Note: The URLAnalysisAgent itself now uses real AI, so we call it directly.
+            analysis_data = await url_agent.analyze_urls(urls=urls_to_analyze)
+            business_analysis_result = analysis_data.get("business_analysis", {})
+        elif business_description:
+            logger.info("Performing description-based analysis.")
+            business_analysis_result = await _extract_business_context_from_description(
+                business_description=business_description,
+                target_audience=target_audience,
+                objective=objective,
+                campaign_type=campaign_type
+            )
         else:
-            # Extract detailed business context from provided business description
-            business_description = context["business_description"]
-            logger.info(f"Analyzing business description: {business_description[:100]}...")
-            
-            # Enhanced business context extraction based on description
-            business_analysis = await _extract_business_context_from_description(
-                business_description, 
-                context["target_audience"],
-                context["objective"],
-                context["campaign_type"]
-            )
+            logger.warning("No URLs or business description provided for analysis.")
+            return {"error": "Business information required for analysis."}
         
-        # Step 2: Content Generation using real business context
-        social_posts = await _generate_real_social_content(business_analysis, context)
+        if not business_analysis_result:
+            logger.error("Business analysis failed to produce results.")
+            return {"error": "Could not analyze business context."}
+
+        # STEP 2: Content Generation
+        logger.info("Proceeding to real content generation.")
+        # Pass the result of the analysis to the content generation step
+        generation_context = workflow_context.copy()
+        generation_context["business_context"] = business_analysis_result
+
+        content_generation_agent = await create_content_generation_agent()
+        adk_result = await content_generation_agent.invoke(generation_context)
+
+        # STEP 3: Formatting and Final Output
+        generated_content = _format_generated_content(
+            content_data=adk_result,
+            context=workflow_context,
+            business_analysis=business_analysis_result
+        )
         
-        # Step 3: Visual Content Generation
-        if social_posts:
-            logger.info("Generating visual content for social posts")
-            visual_result = await generate_visual_content_for_posts(
-                social_posts=social_posts,
-                business_context=business_analysis,
-                campaign_objective=context["objective"],
-                target_platforms=["instagram", "linkedin", "facebook", "twitter"]
-            )
-            social_posts = visual_result.get("posts_with_visuals", social_posts)
-        
-        return {
-            "campaign_id": context["workflow_id"],
-            "summary": f"AI-generated marketing campaign for {context['objective']} targeting {context['target_audience']}. Campaign leverages real business analysis and AI-powered content generation to maximize engagement and drive results.",
-            "business_analysis": business_analysis,
-            "social_posts": social_posts,
-            "created_at": datetime.now().isoformat(),
-            "status": "completed",
-            "processing_time": 5.0,
-            "workflow_metadata": {
-                "creativity_level": context["creativity_level"],
-                "campaign_type": context["campaign_type"],
-                "total_posts": len(social_posts),
-                "agent_execution_order": [
-                    "URLAnalysisAgent",
-                    "BusinessContextAgent",
-                    "SocialContentAgent",
-                    "HashtagOptimizationAgent",
-                    "VisualContentAgent"
-                ],
-                "real_adk_execution": True,
-                "gemini_integration": True,
-                "urls_analyzed": len(urls_to_analyze) if urls_to_analyze else 0
+        final_result = {
+            "business_analysis": business_analysis_result,
+            "generated_content": generated_content,
+            "metadata": {
+                "timestamp": workflow_context["timestamp"],
+                "real_ai_used": True,
+                "workflow_type": "URL-based" if urls_to_analyze else "Description-based"
             }
         }
-        
+
+        logger.info("Successfully completed real AI campaign workflow.")
+        return final_result
+
     except Exception as e:
-        logger.error(f"Real ADK workflow execution failed: {e}", exc_info=True)
-        # Fallback to enhanced mock
-        return await _enhanced_mock_workflow_execution(context)
+        logger.error(f"An error occurred during the real AI workflow: {e}", exc_info=True)
+        # Proper error handling as per remediation plan
+        return {"error": f"An unexpected error occurred: {e}"}
+
+async def _execute_real_adk_workflow(orchestrator: SequentialAgent, context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    DEPRECATED: This function's logic has been integrated directly into
+    the main execute_campaign_workflow function for a clearer, more direct flow.
+    The core logic for business analysis and content generation is now
+    handled sequentially in the main function.
+    """
+    logger.warning("DEPRECATED: _execute_real_adk_workflow is no longer in use.")
+    # The logic from this function has been moved to execute_campaign_workflow
+    # for a more streamlined process.
+    return {"error": "This execution path is deprecated."}
 
 async def _generate_real_social_content(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Generate real social media content using Gemini AI."""
@@ -596,217 +582,68 @@ async def _generate_real_social_content(business_analysis: Dict[str, Any], conte
         return _generate_enhanced_content_fallback(business_analysis, context)
 
 def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, Any], business_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Format generated content into standardized post structure."""
+    """Formats the generated content from ADK result into a structured list of posts."""
+    # This function is kept as it's a useful utility for formatting
     
-    social_posts = []
-    post_id_counter = 1
+    logger.info("Formatting generated ADK content into final response structure.")
+    
+    generated_posts = []
     
     # Process text + URL posts
     for post in content_data.get('text_url_posts', []):
-        social_posts.append({
-            "id": f"real_generated_text_url_{post_id_counter}",
+        generated_posts.append({
+            "id": f"real_generated_text_url_{post['id']}",
             "type": "text_url",
-            "content": post.get('content', ''),
-            "hashtags": post.get('hashtags', []),
+            "content": post['content'],
+            "hashtags": post['hashtags'],
             "url": context.get('business_website') or context.get('product_service_url', 'https://example.com'),
-            "platform_optimized": {
-                "linkedin": {
-                    "content": f"Professional content optimized for LinkedIn",
-                    "hashtags": ["#Business", "#Professional", "#Growth"],
-                    "character_count": 120
-                },
-                "twitter": {
-                    "content": f"Concise content for Twitter engagement",
-                    "hashtags": ["#Business", "#Growth"],
-                    "character_count": 80
-                },
-                "facebook": {
-                    "content": f"Community-focused content for Facebook",
-                    "hashtags": ["#Business", "#Community"],
-                    "character_count": 150
-                }
-            },
-            "engagement_score": 8.0 + (post_id_counter * 0.1),
-            "selected": False,
+            "platform_optimized": post['platform_optimized'],
+            "engagement_score": post['engagement_score'],
+            "selected": post['selected'],
             "generation_method": "gemini_ai"
         })
-        post_id_counter += 1
     
     # Process text + image posts
     for post in content_data.get('text_image_posts', []):
-        social_posts.append({
-            "id": f"real_generated_text_image_{post_id_counter}",
+        generated_posts.append({
+            "id": f"real_generated_text_image_{post['id']}",
             "type": "text_image",
-            "content": post.get('content', ''),
-            "hashtags": post.get('hashtags', []),
-            "image_prompt": post.get('image_prompt', ''),
-            "platform_optimized": {
-                "instagram": {
-                    "content": f"Visual content optimized for Instagram",
-                    "hashtags": ["#Visual", "#Instagram", "#Creative"],
-                    "character_count": 100
-                },
-                "linkedin": {
-                    "content": f"Professional visual content for LinkedIn",
-                    "hashtags": ["#Professional", "#Visual"],
-                    "character_count": 120
-                },
-                "facebook": {
-                    "content": f"Engaging visual content for Facebook",
-                    "hashtags": ["#Visual", "#Engaging"],
-                    "character_count": 140
-                }
-            },
-            "engagement_score": 8.2 + (post_id_counter * 0.1),
-            "selected": False,
+            "content": post['content'],
+            "hashtags": post['hashtags'],
+            "image_prompt": post['image_prompt'],
+            "platform_optimized": post['platform_optimized'],
+            "engagement_score": post['engagement_score'],
+            "selected": post['selected'],
             "generation_method": "gemini_ai"
         })
-        post_id_counter += 1
     
     # Process text + video posts
     for post in content_data.get('text_video_posts', []):
-        social_posts.append({
-            "id": f"real_generated_text_video_{post_id_counter}",
+        generated_posts.append({
+            "id": f"real_generated_text_video_{post['id']}",
             "type": "text_video",
-            "content": post.get('content', ''),
-            "hashtags": post.get('hashtags', []),
-            "video_prompt": post.get('video_prompt', ''),
-            "platform_optimized": {
-                "instagram": {
-                    "content": f"Dynamic video content for Instagram",
-                    "hashtags": ["#Video", "#Dynamic", "#Instagram"],
-                    "character_count": 90
-                },
-                "tiktok": {
-                    "content": f"Trending video content for TikTok",
-                    "hashtags": ["#TikTok", "#Trending", "#Video"],
-                    "character_count": 70
-                },
-                "linkedin": {
-                    "content": f"Professional video content for LinkedIn",
-                    "hashtags": ["#Professional", "#Video"],
-                    "character_count": 110
-                }
-            },
-            "engagement_score": 8.5 + (post_id_counter * 0.1),
-            "selected": False,
+            "content": post['content'],
+            "hashtags": post['hashtags'],
+            "video_prompt": post['video_prompt'],
+            "platform_optimized": post['platform_optimized'],
+            "engagement_score": post['engagement_score'],
+            "selected": post['selected'],
             "generation_method": "gemini_ai"
         })
-        post_id_counter += 1
     
-    return social_posts
+    return generated_posts
 
 def _generate_enhanced_content_fallback(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate enhanced fallback content when AI generation fails."""
-    
-    company_name = business_analysis.get('company_name', 'Your Company')
-    objective = context['objective']
-    industry = business_analysis.get('industry', 'Professional Services')
-    
-    social_posts = []
-    post_types = ["text_url", "text_image", "text_video"]
-    
-    for i, post_type in enumerate(post_types * 3):
-        post_id = f"enhanced_fallback_{post_type}_{i+1}"
-        
-        # Generate contextual content based on business analysis
-        if post_type == "text_url":
-            content = f"🚀 Exciting developments at {company_name}! We're transforming how businesses {objective} through our innovative {industry.lower()} approach. Our latest solution addresses the core challenges we've identified in the market, delivering measurable results for companies just like yours. Ready to see what's possible? Check out our latest insights and discover how we can help accelerate your success."
-        elif post_type == "text_image":
-            content = f"🎨 Visual storytelling meets business results. This image captures the essence of how {company_name} helps businesses {objective} through innovative {industry.lower()} solutions. Every element represents our commitment to excellence and our understanding of what it takes to succeed in today's market."
-        else:  # text_video
-            content = f"🎬 Motion tells the story of transformation. This video showcases how {company_name} helps businesses {objective} through dynamic {industry.lower()} solutions. In just seconds, you'll see the power of our approach and understand why companies choose us as their strategic partner."
-        
-        post = {
-            "id": post_id,
-            "type": post_type,
-            "content": content,
-            "hashtags": ["#Business", "#Growth", "#Innovation", "#Success", f"#{industry.replace(' ', '')}"],
-            "platform_optimized": {
-                "linkedin": {
-                    "content": f"Professional {post_type} content optimized for LinkedIn",
-                    "hashtags": ["#Professional", "#Business"],
-                    "character_count": 120
-                },
-                "instagram": {
-                    "content": f"Visual {post_type} content for Instagram",
-                    "hashtags": ["#Visual", "#Creative"],
-                    "character_count": 100
-                },
-                "facebook": {
-                    "content": f"Community-focused {post_type} content for Facebook",
-                    "hashtags": ["#Community", "#Business"],
-                    "character_count": 150
-                }
-            },
-            "engagement_score": 7.5 + (i * 0.1),
-            "selected": False,
-            "generation_method": "enhanced_fallback"
-        }
-        
-        # Add type-specific fields
-        if post_type == "text_url":
-            post["url"] = context.get("business_website") or context.get("product_service_url", "https://example.com")
-        elif post_type == "text_image":
-            post["image_prompt"] = f"Professional {industry.lower()} image showing {objective} with modern, clean design representing {company_name}"
-        elif post_type == "text_video":
-            post["video_prompt"] = f"Dynamic video showcasing {company_name}'s approach to {objective} in the {industry.lower()} sector"
-        
-        social_posts.append(post)
-    
-    return social_posts
-
-async def _enhanced_mock_workflow_execution(context: Dict[str, Any]) -> Dict[str, Any]:
-    """Enhanced mock workflow execution with better contextual content."""
-    
-    # Enhanced business analysis based on context
-    business_analysis = {
-        "company_name": "Your Company",
-        "industry": "Technology Services",
-        "target_audience": context["target_audience"],
-        "business_description": context["business_description"],
-        "value_propositions": [
-            "Innovative solutions",
-            "Customer-centric approach", 
-            "Proven track record"
-        ],
-        "brand_voice": "Professional yet approachable",
-        "competitive_advantages": [
-            "Advanced technology",
-            "Expert team",
-            "Comprehensive support"
-        ],
-        "market_positioning": "Premium solution provider"
-    }
-    
-    # Generate enhanced social posts using fallback method
-    social_posts = _generate_enhanced_content_fallback(business_analysis, context)
-    
-    return {
-        "campaign_id": context["workflow_id"],
-        "summary": f"Enhanced marketing campaign for {context['objective']} targeting {context['target_audience']}. This campaign uses contextual content generation to create more relevant and engaging social media posts.",
-        "business_analysis": business_analysis,
-        "social_posts": social_posts,
-        "created_at": datetime.now().isoformat(),
-        "status": "completed",
-        "processing_time": 2.0,
-        "workflow_metadata": {
-            "creativity_level": context["creativity_level"],
-            "campaign_type": context["campaign_type"],
-            "total_posts": len(social_posts),
-            "agent_execution_order": [
-                "EnhancedMockBusinessAnalysis",
-                "EnhancedMockContentGeneration"
-            ],
-            "real_adk_execution": False,
-            "gemini_integration": False,
-            "enhancement_level": "contextual_mock"
-        }
-    }
+    """
+    DEPRECATED: Fallback logic is now handled by raising exceptions and
+    allowing the API layer to return a proper error message.
+    """
+    logger.warning("DEPRECATED: _generate_enhanced_content_fallback is no longer used.")
+    return []
 
 async def _extract_business_context_from_description(
     business_description: str,
-    target_audience: str, 
+    target_audience: str,
     objective: str,
     campaign_type: str
 ) -> Dict[str, Any]:
