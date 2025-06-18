@@ -1537,7 +1537,7 @@ if actual_count < regenerate_count:
 ```bash
 # Google AI Configuration
 GEMINI_API_KEY=your_api_key
-GEMINI_MODEL=gemini-2.5-flash-preview-05-20
+GEMINI_MODEL=gemini-2.5-flash
 IMAGE_MODEL=imagen-3.0-generate-002
 VIDEO_MODEL=veo-2
 

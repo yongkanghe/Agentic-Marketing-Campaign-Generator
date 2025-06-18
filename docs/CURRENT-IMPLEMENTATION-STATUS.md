@@ -104,7 +104,7 @@ Context Ext.   Brand Voice           Optimization         Brand Consistency
 **Implementation**:
 - Standardized `GEMINI_MODEL` and `GEMINI_API_KEY` across all agents
 - Removed inconsistent `DEFAULT_MODEL_NAME` and `GOOGLE_API_KEY` fallbacks
-- Updated to use `gemini-2.5-flash-preview-05-20` model
+- Updated to use `gemini-2.5-flash` model
 - Consistent configuration pattern across all modules
 
 **Files Updated**:

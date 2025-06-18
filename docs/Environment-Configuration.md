@@ -16,7 +16,7 @@ This document outlines the comprehensive environment configuration for the AI Ma
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # Model Selection: Choose your preferred Gemini model
-GEMINI_MODEL=gemini-2.5-flash-preview-05-20
+GEMINI_MODEL=gemini-2.5-flash
 # Alternatives: gemini-1.5-pro, gemini-1.5-flash
 ```
 
@@ -155,7 +155,7 @@ The application validates required environment variables on startup:
 ## Model Selection Guide
 
 ### Gemini Models
-- **gemini-2.5-flash-preview-05-20**: Latest preview with AFC support
+- **gemini-2.5-flash**: Latest preview with AFC support
 - **gemini-1.5-pro**: Stable, high-quality responses
 - **gemini-1.5-flash**: Faster, cost-effective option
 

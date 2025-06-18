@@ -32,7 +32,7 @@ except ImportError as e:
     generate_visual_content_for_posts = None
 
 # Model configuration - Using standardized environment variables
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -513,7 +513,7 @@ async def _generate_real_social_content(business_analysis: Dict[str, Any], conte
         
         # Initialize Gemini client
         client = genai.Client(api_key=GEMINI_API_KEY)
-        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         
         company_name = business_analysis.get('company_name', 'Your Company')
         industry = business_analysis.get('industry', 'Professional Services')
@@ -816,7 +816,7 @@ async def _extract_business_context_from_description(
         if GEMINI_API_KEY:
             import google.genai as genai
             client = genai.Client(api_key=GEMINI_API_KEY)
-            model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+            model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
             
             analysis_prompt = f"""
             Analyze this business description and extract detailed business context for marketing campaign generation:

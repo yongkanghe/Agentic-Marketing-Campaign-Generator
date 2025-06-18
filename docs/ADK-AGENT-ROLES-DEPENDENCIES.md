@@ -399,7 +399,7 @@ def _create_image_prompt(self, post: Dict, business_context: Dict, objective: st
 ```bash
 # CRITICAL: These environment variables MUST be set for real AI analysis
 GEMINI_API_KEY=your_actual_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash-preview-05-20
+GEMINI_MODEL=gemini-2.5-flash
 IMAGE_MODEL=imagen-3.0-generate-002
 VIDEO_MODEL=veo-2
 ```

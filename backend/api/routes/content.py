@@ -470,7 +470,7 @@ async def _generate_batch_content_with_gemini(
         
         # Initialize Gemini client
         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         
         company_name = business_context.get('company_name', 'Your Company')
         objective = business_context.get('objective', 'increase sales')
@@ -848,9 +848,22 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
             content=generate_enhanced_content(post_type, business_context, i),
             hashtags=generate_contextual_hashtags(business_context),
             platform_optimized={
-                "linkedin": f"Professional {post_type.value} content",
-                "twitter": f"Engaging {post_type.value} content",
-                "instagram": f"Visual {post_type.value} content"
+                "linkedin": {
+                    "content": f"Professional {post_type.value} content for {company_name}",
+                    "hashtags": ["#Professional", "#LinkedIn", "#Business"]
+                },
+                "twitter": {
+                    "content": f"Engaging {post_type.value} content for {company_name}",
+                    "hashtags": ["#Twitter", "#Social", "#Marketing"]
+                },
+                "instagram": {
+                    "content": f"Visual {post_type.value} content for {company_name}",
+                    "hashtags": ["#Instagram", "#Visual", "#Creative"]
+                },
+                "facebook": {
+                    "content": f"Engaging {post_type.value} content for {company_name}",
+                    "hashtags": ["#Facebook", "#Engagement", "#Community"]
+                }
             },
             engagement_score=7.5 + (i * 0.1),
             selected=False

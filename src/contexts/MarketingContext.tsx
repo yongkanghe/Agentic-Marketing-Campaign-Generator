@@ -78,6 +78,13 @@ export type Campaign = {
   socialMediaColumns?: SocialMediaColumn[];
   selectedPosts?: SocialMediaPost[];
   campaignTemplate?: CampaignTemplate;
+  // AI Analysis results
+  aiAnalysis?: {
+    summary: string;
+    businessAnalysis: any;
+    campaignGuidance: any;
+    lastUpdated: string;
+  };
 };
 
 export type IdeaType = {
@@ -304,11 +311,21 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSelectedTags(tags.slice(0, 4));
       }
 
-      // Update AI summary with business analysis
+      // Store COMPLETE AI analysis results in campaign
       if (analysisResult.business_analysis) {
         const businessAnalysis = analysisResult.business_analysis;
         const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Key strengths: ${businessAnalysis.competitive_advantages?.join(', ') || 'Advanced solutions'}.`;
         setAiSummary(newSummary);
+        
+        // Store FULL AI analysis in campaign for later use
+        updateCurrentCampaign({
+          aiAnalysis: {
+            summary: newSummary,
+            businessAnalysis: businessAnalysis,
+            campaignGuidance: businessAnalysis.campaign_guidance || {},
+            lastUpdated: new Date().toISOString()
+          }
+        });
       }
 
       // Cache successful analysis
@@ -567,9 +584,37 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const deleteSavedCampaign = (campaignId: string): void => {
-    const savedCampaigns = JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
-    const updatedCampaigns = savedCampaigns.filter((c: SavedCampaign) => c.id !== campaignId);
-    localStorage.setItem('savedCampaigns', JSON.stringify(updatedCampaigns));
+    try {
+      // Delete from savedCampaigns (localStorage)
+      const savedCampaigns = JSON.parse(localStorage.getItem('savedCampaigns') || '[]');
+      const updatedSavedCampaigns = savedCampaigns.filter((c: SavedCampaign) => c.id !== campaignId);
+      localStorage.setItem('savedCampaigns', JSON.stringify(updatedSavedCampaigns));
+      
+      // Also delete from campaigns array (context state)
+      setCampaigns(prevCampaigns => prevCampaigns.filter(c => c.id !== campaignId));
+      
+      // If the deleted campaign is currently active, clear it
+      if (currentCampaign?.id === campaignId) {
+        setCurrentCampaign(null);
+        localStorage.removeItem('currentCampaignId');
+        // Clear campaign-specific localStorage data
+        localStorage.removeItem(`campaign-${campaignId}-columns`);
+        localStorage.removeItem(`campaign-${campaignId}-analysis`);
+        
+        // Reset all campaign-related state
+        setGeneratedIdeas([]);
+        setAiSummary('');
+        setSuggestedThemes([]);
+        setSuggestedTags([]);
+        setSelectedThemes([]);
+        setSelectedTags([]);
+        setSelectedIdeas([]);
+      }
+      
+      console.log(`Campaign ${campaignId} deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+    }
   };
 
   const value: MarketingContextType = {

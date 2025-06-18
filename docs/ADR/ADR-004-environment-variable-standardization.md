@@ -40,7 +40,7 @@ We will standardize all environment variables following these principles:
 
 | Purpose | Variable Name | Default Value | Description |
 |---------|---------------|---------------|-------------|
-| Gemini Model | `GEMINI_MODEL` | `"gemini-2.5-flash-preview-05-20"` | AI model version |
+| Gemini Model | `GEMINI_MODEL` | `"gemini-2.5-flash"` | AI model version |
 | Gemini API Key | `GEMINI_API_KEY` | None (required) | Authentication key |
 | Database Path | `DATABASE_PATH` | `"data/video_venture_launch.db"` | SQLite database location |
 | API Port | `API_PORT` | `8080` | Backend API server port |
@@ -53,7 +53,7 @@ We will standardize all environment variables following these principles:
 **Standardized Pattern**:
 ```python
 # Configuration - Using standardized environment variables
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Validation
@@ -67,7 +67,7 @@ if not GEMINI_API_KEY:
 ```bash
 # AI/ML Configuration
 GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL="gemini-2.5-flash-preview-05-20"
+GEMINI_MODEL="gemini-2.5-flash"
 
 # Database Configuration  
 DATABASE_PATH="data/video_venture_launch.db"

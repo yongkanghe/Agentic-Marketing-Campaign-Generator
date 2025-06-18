@@ -29,7 +29,7 @@ class ImageGenerationAgent:
     def __init__(self):
         """Initialize image generation agent with Gemini client."""
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
-        self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-05-20')
+        self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
         self.max_images = int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4'))
         

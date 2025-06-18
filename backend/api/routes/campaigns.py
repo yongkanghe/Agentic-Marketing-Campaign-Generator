@@ -244,7 +244,7 @@ async def chat_with_campaign_guidance(
         client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
         
         # Get model from environment
-        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         
         # Build context prompt with campaign data
         business_analysis = campaign_data.get("business_analysis", {})
