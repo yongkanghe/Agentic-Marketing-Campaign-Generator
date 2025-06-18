@@ -29,6 +29,47 @@ We implemented a comprehensive backend API service using FastAPI with ADK sequen
        - SocialContentAgent (LLM)
        - HashtagOptimizationAgent (LLM)
 
+### Agent Relationship Diagram
+```ascii
+[ MarketingOrchestratorAgent (Sequential Root) ]
+    |
+    |--- 1. [ BusinessAnalysisAgent (Sequential) ]
+    |         |
+    |         |--- 1a. [ URLAnalysisAgent (LLM) ]
+    |         |         (Input: URLs; Output: url_analysis)
+    |         |
+    |         |--- 1b. [ FileAnalysisAgent (LLM) ]
+    |         |         (Input: Uploaded files; Output: file_analysis)
+    |         |
+    |         |--- 1c. [ BusinessContextAgent (LLM) ]
+    |                   (Input: url_analysis, file_analysis, user_input, etc.;
+    |                    Output: business_context with detailed visual direction)
+    |
+    |--- 2. [ ContentGenerationAgent (Sequential) ]
+              |
+              |--- 2a. [ SocialContentAgent (LLM) ]
+              |         (Input: business_context, objective, etc.;
+              |          Output: social_content including text & prompts for images/videos)
+              |
+              |--- 2b. [ HashtagOptimizationAgent (LLM) ]
+                        (Input: business_context, social_content;
+                         Output: hashtag_optimization)
+
+---------------------------------------------------------------------
+Separate, but invoked by API layer using outputs from above:
+
+[ VisualContentOrchestrator ]
+    |
+    |--- [ ImageGenerationAgent ]
+    |     (Input: Image prompts from SocialContentAgent output, business_context;
+    |      Output: Generated images (real via Imagen or placeholders))
+    |
+    |--- [ VideoGenerationAgent ]
+          (Input: Video prompts from SocialContentAgent output, business_context;
+           Output: Mocked video data)
+---------------------------------------------------------------------
+```
+
 3. **API Endpoints**
    - `POST /api/v1/campaigns/create` - Enhanced campaign creation
    - `POST /api/v1/analysis/url` - Business URL analysis
