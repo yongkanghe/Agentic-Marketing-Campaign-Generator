@@ -86,51 +86,93 @@ async def analyze_business_url(request: URLAnalysisRequest):
             content_themes = campaign_guidance.get("content_themes", {})
             logger.info(f"DEBUG: Content themes keys: {list(content_themes.keys())}")
             
-            # Get primary themes
-            primary_themes = content_themes.get("primary_themes", [])
-            logger.info(f"DEBUG: Primary themes found: {primary_themes}")
-            if primary_themes:
-                suggested_themes.extend(primary_themes)
+            # Get primary business themes for tag generation
+            primary_business_themes = content_themes.get("primary_themes", [])
+            logger.info(f"DEBUG: Primary business themes found: {primary_business_themes}")
             
-            # Get product-specific themes (handle null case)
-            product_themes = content_themes.get("product_specific_themes")
-            if product_themes and isinstance(product_themes, list):
-                suggested_themes.extend(product_themes[:3])  # Limit to 3 more themes
+            # Generate business-specific TAGS from content analysis
+            # Convert business themes to hashtag-style tags
+            for theme in primary_business_themes[:4]:  # Limit to 4 themes
+                # Convert theme to hashtag format
+                tag = theme.replace(" ", "").replace("&", "And").replace(",", "").replace("'", "")
+                if len(tag) > 3 and len(tag) < 25:  # Reasonable tag length
+                    suggested_tags.append(f"#{tag}")
             
-            # Generate suggested tags from various sources
-            # Use value propositions as tags
+            # Add value propositions as tags
             value_props = business_analysis.get("value_propositions", [])
-            for prop in value_props[:4]:  # Limit to 4
-                # Convert to hashtag format (remove spaces, special chars)
-                tag = prop.replace(" ", "").replace(",", "").replace("&", "And")
-                if len(tag) > 3 and len(tag) < 20:  # Reasonable tag length
-                    suggested_tags.append(tag)
+            for prop in value_props[:3]:  # Limit to 3
+                # Extract key words and convert to hashtag
+                words = prop.split()[:2]  # First 2 words
+                for word in words:
+                    clean_word = word.replace(",", "").replace(".", "").replace("(", "").replace(")", "")
+                    if len(clean_word) > 3 and len(clean_word) < 15:
+                        suggested_tags.append(f"#{clean_word}")
+            
+            # Add company/product specific tags
+            company_name = business_analysis.get("company_name", "")
+            if company_name and len(company_name) < 20:
+                suggested_tags.append(f"#{company_name.replace(' ', '')}")
             
             # Add industry-based tags
             industry = business_analysis.get("industry", "")
             if industry:
-                # Extract key words from industry
-                industry_words = industry.replace("(", "").replace(")", "").split()
-                for word in industry_words[:3]:
-                    if len(word) > 3:
-                        suggested_tags.append(word.replace(",", ""))
+                # Extract key industry words
+                industry_words = industry.replace("&", "And").replace(",", "").split()
+                for word in industry_words[:2]:  # First 2 words
+                    clean_word = word.replace("(", "").replace(")", "")
+                    if len(clean_word) > 3 and len(clean_word) < 15:
+                        suggested_tags.append(f"#{clean_word}")
+        
+        # CREATIVE/PROMOTIONAL STYLE THEMES (not business content themes)
+        # These are visual/creative styles for campaign execution
+        creative_style_themes = [
+            "Professional", "Modern", "Hipster", "Cartoon", "Nostalgic", 
+            "Futuristic", "Colorful", "Minimalist", "Vintage", "Bold",
+            "Elegant", "Playful", "Sophisticated", "Dynamic", "Clean",
+            "Artistic", "Corporate", "Trendy", "Classic", "Vibrant"
+        ]
+        
+        # Select appropriate creative themes based on business context
+        if "business_analysis" in analysis_result:
+            business_analysis = analysis_result["business_analysis"]
+            industry = business_analysis.get("industry", "").lower()
+            target_audience = business_analysis.get("target_audience", "").lower()
             
-            # Add competitive advantages as tags
-            comp_advantages = business_analysis.get("competitive_advantages", [])
-            for advantage in comp_advantages[:2]:  # Limit to 2
-                # Extract key words
-                words = advantage.split()[:2]  # First 2 words
-                for word in words:
-                    clean_word = word.replace(",", "").replace(".", "")
-                    if len(clean_word) > 3:
-                        suggested_tags.append(clean_word)
+            # Industry-based theme selection
+            if any(word in industry for word in ["tech", "software", "digital", "ai"]):
+                suggested_themes = ["Modern", "Futuristic", "Clean", "Professional", "Dynamic"]
+            elif any(word in industry for word in ["fashion", "apparel", "clothing", "footwear"]):
+                suggested_themes = ["Trendy", "Colorful", "Modern", "Hipster", "Vibrant"]
+            elif any(word in industry for word in ["food", "restaurant", "cafe"]):
+                suggested_themes = ["Colorful", "Playful", "Modern", "Elegant", "Artistic"]
+            elif any(word in industry for word in ["finance", "banking", "investment"]):
+                suggested_themes = ["Professional", "Clean", "Sophisticated", "Corporate", "Modern"]
+            elif any(word in industry for word in ["health", "medical", "wellness"]):
+                suggested_themes = ["Clean", "Professional", "Modern", "Elegant", "Minimalist"]
+            elif any(word in industry for word in ["creative", "design", "art"]):
+                suggested_themes = ["Artistic", "Colorful", "Bold", "Creative", "Vibrant"]
+            else:
+                # Default professional themes
+                suggested_themes = ["Professional", "Modern", "Clean", "Sophisticated", "Dynamic"]
+            
+            # Audience-based adjustments
+            if any(word in target_audience for word in ["young", "millennial", "gen z"]):
+                if "Hipster" not in suggested_themes:
+                    suggested_themes.append("Hipster")
+                if "Trendy" not in suggested_themes:
+                    suggested_themes.append("Trendy")
+            elif any(word in target_audience for word in ["family", "parent", "children"]):
+                if "Playful" not in suggested_themes:
+                    suggested_themes.append("Playful")
+                if "Colorful" not in suggested_themes:
+                    suggested_themes.append("Colorful")
+        else:
+            # Fallback creative themes
+            suggested_themes = ["Professional", "Modern", "Clean", "Sophisticated", "Dynamic"]
         
-        # Fallback themes and tags if none extracted
-        if not suggested_themes:
-            suggested_themes = ["Professional", "Modern", "Innovative", "Trustworthy", "Quality"]
-        
+        # Fallback tags if none extracted
         if not suggested_tags:
-            suggested_tags = ["Business", "Quality", "Value", "Innovation", "Service", "Growth"]
+            suggested_tags = ["#Business", "#Quality", "#Value", "#Innovation", "#Service", "#Growth"]
         
         # Remove duplicates and limit counts
         suggested_themes = list(dict.fromkeys(suggested_themes))[:8]  # Max 8 themes
