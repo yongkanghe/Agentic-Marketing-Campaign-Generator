@@ -131,14 +131,17 @@ const IdeationPage: React.FC = () => {
   };
 
   const generateColumnPosts = async (columnId: string) => {
+    // Set loading state immediately
     setSocialMediaColumns(prev => prev.map(col => 
-      col.id === columnId ? { ...col, isGenerating: true } : col
+      col.id === columnId ? { ...col, isGenerating: true, posts: [] } : col
     ));
     
     try {
       // Real API call to backend for content generation
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
+      
+      console.log(`🎯 Generating ${postType} posts for column ${columnId}...`);
       
       const data = await VideoVentureLaunchAPI.generateBulkContent({
         post_type: postType,
@@ -156,6 +159,8 @@ const IdeationPage: React.FC = () => {
         },
         creativity_level: currentCampaign?.creativityLevel || 7
       });
+      
+      console.log(`✅ Generated ${data.new_posts.length} ${postType} posts successfully`);
       
       // Transform API response to match frontend format
       const transformedPosts = data.new_posts.map((post: any, idx: number) => {
@@ -186,16 +191,20 @@ const IdeationPage: React.FC = () => {
       toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`);
       
     } catch (error) {
-      console.error(`Failed to generate ${columnId} posts:`, error);
+      console.error(`❌ Failed to generate ${columnId} posts:`, error);
       
-      // Reset loading state
+      // Reset loading state and clear any partial posts
       setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, isGenerating: false } : col
+        col.id === columnId ? { ...col, isGenerating: false, posts: [] } : col
       ));
       
-      // Show proper error message without fallback to mock content
+      // Show detailed error message for debugging
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Failed to generate ${columnId} posts: ${errorMessage}. Please check your internet connection and try again.`);
+      const postType = columnId === 'text-only' ? 'text_url' : 
+                      columnId === 'text-image' ? 'text_image' : 'text_video';
+      console.error(`Generation error details:`, { columnId, postType, error });
+      
+      toast.error(`Failed to generate ${columnId.replace('-', ' + ')} posts: ${errorMessage}. Please check your connection and try again.`);
     }
   };
 
