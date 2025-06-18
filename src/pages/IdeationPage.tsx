@@ -148,7 +148,7 @@ const IdeationPage: React.FC = () => {
         post_type: postType,
         regenerate_count: 5,
         business_context: {
-          // Use REAL AI analysis data when available
+          // Use REAL AI analysis data when available - OPTIMIZED data extraction
           company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
           objective: currentCampaign?.objective || 'increase sales',
           campaign_type: currentCampaign?.campaignType || 'service',
@@ -156,7 +156,11 @@ const IdeationPage: React.FC = () => {
           business_description: currentCampaign?.businessDescription || '',
           business_website: currentCampaign?.businessUrl || '',
           product_service_url: currentCampaign?.productServiceUrl || '',
-          campaign_media_tuning: preferredDesign || ''
+          campaign_media_tuning: preferredDesign || '',
+          // PERFORMANCE: Pass campaign guidance directly to avoid re-processing
+          campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
+          // PERFORMANCE: Pass product context for enhanced targeting
+          product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {}
         },
         creativity_level: currentCampaign?.creativityLevel || 7
       });
@@ -600,15 +604,18 @@ const IdeationPage: React.FC = () => {
                         creativeDirection: currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction
                       });
                       
-                      const creativeDirection = currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction;
+                      // FIXED: Correct data path for campaign guidance
+                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                      const creativeDirection = businessAnalysis?.campaign_guidance?.creative_direction;
+                      
                       if (creativeDirection && creativeDirection.trim() !== '') {
                         return creativeDirection;
                       }
                       
-                      // Fallback to business analysis if campaign guidance not available
-                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
-                      if (businessAnalysis?.campaign_guidance?.creative_direction) {
-                        return businessAnalysis.campaign_guidance.creative_direction;
+                      // Legacy fallback for older data structure
+                      const legacyCreativeDirection = currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction;
+                      if (legacyCreativeDirection && legacyCreativeDirection.trim() !== '') {
+                        return legacyCreativeDirection;
                       }
                       
                       return "AI-generated creative direction will appear here after analysis. Click 'Regenerate Analysis' to generate tailored creative guidance based on your business context.";
@@ -618,8 +625,9 @@ const IdeationPage: React.FC = () => {
                   <h5 className="text-sm font-semibold text-white mb-2 mt-4">Visual Style</h5>
                   <div className="space-y-2">
                     {(() => {
-                      const visualStyle = currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style || 
-                                         currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.visual_style;
+                      // FIXED: Correct data path for visual style
+                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                      const visualStyle = businessAnalysis?.campaign_guidance?.visual_style;
                       
                       if (visualStyle) {
                         return (
@@ -653,16 +661,16 @@ const IdeationPage: React.FC = () => {
                   <h5 className="text-sm font-semibold text-white mb-2">Content Themes</h5>
                   <p className="text-sm text-gray-200 leading-relaxed mb-3">
                     {(() => {
-                      const targetContext = currentCampaign?.aiAnalysis?.campaignGuidance?.target_context ||
-                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.target_context;
+                      // FIXED: Correct data path for target context
+                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                      const targetContext = businessAnalysis?.campaign_guidance?.target_context;
                       
                       if (targetContext && targetContext.trim() !== '') {
                         return targetContext;
                       }
                       
                       // Try to build from content themes
-                      const contentThemes = currentCampaign?.aiAnalysis?.campaignGuidance?.content_themes ||
-                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.content_themes;
+                      const contentThemes = businessAnalysis?.campaign_guidance?.content_themes;
                       
                       if (contentThemes?.primary_themes?.length > 0) {
                         return `Focus on ${contentThemes.primary_themes.slice(0, 3).join(', ').toLowerCase()}. Use compelling calls-to-action that resonate with your target audience and drive engagement.`;
@@ -674,8 +682,9 @@ const IdeationPage: React.FC = () => {
                   
                   <div className="flex flex-wrap gap-2">
                     {(() => {
-                      const contentThemes = currentCampaign?.aiAnalysis?.campaignGuidance?.content_themes ||
-                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.content_themes;
+                      // FIXED: Correct data path for content themes
+                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                      const contentThemes = businessAnalysis?.campaign_guidance?.content_themes;
                       
                       const primaryThemes = contentThemes?.primary_themes || [];
                       const productThemes = contentThemes?.product_specific_themes || [];
@@ -705,8 +714,9 @@ const IdeationPage: React.FC = () => {
                     <span className="font-semibold text-blue-400">Image Generation:</span>
                     <span className="text-gray-300 ml-2">
                       {(() => {
-                        const imagenPrompts = currentCampaign?.aiAnalysis?.campaignGuidance?.imagen_prompts ||
-                                             currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.imagen_prompts;
+                        // FIXED: Correct data path for imagen prompts
+                        const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                        const imagenPrompts = businessAnalysis?.campaign_guidance?.imagen_prompts;
                         
                         if (imagenPrompts?.technical_specs) {
                           return imagenPrompts.technical_specs;
@@ -724,8 +734,9 @@ const IdeationPage: React.FC = () => {
                     <span className="font-semibold text-purple-400">Video Generation:</span>
                     <span className="text-gray-300 ml-2">
                       {(() => {
-                        const veoPrompts = currentCampaign?.aiAnalysis?.campaignGuidance?.veo_prompts ||
-                                          currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.veo_prompts;
+                        // FIXED: Correct data path for veo prompts
+                        const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                        const veoPrompts = businessAnalysis?.campaign_guidance?.veo_prompts;
                         
                         if (veoPrompts?.duration_focus) {
                           return veoPrompts.duration_focus;

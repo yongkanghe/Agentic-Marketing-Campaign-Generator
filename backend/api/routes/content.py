@@ -452,11 +452,23 @@ async def _generate_batch_content_with_gemini(
         import json
         import re
         
-        # Apply configurable limits based on post type
+        # Apply configurable limits based on post type with safe parsing
+        def safe_int_env(env_var: str, default: str) -> int:
+            """Safely parse environment variable to int, handling malformed values."""
+            try:
+                value = os.getenv(env_var, default)
+                # Handle case where environment variable contains extra content
+                if '=' in value:
+                    value = value.split('=')[0]
+                return int(value)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid environment variable {env_var}, using default {default}")
+                return int(default)
+        
         max_posts_by_type = {
-            PostType.TEXT_URL: int(os.getenv('MAX_TEXT_URL_POSTS', '10')),
-            PostType.TEXT_IMAGE: int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4')), 
-            PostType.TEXT_VIDEO: int(os.getenv('MAX_TEXT_VIDEO_POSTS', '4'))
+            PostType.TEXT_URL: safe_int_env('MAX_TEXT_URL_POSTS', '10'),
+            PostType.TEXT_IMAGE: safe_int_env('MAX_TEXT_IMAGE_POSTS', '4'), 
+            PostType.TEXT_VIDEO: safe_int_env('MAX_TEXT_VIDEO_POSTS', '4')
         }
         
         max_allowed = max_posts_by_type.get(post_type, 5)
@@ -567,7 +579,7 @@ async def _generate_batch_content_with_gemini(
             - Base Concept: {veo_base}
             - Movement Style: {veo_movement}
             - Storytelling: {veo_storytelling}
-            - Duration Focus: {veo_prompts.get('duration_focus', '15-30 second clips')}
+            - Duration Focus: {veo_prompts.get('duration_focus', '4-8 second clips')}
             - Scene Composition: {veo_prompts.get('scene_composition', 'engaging transitions')}
             - Show real people engaging with {company_name}'s offerings{media_tuning_guidance}
             

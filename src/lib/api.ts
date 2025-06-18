@@ -413,6 +413,8 @@ export class VideoVentureLaunchAPI {
       business_website?: string;
       product_service_url?: string;
       campaign_media_tuning?: string;
+      campaign_guidance?: any;
+      product_context?: any;
     };
     creativity_level: number;
   }): Promise<{
