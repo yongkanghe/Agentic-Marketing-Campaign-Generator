@@ -48,20 +48,20 @@ async def generate_content(request: ContentGenerationRequest) -> ContentGenerati
         raise HTTPException(status_code=500, detail="AI services are not configured.")
 
     try:
-        logger.info(f"Executing real AI workflow to generate content for campaign: {request.campaign_id}")
+        logger.info(f"Executing real AI workflow to generate content for campaign objective: {request.campaign_objective}")
         start_time = time.time()
 
         # Call the orchestrator to execute the real end-to-end workflow
         # The orchestrator will handle analysis (from URL or description) and content generation
         workflow_result = await execute_campaign_workflow(
-            business_description=request.business_context.get("business_description", ""),
+            business_description=request.business_context.business_description or "",
             objective=request.campaign_objective,
-            target_audience=request.business_context.get("target_audience", ""),
+            target_audience=request.business_context.target_audience or "",
             campaign_type=request.campaign_type,
             creativity_level=request.creativity_level,
-            business_website=request.business_context.get("business_website"),
-            about_page_url=request.business_context.get("about_page_url"),
-            product_service_url=request.business_context.get("product_service_url")
+            business_website=request.business_context.business_website,
+            about_page_url=request.business_context.about_page_url,
+            product_service_url=request.business_context.product_service_url
         )
 
         processing_time = time.time() - start_time

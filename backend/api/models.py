@@ -46,6 +46,11 @@ class BusinessAnalysis(BaseModel):
     industry: Optional[str] = None
     target_audience: Optional[str] = None
     
+    # Source URLs for context
+    business_website: Optional[HttpUrl] = None
+    about_page_url: Optional[HttpUrl] = None
+    product_service_url: Optional[HttpUrl] = None
+
     # Business context
     value_propositions: List[str] = Field(default_factory=list)
     brand_voice: Optional[str] = None
@@ -112,6 +117,7 @@ class URLAnalysisRequest(BaseModel):
 
 class ContentGenerationRequest(BaseModel):
     """Content generation request."""
+    campaign_type: Optional[CampaignType] = None
     business_context: BusinessAnalysis
     campaign_objective: str
     creativity_level: int = Field(..., ge=1, le=10)

@@ -187,6 +187,10 @@ test-content-generation-flow: ## 🎨 Test content generation flow
 	@echo "🎨 Testing Content Generation Flow..."
 	@echo "✅ Content generation testing integrated into full-stack test"
 
+test-e2e-single: ## 🧪 Run a single end-to-end test file
+	@echo "🧪 Running single End-to-End test..."
+	@cd backend && PYTHONPATH=.. python3 -m pytest tests/test_e2e_workflow.py -v --tb=short
+
 test-summary: ## 📊 Display comprehensive test summary
 	@echo ""
 	@echo "📊 Full-Stack Test Summary"

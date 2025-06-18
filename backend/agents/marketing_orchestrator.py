@@ -9,6 +9,7 @@ marketing campaign workflow, following Google ADK samples best practices.
 
 import os
 import logging
+import json
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -239,8 +240,8 @@ async def create_social_content_agent() -> LlmAgent:
         objective: str,
         target_audience: str,
         campaign_type: str,
-        creativity_level: int = 5,
-        post_count: int = 9
+        creativity_level: int,
+        post_count: int
     ) -> dict:
         """Generate social media posts based on business context."""
         
@@ -326,25 +327,21 @@ async def create_hashtag_optimization_agent() -> LlmAgent:
     def optimize_hashtags(
         social_posts: dict,
         business_context: dict,
-        target_platforms: list = None
+        target_platforms: list
     ) -> dict:
-        """Optimize hashtags for social media posts."""
+        """Optimizes hashtags for social media posts."""
         
-        # This tool function will be called by the LlmAgent
-        # The actual optimization will be handled by the agent's instruction
+        # This function will be called by the LlmAgent
         return {
             "social_posts": social_posts,
             "business_context": business_context,
-            "target_platforms": target_platforms or ["instagram", "twitter", "linkedin", "facebook"],
-            "tool_called": True
+            "target_platforms": target_platforms
         }
-    
+
     return LlmAgent(
         name="HashtagOptimizationAgent",
-        model="gemini-2.5-flash",
-        description="Optimizes hashtags for social media posts to maximize reach and engagement.",
-        instruction="""
-        You are a hashtag optimization expert. Your task is to enhance the hashtags in social media posts
+        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
+        instruction="""You are a hashtag optimization expert. Your task is to enhance the hashtags in social media posts
         to maximize reach, engagement, and discoverability across different platforms.
         
         When the optimize_hashtags tool is called, analyze the provided social posts and business context
@@ -368,8 +365,27 @@ async def create_hashtag_optimization_agent() -> LlmAgent:
         Return the posts with enhanced hashtag arrays and updated platform_optimized sections.
         Ensure all hashtags are relevant, properly formatted, and likely to increase engagement.
         """,
+        description="Optimizes hashtags for social media posts to maximize reach and engagement",
+        output_key="optimized_posts",
         tools=[optimize_hashtags],
-        output_key="optimized_posts"
+        tool_configs={
+            "optimize_hashtags": {
+                "name": "optimize_hashtags",
+                "description": "Optimizes hashtags for a list of social media posts.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "social_posts": {"type": "OBJECT"},
+                        "business_context": {"type": "OBJECT"},
+                        "target_platforms": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"}
+                        }
+                    },
+                    "required": ["social_posts", "business_context", "target_platforms"]
+                }
+            }
+        }
     )
 
 # --- Sequential Agent Orchestration ---
@@ -673,56 +689,64 @@ async def _generate_real_social_content(business_analysis: Dict[str, Any], conte
         return _generate_enhanced_content_fallback(business_analysis, context)
 
 def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, Any], business_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Formats the generated content from ADK result into a structured list of posts."""
-    # This function is kept as it's a useful utility for formatting
+    """
+    Formats the structured content from the LLM into the application's data models.
     
-    logger.info("Formatting generated ADK content into final response structure.")
+    ADK Enhancement: This function now correctly handles JSON string parsing for platform-optimized
+    content, a common requirement when dealing with structured LLM outputs.
+    """
+    logger.debug(f"Formatting generated content with creativity level {context.get('creativity_level')}")
     
-    generated_posts = []
+    formatted_posts = []
     
-    # Process text + URL posts
-    for post in content_data.get('text_url_posts', []):
-        generated_posts.append({
-            "id": f"real_generated_text_url_{post['id']}",
-            "type": "text_url",
-            "content": post['content'],
-            "hashtags": post['hashtags'],
-            "url": context.get('business_website') or context.get('product_service_url', 'https://example.com'),
-            "platform_optimized": post['platform_optimized'],
-            "engagement_score": post['engagement_score'],
-            "selected": post['selected'],
-            "generation_method": "gemini_ai"
-        })
-    
-    # Process text + image posts
-    for post in content_data.get('text_image_posts', []):
-        generated_posts.append({
-            "id": f"real_generated_text_image_{post['id']}",
-            "type": "text_image",
-            "content": post['content'],
-            "hashtags": post['hashtags'],
-            "image_prompt": post['image_prompt'],
-            "platform_optimized": post['platform_optimized'],
-            "engagement_score": post['engagement_score'],
-            "selected": post['selected'],
-            "generation_method": "gemini_ai"
-        })
-    
-    # Process text + video posts
-    for post in content_data.get('text_video_posts', []):
-        generated_posts.append({
-            "id": f"real_generated_text_video_{post['id']}",
-            "type": "text_video",
-            "content": post['content'],
-            "hashtags": post['hashtags'],
-            "video_prompt": post['video_prompt'],
-            "platform_optimized": post['platform_optimized'],
-            "engagement_score": post['engagement_score'],
-            "selected": post['selected'],
-            "generation_method": "gemini_ai"
-        })
-    
-    return generated_posts
+    # Ensure content_data['social_posts'] is a list
+    social_posts_data = content_data.get("social_posts", [])
+    if not isinstance(social_posts_data, list):
+        logger.error(f"Expected a list for 'social_posts', but got {type(social_posts_data)}")
+        return []
+
+    for i, post_data in enumerate(social_posts_data):
+        if not isinstance(post_data, dict):
+            logger.warning(f"Skipping post at index {i} as it is not a dictionary.")
+            continue
+            
+        post_id = f"post_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}"
+        
+        # Safely parse platform_optimized content
+        platform_optimized_raw = post_data.get("platform_optimized", "{}")
+        platform_optimized_data = {}
+        if isinstance(platform_optimized_raw, str):
+            try:
+                # ADK FIX: LLM often returns a JSON string, which must be parsed
+                platform_optimized_data = json.loads(platform_optimized_raw)
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to decode platform_optimized JSON for post {post_id}: {platform_optimized_raw}")
+                # Fallback to an empty dict to prevent validation errors
+                platform_optimized_data = {}
+        elif isinstance(platform_optimized_raw, dict):
+            # Already a dictionary, use it directly
+            platform_optimized_data = platform_optimized_raw
+        
+        post = {
+            "id": post_id,
+            "type": post_data.get("type", "text_url"),
+            "content": post_data.get("content", "No content generated."),
+            "url": post_data.get("url"),
+            "image_prompt": post_data.get("image_prompt"),
+            "video_prompt": post_data.get("video_prompt"),
+            "hashtags": post_data.get("hashtags", []),
+            "platform_optimized": platform_optimized_data,  # Use parsed data
+            "engagement_score": post_data.get("engagement_score"),
+            "selected": False  # Default to not selected
+        }
+        
+        # ADK ENHANCEMENT: Add business context to each post for regeneration
+        post["business_context"] = business_analysis
+        
+        formatted_posts.append(post)
+        
+    logger.info(f"Successfully formatted {len(formatted_posts)} social media posts.")
+    return formatted_posts
 
 def _generate_enhanced_content_fallback(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
     """

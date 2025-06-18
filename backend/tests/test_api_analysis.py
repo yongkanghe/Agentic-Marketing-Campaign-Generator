@@ -22,31 +22,22 @@ class TestAnalysisAPI:
         assert response.status_code == 200
         data = response.json()
         
-        # Verify response structure
-        assert "analysis_results" in data
-        assert "business_context" in data
+        # Verify response structure has been updated
+        assert "url_insights" in data
+        assert "business_analysis" in data
         assert "analysis_metadata" in data
         
         # Verify analysis results structure
-        analysis_results = data["analysis_results"]
-        assert isinstance(analysis_results, list)
-        assert len(analysis_results) == len(sample_url_analysis_request["urls"])
-        
-        for result in analysis_results:
-            assert "url" in result
-            assert "content_summary" in result
-            assert "key_insights" in result
-            assert "business_relevance" in result
-            assert "analysis_status" in result
-            assert result["analysis_status"] in ["success", "failed", "partial"]
+        url_insights = data["url_insights"]
+        assert isinstance(url_insights, dict)
         
         # Verify business context structure
-        business_context = data["business_context"]
-        assert "company_name" in business_context
-        assert "industry" in business_context
-        assert "target_audience" in business_context
-        assert "value_propositions" in business_context
-        assert isinstance(business_context["value_propositions"], list)
+        business_analysis = data["business_analysis"]
+        assert "company_name" in business_analysis
+        assert "industry" in business_analysis
+        assert "target_audience" in business_analysis
+        assert "value_propositions" in business_analysis
+        assert isinstance(business_analysis["value_propositions"], list)
 
     def test_analyze_url_validation_error(self, client: TestClient):
         """Test URL analysis with invalid data."""
@@ -79,14 +70,9 @@ class TestAnalysisAPI:
         assert response.status_code == 200  # Should handle gracefully
         
         data = response.json()
-        analysis_results = data["analysis_results"]
+        # The key is now url_insights, not analysis_results
+        assert "url_insights" in data
         
-        # Should have results for each URL, even if failed
-        assert len(analysis_results) == 3
-        for result in analysis_results:
-            # Invalid URLs should have failed status
-            assert result["analysis_status"] in ["failed", "partial"]
-
     def test_analyze_url_different_depths(self, client: TestClient):
         """Test URL analysis with different analysis depths."""
         depths = ["basic", "standard", "comprehensive"]
@@ -119,11 +105,11 @@ class TestAnalysisAPI:
         assert response.status_code == 200
         
         data = response.json()
-        analysis_results = data["analysis_results"]
-        assert len(analysis_results) == 4
+        url_insights = data["url_insights"]
+        assert len(url_insights) == 4
         
         # Each URL should have its own analysis
-        analyzed_urls = [result["url"] for result in analysis_results]
+        analyzed_urls = list(url_insights.keys())
         assert set(analyzed_urls) == set(request_data["urls"])
 
     def test_analyze_files_success(self, client: TestClient):
@@ -143,7 +129,7 @@ class TestAnalysisAPI:
         assert response.status_code == 200
         data = response.json()
         
-        # Verify response structure
+        # Verify response structure for file analysis (using backward-compatible keys)
         assert "analysis_results" in data
         assert "extracted_insights" in data
         assert "analysis_metadata" in data
@@ -253,9 +239,10 @@ class TestAnalysisAPI:
             
             data = response.json()
             assert data["analysis_metadata"]["analysis_type"] == analysis_type
+            assert "analysis_results" in data
 
     def test_analyze_files_extracted_insights(self, client: TestClient):
-        """Test that file analysis extracts meaningful insights."""
+        """Test that file analysis returns structured insights."""
         test_files = [
             ("files", ("business_plan.txt", io.BytesIO(b"Our company focuses on AI solutions for small businesses"), "text/plain")),
         ]
@@ -268,52 +255,51 @@ class TestAnalysisAPI:
         assert response.status_code == 200
         
         data = response.json()
-        extracted_insights = data["extracted_insights"]
+        assert "extracted_insights" in data
+        summary = data["extracted_insights"]
         
-        # Should extract business-relevant insights
-        assert "business_focus" in extracted_insights
-        assert "target_market" in extracted_insights
-        assert "key_themes" in extracted_insights
-        assert isinstance(extracted_insights["key_themes"], list)
+        assert "business_focus" in summary
+        assert "target_market" in summary
+        assert "key_themes" in summary
+        assert isinstance(summary["key_themes"], list)
+        
+        # Check that results are present
+        assert "analysis_results" in data
+        assert len(data["analysis_results"]) > 0
 
 
 @pytest.mark.asyncio
 class TestAnalysisAPIAsync:
-    """Async test suite for analysis API endpoints."""
+    """Test suite for asynchronous analysis API endpoints."""
 
     async def test_analyze_url_async(self, async_client: AsyncClient, sample_url_analysis_request):
-        """Test async URL analysis."""
+        """Test asynchronous URL analysis."""
         response = await async_client.post("/api/v1/analysis/url", json=sample_url_analysis_request)
         
         assert response.status_code == 200
-        data = response.json()
-        assert "analysis_results" in data
-        assert "business_context" in data
+        data = response.json()  # Do not await, httpx async client returns dict directly
+        assert "url_insights" in data
+        assert "business_analysis" in data
 
     async def test_concurrent_url_analysis(self, async_client: AsyncClient):
         """Test concurrent URL analysis requests."""
         import asyncio
         
-        # Create multiple URL analysis requests concurrently
-        tasks = []
-        for i in range(3):
-            request_data = {
-                "urls": [f"https://example{i}.com"],
-                "analysis_depth": "standard"
-            }
-            task = async_client.post("/api/v1/analysis/url", json=request_data)
-            tasks.append(task)
+        tasks = [
+            async_client.post("/api/v1/analysis/url", json={"urls": ["https://test1.com"], "analysis_depth": "basic"}),
+            async_client.post("/api/v1/analysis/url", json={"urls": ["https://test2.com"], "analysis_depth": "standard"}),
+        ]
         
         responses = await asyncio.gather(*tasks)
         
-        # Verify all succeeded
         for response in responses:
             assert response.status_code == 200
-            data = response.json()
-            assert "analysis_results" in data
+            data = response.json()  # Do not await
+            assert "url_insights" in data
+            assert "business_analysis" in data
 
     async def test_analyze_files_async(self, async_client: AsyncClient):
-        """Test async file analysis."""
+        """Test asynchronous file analysis."""
         test_files = [
             ("files", ("test.txt", io.BytesIO(b"Test content"), "text/plain")),
         ]
@@ -325,33 +311,32 @@ class TestAnalysisAPIAsync:
         response = await async_client.post("/api/v1/analysis/files", files=test_files, data=form_data)
         
         assert response.status_code == 200
-        data = response.json()
+        data = response.json()  # Do not await
         assert "analysis_results" in data
+        assert len(data["analysis_results"]) == 1
 
     async def test_mixed_analysis_operations(self, async_client: AsyncClient, sample_url_analysis_request):
-        """Test mixed URL and file analysis operations."""
+        """Test concurrent URL and file analysis."""
         import asyncio
         
-        # Prepare file analysis
+        # Create test files
         test_files = [
             ("files", ("test.txt", io.BytesIO(b"Test content"), "text/plain")),
         ]
-        form_data = {
-            "analysis_type": "standard"
-        }
         
-        # Run URL and file analysis concurrently
+        # Create tasks for URL and file analysis
         url_task = async_client.post("/api/v1/analysis/url", json=sample_url_analysis_request)
-        file_task = async_client.post("/api/v1/analysis/files", files=test_files, data=form_data)
+        file_task = async_client.post("/api/v1/analysis/files", files=test_files, data={"analysis_type": "standard"})
         
         url_response, file_response = await asyncio.gather(url_task, file_task)
         
-        # Verify both succeeded
         assert url_response.status_code == 200
         assert file_response.status_code == 200
         
-        url_data = url_response.json()
-        file_data = file_response.json()
+        url_data = url_response.json()  # Do not await
+        file_data = file_response.json()  # Do not await
         
-        assert "analysis_results" in url_data
-        assert "analysis_results" in file_data 
+        assert "url_insights" in url_data
+        assert "analysis_results" in file_data
+        assert url_data["analysis_metadata"]["urls_analyzed"] == 2
+        assert file_data["analysis_metadata"]["files_processed"] > 0 

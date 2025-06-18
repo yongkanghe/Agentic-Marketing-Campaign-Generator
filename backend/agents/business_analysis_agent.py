@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 import os
 from google import genai
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class URLAnalysisAgent:
         Returns:
             Dictionary containing extracted business context
         """
+        start_time = time.time()
         try:
             logger.info(f"Starting {analysis_type} analysis of {len(urls)} URLs")
             
@@ -78,6 +80,11 @@ class URLAnalysisAgent:
             if not suggested_tags:
                 suggested_tags = business_context.get('suggested_tags', [])
             
+            # Calculate processing time and a simple confidence score
+            end_time = time.time()
+            processing_time = round(end_time - start_time, 2)
+            confidence_score = 0.85 if self.client else 0.5 # Higher confidence if real AI was used
+            
             return {
                 "business_analysis": business_context,
                 "suggested_themes": suggested_themes,
@@ -86,9 +93,11 @@ class URLAnalysisAgent:
                 "analysis_metadata": {
                     "urls_analyzed": len(urls),
                     "successful_scrapes": len([c for c in url_contents.values() if 'text' in c]),
-                    "analysis_type": analysis_type,
+                    "analysis_depth": analysis_type,
                     "ai_analysis_used": self.client is not None
-                }
+                },
+                "processing_time": processing_time,
+                "confidence_score": confidence_score
             }
             
         except Exception as e:
@@ -491,8 +500,9 @@ class URLAnalysisAgent:
         
         # Extract from URLs if AI response doesn't have it
         for url in url_contents.keys():
-            # Extract domain name as fallback
-            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url)
+            # Convert HttpUrl to string if necessary
+            url_str = str(url) if hasattr(url, '__str__') else url
+            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url_str)
             if domain_match:
                 domain = domain_match.group(1)
                 # Clean up domain name
@@ -700,7 +710,9 @@ class URLAnalysisAgent:
                 all_text += content['text'] + " "
             
             # Extract company name from URL
-            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url)
+            # Convert HttpUrl to string if necessary
+            url_str = str(url) if hasattr(url, '__str__') else url
+            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url_str)
             if domain_match:
                 domain = domain_match.group(1)
                 company_name = domain.replace('-', ' ').replace('_', ' ').title()
@@ -1109,38 +1121,22 @@ class URLAnalysisAgent:
         
         # Extract company name from URLs
         for url in urls_analyzed:
-            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url)
+            # Convert HttpUrl to string if necessary
+            url_str = str(url) if hasattr(url, '__str__') else url
+            domain_match = re.search(r'https?://(?:www\.)?([^\.]+)', url_str)
             if domain_match:
                 domain = domain_match.group(1)
                 company_name = domain.replace('-', ' ').replace('_', ' ').title()
                 break
         
-        # Analyze content for business type and industry
-        text_lower = all_text.lower()
-        url_text_lower = ' '.join(urls_analyzed).lower()
+        # Generate industry-specific themes and tags
+        urls_analyzed = list(url_contents.keys())
+        # Convert HttpUrl objects to strings before joining
+        urls_str = [str(url) for url in urls_analyzed]
+        url_text_lower = ' '.join(urls_str).lower()
         
-        # Determine industry based on content analysis
-        if any(word in text_lower or word in url_text_lower for word in ['sneaker', 'shoe', 'footwear', 'trainer', 'athletic', 'sport']):
-            industry = "Footwear & Athletic Apparel"
-            business_description = f"{company_name} specializes in athletic footwear, sneakers, and sports apparel"
-            target_audience = "Athletes, fitness enthusiasts, sneaker collectors, fashion-conscious consumers"
-            visual_themes = ["athletic", "performance", "style", "comfort", "fashion"]
-            color_palette = ["athletic", "dynamic", "energetic", "modern"]
-            suggested_themes = ["Performance", "Athletic Style", "Comfort", "Fashion", "Sport"]
-            suggested_tags = ["#Sneakers", "#Athletic", "#Performance", "#Style", "#Footwear", "#Sports", "#Fashion", "#Comfort"]
-            creative_direction = "Showcase athletic footwear in action-oriented lifestyle contexts, emphasizing performance, style, and comfort"
-            
-        elif any(word in text_lower or word in url_text_lower for word in ['fashion', 'clothing', 'apparel', 'style', 'outfit']):
-            industry = "Fashion & Apparel"
-            business_description = f"{company_name} provides fashionable clothing and apparel for style-conscious consumers"
-            target_audience = "Fashion-conscious consumers, style enthusiasts, trendsetters"
-            visual_themes = ["fashion", "style", "trendy", "modern", "chic"]
-            color_palette = ["fashionable", "stylish", "contemporary", "vibrant"]
-            suggested_themes = ["Fashion", "Style", "Trendy", "Modern", "Chic"]
-            suggested_tags = ["#Fashion", "#Style", "#Apparel", "#Trendy", "#OOTD", "#StyleInspo", "#FashionForward"]
-            creative_direction = "Highlight fashionable apparel in stylish lifestyle settings, emphasizing trends and personal style"
-            
-        elif any(word in text_lower or word in url_text_lower for word in ['tech', 'software', 'digital', 'app', 'technology']):
+        # Industry detection
+        if any(term in url_text_lower for term in ['tech', 'software', 'app', 'digital', 'ai']):
             industry = "Technology"
             business_description = f"{company_name} provides innovative technology solutions and digital services"
             target_audience = "Tech professionals, businesses, digital users, innovators"
@@ -1149,26 +1145,6 @@ class URLAnalysisAgent:
             suggested_themes = ["Innovation", "Technology", "Digital", "Efficiency", "Modern"]
             suggested_tags = ["#Tech", "#Innovation", "#Digital", "#Software", "#Technology", "#TechSolutions"]
             creative_direction = "Showcase technology solutions in professional business contexts, emphasizing innovation and efficiency"
-            
-        elif any(word in text_lower or word in url_text_lower for word in ['food', 'restaurant', 'cafe', 'dining', 'cuisine']):
-            industry = "Food & Beverage"
-            business_description = f"{company_name} offers quality food and dining experiences"
-            target_audience = "Food enthusiasts, diners, local community, culinary adventurers"
-            visual_themes = ["delicious", "fresh", "quality", "appetizing", "welcoming"]
-            color_palette = ["warm", "appetizing", "fresh", "inviting"]
-            suggested_themes = ["Quality Food", "Fresh Ingredients", "Dining Experience", "Culinary", "Hospitality"]
-            suggested_tags = ["#Food", "#Restaurant", "#Dining", "#Fresh", "#Quality", "#Culinary", "#LocalEats"]
-            creative_direction = "Show appetizing food and positive dining experiences in welcoming, authentic restaurant settings"
-            
-        elif any(word in text_lower or word in url_text_lower for word in ['fitness', 'gym', 'health', 'wellness', 'workout']):
-            industry = "Health & Fitness"
-            business_description = f"{company_name} promotes health, fitness, and wellness through quality services and products"
-            target_audience = "Fitness enthusiasts, health-conscious individuals, athletes, wellness seekers"
-            visual_themes = ["energetic", "healthy", "strong", "motivating", "active"]
-            color_palette = ["energetic", "vibrant", "healthy", "motivating"]
-            suggested_themes = ["Fitness", "Health", "Wellness", "Strength", "Active Lifestyle"]
-            suggested_tags = ["#Fitness", "#Health", "#Wellness", "#Workout", "#Healthy", "#ActiveLife", "#FitLife"]
-            creative_direction = "Capture active lifestyles and fitness achievements in energetic, motivating contexts"
             
         else:
             # Generic business analysis

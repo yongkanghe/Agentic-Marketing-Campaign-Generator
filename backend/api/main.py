@@ -29,7 +29,9 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import InMemoryRunner
 from google.adk.telemetry import tracer
 
-from .routes import campaigns, content, analysis
+from .routes.campaigns import router as campaigns_router
+from .routes.content import router as content_router
+from .routes.analysis import router as analysis_router
 from .models import CampaignRequest, CampaignResponse, ErrorResponse
 from agents.marketing_orchestrator import create_marketing_orchestrator_agent
 
@@ -97,9 +99,21 @@ app.add_middleware(
 )
 
 # Include API routes
-app.include_router(campaigns.router, prefix="/api/v1/campaigns", tags=["campaigns"])
-app.include_router(content.router, prefix="/api/v1/content", tags=["content"])
-app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"])
+app.include_router(
+    campaigns_router,
+    prefix="/api/v1/campaigns",
+    tags=["Campaign Management"]
+)
+app.include_router(
+    content_router,
+    prefix="/api/v1/content",
+    tags=["Content Generation"]
+)
+app.include_router(
+    analysis_router,
+    prefix="/api/v1/analysis",
+    tags=["Business Analysis"]
+)
 
 @app.get("/", response_model=dict)
 async def root():

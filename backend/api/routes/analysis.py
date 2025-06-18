@@ -17,8 +17,6 @@ if backend_dir not in sys.path:
 
 from ..models import URLAnalysisRequest, URLAnalysisResponse, BusinessAnalysis
 
-logger = logging.getLogger(__name__)
-
 # Import the business analysis service
 try:
     from agents.business_analysis_agent import analyze_business_urls
@@ -27,6 +25,14 @@ except ImportError as e:
     logger.error(f"Failed to import analyze_business_urls: {e}")
     # Fallback to None - will use mock data
     business_analysis_service = False
+
+# Import the agent that performs the actual analysis
+try:
+    from agents.business_analysis_agent import URLAnalysisAgent
+except ImportError:
+    URLAnalysisAgent = None
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 def _is_valid_url(url: str) -> bool:
@@ -41,211 +47,106 @@ def _is_valid_url(url: str) -> bool:
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
     return url_pattern.match(url) is not None
 
-@router.post("/url")
-async def analyze_urls(request: URLAnalysisRequest):
-    """Analyze business URLs to extract company and market intelligence using Gemini ADK agents."""
-    
-    try:
-        logger.info(f"Analyzing {len(request.urls)} URLs with {request.analysis_depth} depth")
-        
-        # Validate and process URLs
-        valid_urls = []
-        invalid_urls = []
-        
-        for url in request.urls:
-            if _is_valid_url(url):
-                valid_urls.append(url)
-            else:
-                invalid_urls.append(url)
-                logger.warning(f"Invalid URL format: {url}")
-        
-        # Use ADK business analysis service if available, otherwise fallback to mock
-        use_real_analysis = business_analysis_service and valid_urls
-        business_analysis = None
-        
-        if use_real_analysis:
-            try:
-                analysis_result = await analyze_business_urls(
-                    urls=valid_urls,
-                    analysis_type=request.analysis_depth
-                )
-                
-                # Extract business analysis data
-                business_data = analysis_result.get("business_analysis", {})
-                business_analysis = BusinessAnalysis(
-                    company_name=business_data.get("company_name", "Unknown"),
-                    business_description=business_data.get("business_description"),
-                    industry=business_data.get("industry", "Unknown"),
-                    target_audience=business_data.get("target_audience", "Unknown"),
-                    value_propositions=business_data.get("value_propositions", []),
-                    brand_voice=business_data.get("brand_voice", "Unknown"),
-                    competitive_advantages=business_data.get("competitive_advantages", []),
-                    market_positioning=business_data.get("market_positioning", "Unknown"),
-                    key_messaging=business_data.get("key_messaging", []),
-                    product_context=business_data.get("product_context", {}),
-                    campaign_guidance=business_data.get("campaign_guidance", {})
-                )
-                
-            except Exception as agent_error:
-                logger.warning(f"ADK agent failed, falling back to mock data: {agent_error}")
-                # Fall through to mock data below
-                use_real_analysis = False
-        
-        if not use_real_analysis or business_analysis is None:
-            # Use enhanced content-based analysis instead of graceful failure
-            logger.warning("AI analysis failed or unavailable, using enhanced content-based analysis")
-            
-            # Create URLAnalysisAgent to perform content-based analysis
-            from agents.business_analysis_agent import URLAnalysisAgent
-            agent = URLAnalysisAgent()
-            
-            try:
-                # Scrape content from URLs for analysis
-                import aiohttp
-                url_contents = {}
-                async with aiohttp.ClientSession() as session:
-                    for url in valid_urls:
-                        try:
-                            content = await agent._scrape_url_content(session, url)
-                            url_contents[url] = content
-                            logger.info(f"Successfully scraped content from {url} for enhanced analysis")
-                        except Exception as e:
-                            logger.error(f"Failed to scrape {url}: {e}")
-                            url_contents[url] = {"error": str(e)}
-                
-                # Generate enhanced analysis based on scraped content
-                business_data = agent._generate_enhanced_mock_analysis(url_contents, request.analysis_depth)
-                
-                business_analysis = BusinessAnalysis(
-                    company_name=business_data.get("company_name", "Business"),
-                    business_description=business_data.get("business_description", "Professional business"),
-                    industry=business_data.get("industry", "Professional Services"),
-                    target_audience=business_data.get("target_audience", "Business professionals"),
-                    value_propositions=business_data.get("value_propositions", []),
-                    brand_voice=business_data.get("brand_voice", "Professional"),
-                    competitive_advantages=business_data.get("competitive_advantages", []),
-                    market_positioning=business_data.get("market_positioning", "Professional services provider"),
-                    key_messaging=business_data.get("key_messaging", []),
-                    product_context=business_data.get("product_context", {}),
-                    campaign_guidance=business_data.get("campaign_guidance", {})
-                )
-                
-                use_real_analysis = True  # Set to true since we have valid analysis
-                logger.info(f"✅ Enhanced content-based analysis complete for {business_analysis.company_name}")
-                
-            except Exception as content_error:
-                logger.error(f"Enhanced content-based analysis failed: {content_error}")
-                # Final fallback to basic business analysis
-                business_analysis = BusinessAnalysis(
-                    company_name="Business",
-                    business_description="Professional business providing quality products and services",
-                    industry="Professional Services",
-                    target_audience="Business professionals and consumers",
-                    value_propositions=["Quality service", "Professional expertise"],
-                    brand_voice="Professional",
-                    competitive_advantages=["Experience", "Quality"],
-                    market_positioning="Professional service provider",
-                    key_messaging=["Quality", "Professional", "Service"],
-                    product_context={"primary_products": ["Professional services"]},
-                    campaign_guidance={
-                        "suggested_themes": ["Professional", "Quality", "Service"],
-                        "suggested_tags": ["#Business", "#Professional", "#Quality"]
-                    }
-                )
-                use_real_analysis = True
+@router.post("/url", response_model=URLAnalysisResponse)
+async def analyze_business_url(request: URLAnalysisRequest):
+    """
+    Analyzes one or more business URLs to extract business context using the real AI agent.
+    """
+    if not URLAnalysisAgent:
+        logger.error("URLAnalysisAgent is not available.")
+        raise HTTPException(status_code=500, detail="AI services are not configured.")
 
-        # Create analysis results for all URLs (valid and invalid)
-        url_insights = {}
-        analysis_results = []
-        
-        # Process valid URLs
-        for i, url in enumerate(valid_urls):
-            url_insights[url] = {
-                "content_type": "business_website",
-                "key_topics": ["innovation", "technology", "solutions"],
-                "sentiment": "positive",
-                "confidence": 0.85 + (i * 0.05),
-                "extracted_data": {
-                    "company_info": "Sample company information",
-                    "products_services": "Technology solutions",
-                    "contact_info": "Contact details found"
-                },
-                "status": "analyzed"
-            }
-            
-            analysis_results.append({
-                "url": url,
-                "content_summary": f"Analysis of {url}",
-                "key_insights": ["innovation", "technology", "solutions"],
-                "business_relevance": "High relevance to business analysis",
-                "analysis_status": "success"
-            })
-        
-        # Process invalid URLs
-        for url in invalid_urls:
-            url_insights[url] = {
-                "content_type": "invalid_url",
-                "key_topics": [],
-                "sentiment": "neutral",
-                "confidence": 0.0,
-                "extracted_data": {},
-                "status": "failed",
-                "error": "Invalid URL format"
-            }
-            
-            analysis_results.append({
-                "url": url,
-                "content_summary": f"Failed to analyze {url} due to invalid format",
-                "key_insights": [],
-                "business_relevance": "Unable to analyze due to invalid URL",
-                "analysis_status": "failed"
-            })
-        
-        # Backward-compatible business_context for tests
-        business_context = {
-            "company_name": business_analysis.company_name,
-            "industry": business_analysis.industry,
-            "target_audience": business_analysis.target_audience,
-            "value_propositions": business_analysis.value_propositions
-        }
-        
-        response_data = URLAnalysisResponse(
-            business_analysis=business_analysis,
-            url_insights=url_insights,
-            processing_time=2.0,
-            confidence_score=0.87 if valid_urls else 0.0,
-            analysis_metadata={
-                "analysis_depth": request.analysis_depth,
-                "total_urls": len(request.urls),
-                "valid_urls": len(valid_urls),
-                "invalid_urls": len(invalid_urls),
-                "adk_agent_used": use_real_analysis
-            }
+    try:
+        logger.info(f"Received request to analyze URLs: {request.urls}")
+        agent = URLAnalysisAgent()
+        analysis_result = await agent.analyze_urls(
+            urls=request.urls,
+            analysis_type=request.analysis_depth
         )
+
+        if "error" in analysis_result:
+            raise HTTPException(status_code=400, detail=analysis_result["error"])
         
-        # Add backward-compatible fields for tests
-        response_dict = response_data.model_dump()
-        response_dict["analysis_results"] = analysis_results
-        response_dict["business_context"] = business_context
+        logger.info("🔧 STARTING theme extraction process...")
         
-        # ADK ENHANCEMENT: Extract themes and tags from campaign guidance
-        if use_real_analysis and business_analysis and business_analysis.campaign_guidance:
-            campaign_guidance = business_analysis.campaign_guidance
-            response_dict["suggested_themes"] = campaign_guidance.get("suggested_themes", [])
-            response_dict["suggested_tags"] = campaign_guidance.get("suggested_tags", [])
-        else:
-            # Fallback themes and tags when using mock data
-            response_dict["suggested_themes"] = ["Professional", "Innovative", "Trustworthy", "Modern", "Results-Driven"]
-            response_dict["suggested_tags"] = ["Business", "Innovation", "Technology", "Growth", "Solutions", "Professional"]
+        # Extract themes and tags for frontend compatibility
+        suggested_themes = []
+        suggested_tags = []
         
-        return response_dict
+        logger.info(f"DEBUG: Extracting themes from analysis result...")
         
+        if "business_analysis" in analysis_result and analysis_result["business_analysis"]:
+            business_analysis = analysis_result["business_analysis"]
+            logger.info(f"DEBUG: Business analysis found")
+            
+            # Extract themes from campaign guidance
+            campaign_guidance = business_analysis.get("campaign_guidance", {})
+            logger.info(f"DEBUG: Campaign guidance keys: {list(campaign_guidance.keys())}")
+            
+            content_themes = campaign_guidance.get("content_themes", {})
+            logger.info(f"DEBUG: Content themes keys: {list(content_themes.keys())}")
+            
+            # Get primary themes
+            primary_themes = content_themes.get("primary_themes", [])
+            logger.info(f"DEBUG: Primary themes found: {primary_themes}")
+            if primary_themes:
+                suggested_themes.extend(primary_themes)
+            
+            # Get product-specific themes (handle null case)
+            product_themes = content_themes.get("product_specific_themes")
+            if product_themes and isinstance(product_themes, list):
+                suggested_themes.extend(product_themes[:3])  # Limit to 3 more themes
+            
+            # Generate suggested tags from various sources
+            # Use value propositions as tags
+            value_props = business_analysis.get("value_propositions", [])
+            for prop in value_props[:4]:  # Limit to 4
+                # Convert to hashtag format (remove spaces, special chars)
+                tag = prop.replace(" ", "").replace(",", "").replace("&", "And")
+                if len(tag) > 3 and len(tag) < 20:  # Reasonable tag length
+                    suggested_tags.append(tag)
+            
+            # Add industry-based tags
+            industry = business_analysis.get("industry", "")
+            if industry:
+                # Extract key words from industry
+                industry_words = industry.replace("(", "").replace(")", "").split()
+                for word in industry_words[:3]:
+                    if len(word) > 3:
+                        suggested_tags.append(word.replace(",", ""))
+            
+            # Add competitive advantages as tags
+            comp_advantages = business_analysis.get("competitive_advantages", [])
+            for advantage in comp_advantages[:2]:  # Limit to 2
+                # Extract key words
+                words = advantage.split()[:2]  # First 2 words
+                for word in words:
+                    clean_word = word.replace(",", "").replace(".", "")
+                    if len(clean_word) > 3:
+                        suggested_tags.append(clean_word)
+        
+        # Fallback themes and tags if none extracted
+        if not suggested_themes:
+            suggested_themes = ["Professional", "Modern", "Innovative", "Trustworthy", "Quality"]
+        
+        if not suggested_tags:
+            suggested_tags = ["Business", "Quality", "Value", "Innovation", "Service", "Growth"]
+        
+        # Remove duplicates and limit counts
+        suggested_themes = list(dict.fromkeys(suggested_themes))[:8]  # Max 8 themes
+        suggested_tags = list(dict.fromkeys(suggested_tags))[:10]     # Max 10 tags
+        
+        # Add themes and tags to top level for frontend compatibility
+        analysis_result["suggested_themes"] = suggested_themes
+        analysis_result["suggested_tags"] = suggested_tags
+        
+        logger.info(f"Extracted {len(suggested_themes)} themes and {len(suggested_tags)} tags")
+        
+        return analysis_result
+
     except Exception as e:
-        logger.error(f"URL analysis failed: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"URL analysis failed: {str(e)}"
-        )
+        logger.error(f"URL analysis endpoint failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/files")
 async def analyze_files(
