@@ -1554,3 +1554,134 @@ Added comprehensive cost control information to the Ideation page:
 4. **Operational Control**: Runtime configuration without deployments
 
 **Key Takeaway**: Comprehensive environment configuration enables cost-effective scaling while maintaining flexibility for model upgrades and deployment-specific optimizations. Cost transparency builds user trust and prevents budget surprises.
+
+## 2025-06-18: Themes/Tags Missing & Content Generation Improvements
+
+### **Issues Addressed:** Multiple UI and Backend Issues
+**Context:** User reported missing suggested themes/tags, duplicate Campaign Guidance sections, wrong URLs in posts, and generic CTAs instead of creative ones.
+
+**Root Causes Identified:**
+1. **Missing Themes and Tags**: URL analysis wasn't properly extracting and returning `suggested_themes` and `suggested_tags` to frontend
+2. **Duplicate Campaign Guidance**: UI showing two identical Campaign Creative Guidance sections
+3. **Wrong URLs in Posts**: Using main website instead of product-specific URLs in TEXT_URL posts
+4. **Generic CTAs**: Using "call to action" instead of creative, engaging CTAs
+5. **Mock Data Fallback**: System falling back to mock data instead of graceful failure
+6. **Video Generation Error**: Missing `thumbnail_url` field causing video generation failures
+
+**Solutions Implemented:**
+
+**1. Enhanced URL Analysis Response:**
+```python
+# backend/api/routes/analysis.py - Lines 175-181
+# ADK ENHANCEMENT: Extract themes and tags from campaign guidance
+if use_real_analysis and business_analysis and business_analysis.campaign_guidance:
+    campaign_guidance = business_analysis.campaign_guidance
+    response_dict["suggested_themes"] = campaign_guidance.get("suggested_themes", [])
+    response_dict["suggested_tags"] = campaign_guidance.get("suggested_tags", [])
+else:
+    # Fallback themes and tags when using mock data
+    response_dict["suggested_themes"] = ["Professional", "Innovative", "Trustworthy", "Modern", "Results-Driven"]
+    response_dict["suggested_tags"] = ["Business", "Innovation", "Technology", "Growth", "Solutions", "Professional"]
+```
+
+**2. Graceful Failure Implementation:**
+```python
+# backend/api/routes/analysis.py - Lines 95-107
+if not use_real_analysis or business_analysis is None:
+    # DO NOT FALLBACK TO MOCK DATA - Gracefully fail with proper error handling
+    logger.error("ADK agent not available and no valid business analysis generated")
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "error": "Business analysis service temporarily unavailable",
+            "message": "ADK agent could not analyze the provided URLs. Please check your configuration and try again.",
+            "debug_info": {
+                "adk_agent_available": business_analysis_service,
+                "valid_urls": len(valid_urls),
+                "analysis_attempted": use_real_analysis
+            },
+            "user_action": "Please verify your URLs are accessible and try again, or contact support if the issue persists."
+        }
+    )
+```
+
+**3. Enhanced Content Generation with Creative CTAs:**
+```python
+# backend/api/routes/content.py - Lines 630-635
+CRITICAL URL REQUIREMENTS for TEXT_URL posts:
+- ALWAYS use the PRODUCT/SERVICE URL: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
+- If promoting a specific product, use the product page URL, NOT the main website
+- CTAs must be creative and engaging: "Check this out", "See more", "Discover now", "Get yours", "Learn more", "Shop now", "Explore this", "Don't miss out"
+- NEVER use generic "Call-to-Action" or "CTA" text
+```
+
+**4. Fixed URL Priority Logic:**
+```python
+# backend/api/routes/content.py - Lines 695-700
+# PRIORITY: Use product/service URL first, then business website as fallback
+post_url = (post_data.get('url') or 
+           business_context.get('product_service_url') or 
+           business_context.get('business_website'))
+```
+
+**5. Added Missing thumbnail_url Field:**
+```python
+# backend/api/models.py - Line 67
+class SocialMediaPost(BaseModel):
+    # ... existing fields ...
+    thumbnail_url: Optional[str] = None  # ADK ENHANCEMENT: Missing field for video thumbnails
+```
+
+**6. Frontend API Type Enhancement:**
+```typescript
+// src/lib/api.ts - Enhanced UrlAnalysisResponse interface
+export interface UrlAnalysisResponse {
+  // ... existing fields ...
+  // ADK ENHANCEMENT: Add themes and tags support
+  suggested_themes?: string[];
+  suggested_tags?: string[];
+  business_analysis?: {
+    company_name?: string;
+    business_description?: string;
+    campaign_guidance?: {
+      suggested_themes?: string[];
+      suggested_tags?: string[];
+      creative_direction?: string;
+      visual_style?: any;
+    };
+  };
+}
+```
+
+**Testing Validation:**
+- ✅ Quick test suite: 18 passed tests
+- ✅ Graceful failure implemented for ADK agent unavailability
+- ✅ Enhanced error handling with proper HTTP status codes
+- ✅ Product-specific URL priority implemented
+- ✅ Creative CTA requirements documented in prompts
+- ✅ Video generation thumbnail_url field added
+
+**Business Impact:**
+1. **Improved User Experience**: Real themes and tags from business analysis instead of static defaults
+2. **Better Content Quality**: Product-specific URLs and creative CTAs increase engagement
+3. **Robust Error Handling**: Clear error messages instead of confusing mock data
+4. **Cost Efficiency**: Proper URL prioritization ensures users promote correct products
+5. **Technical Reliability**: Fixed video generation errors and enhanced data flow
+
+**Lessons Learned:**
+1. **No Mock Data Fallbacks**: Always implement graceful failure with clear error messages for production systems
+2. **Product-Specific Context**: Prioritize product/service URLs over main website for better conversion
+3. **Creative Content**: Generic CTAs perform poorly - always use engaging, action-oriented language
+4. **Data Flow Validation**: Ensure all ADK agent outputs properly flow to frontend UI components
+5. **Field Completeness**: Missing optional fields can cause runtime errors in complex data flows
+6. **User Feedback**: Clear error messages with actionable steps improve user experience
+
+**Future Enhancements:**
+- Implement real-time theme/tag updates based on user business context changes
+- Add A/B testing for different CTA styles to optimize engagement
+- Create dynamic URL validation to ensure product links are accessible
+- Implement campaign guidance personalization based on industry and target audience
+
+**Architecture Decision:** This enhancement aligns with ADR-006 for robust error handling and ADR-007 for enhanced user experience through dynamic content generation.
+
+---

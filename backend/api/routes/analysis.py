@@ -67,19 +67,23 @@ async def analyze_urls(request: URLAnalysisRequest):
             try:
                 analysis_result = await analyze_business_urls(
                     urls=valid_urls,
-                    analysis_depth=request.analysis_depth
+                    analysis_type=request.analysis_depth
                 )
                 
                 # Extract business analysis data
                 business_data = analysis_result.get("business_analysis", {})
                 business_analysis = BusinessAnalysis(
                     company_name=business_data.get("company_name", "Unknown"),
+                    business_description=business_data.get("business_description"),
                     industry=business_data.get("industry", "Unknown"),
                     target_audience=business_data.get("target_audience", "Unknown"),
                     value_propositions=business_data.get("value_propositions", []),
                     brand_voice=business_data.get("brand_voice", "Unknown"),
                     competitive_advantages=business_data.get("competitive_advantages", []),
-                    market_positioning=business_data.get("market_positioning", "Unknown")
+                    market_positioning=business_data.get("market_positioning", "Unknown"),
+                    key_messaging=business_data.get("key_messaging", []),
+                    product_context=business_data.get("product_context", {}),
+                    campaign_guidance=business_data.get("campaign_guidance", {})
                 )
                 
             except Exception as agent_error:
@@ -88,24 +92,20 @@ async def analyze_urls(request: URLAnalysisRequest):
                 use_real_analysis = False
         
         if not use_real_analysis or business_analysis is None:
-            # Fallback mock data when ADK agent is not available
-            logger.info("Using mock business analysis data")
-            business_analysis = BusinessAnalysis(
-                company_name="Sample Company",
-                industry="Technology",
-                target_audience="Business professionals",
-                value_propositions=[
-                    "Innovative solutions",
-                    "Customer-centric approach",
-                    "Proven track record"
-                ],
-                brand_voice="Professional yet approachable",
-                competitive_advantages=[
-                    "Advanced technology",
-                    "Expert team",
-                    "Comprehensive support"
-                ],
-                market_positioning="Premium solution provider"
+            # DO NOT FALLBACK TO MOCK DATA - Gracefully fail with proper error handling
+            logger.error("ADK agent not available and no valid business analysis generated")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "Business analysis service temporarily unavailable",
+                    "message": "ADK agent could not analyze the provided URLs. Please check your configuration and try again.",
+                    "debug_info": {
+                        "adk_agent_available": business_analysis_service,
+                        "valid_urls": len(valid_urls),
+                        "analysis_attempted": use_real_analysis
+                    },
+                    "user_action": "Please verify your URLs are accessible and try again, or contact support if the issue persists."
+                }
             )
 
         # Create analysis results for all URLs (valid and invalid)
@@ -181,6 +181,16 @@ async def analyze_urls(request: URLAnalysisRequest):
         response_dict = response_data.model_dump()
         response_dict["analysis_results"] = analysis_results
         response_dict["business_context"] = business_context
+        
+        # ADK ENHANCEMENT: Extract themes and tags from campaign guidance
+        if use_real_analysis and business_analysis and business_analysis.campaign_guidance:
+            campaign_guidance = business_analysis.campaign_guidance
+            response_dict["suggested_themes"] = campaign_guidance.get("suggested_themes", [])
+            response_dict["suggested_tags"] = campaign_guidance.get("suggested_tags", [])
+        else:
+            # Fallback themes and tags when using mock data
+            response_dict["suggested_themes"] = ["Professional", "Innovative", "Trustworthy", "Modern", "Results-Driven"]
+            response_dict["suggested_tags"] = ["Business", "Innovation", "Technology", "Growth", "Solutions", "Professional"]
         
         return response_dict
         

@@ -183,6 +183,20 @@ export interface UrlAnalysisResponse {
     analyzed_at: string;
   };
   extracted_insights: string[];
+  suggested_themes?: string[];
+  suggested_tags?: string[];
+  business_analysis?: {
+    company_name?: string;
+    business_description?: string;
+    industry?: string;
+    target_audience?: string;
+    campaign_guidance?: {
+      suggested_themes?: string[];
+      suggested_tags?: string[];
+      creative_direction?: string;
+      visual_style?: any;
+    };
+  };
 }
 
 export interface FileAnalysisRequest {
@@ -346,6 +360,7 @@ export class VideoVentureLaunchAPI {
       business_description?: string;
       business_website?: string;
       product_service_url?: string;
+      campaign_media_tuning?: string;
     };
     creativity_level: number;
   }): Promise<{
@@ -355,7 +370,9 @@ export class VideoVentureLaunchAPI {
       content: string;
       url?: string;
       image_prompt?: string;
+      image_url?: string;
       video_prompt?: string;
+      video_url?: string;
       hashtags: string[];
       platform_optimized: any;
       engagement_score: number;
@@ -365,15 +382,45 @@ export class VideoVentureLaunchAPI {
     processing_time: number;
   }> {
     try {
+      console.log('🎯 Generating bulk content with request:', {
+        post_type: request.post_type,
+        count: request.regenerate_count,
+        company: request.business_context.company_name
+      });
+      
       const response = await apiClient.post('/api/v1/content/regenerate', request);
       
+      // Backend returns SocialPostRegenerationResponse directly, not wrapped in ApiResponse
       if (!response.data) {
-        throw new Error('No response data received');
+        throw new Error('No response data received from backend');
       }
+
+      // Validate required fields exist
+      if (!response.data.new_posts || !Array.isArray(response.data.new_posts)) {
+        throw new Error('Invalid response format: missing new_posts array');
+      }
+      
+      console.log('✅ Bulk content generated successfully:', {
+        posts_count: response.data.new_posts.length,
+        processing_time: response.data.processing_time,
+        method: response.data.regeneration_metadata?.generation_method
+      });
       
       return response.data;
     } catch (error) {
-      console.error('Generate bulk content error:', error);
+      console.error('❌ Generate bulk content error:', error);
+      
+      // Enhanced error logging for debugging
+      if (axios.isAxiosError(error)) {
+        console.error('API Error Details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          method: error.config?.method
+        });
+      }
+      
       throw this.handleApiError(error);
     }
   }

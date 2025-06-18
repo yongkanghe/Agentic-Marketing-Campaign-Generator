@@ -473,51 +473,123 @@ class VisualContentOrchestrator:
             return self._generate_fallback_visual_content(social_posts)
     
     def _create_image_prompt(self, post: Dict[str, Any], business_context: Dict[str, Any], objective: str) -> str:
-        """Create image generation prompt based on post content and business context."""
+        """
+        Create image generation prompt based on post content and comprehensive business context.
+        
+        ADK Enhancement: Uses full business analysis including product context, 
+        campaign guidance, and visual style for brand-specific generation.
+        """
         
         post_content = post.get('content', '')
         company_name = business_context.get('company_name', 'Company')
-        industry = business_context.get('industry', 'business')
         business_description = business_context.get('business_description', '')
-        target_audience = business_context.get('target_audience', 'general audience')
+        industry = business_context.get('industry', 'business')
+        target_audience = business_context.get('target_audience', 'customers')
         
-        # Extract detailed business context for visual generation
-        logger.info(f"Creating image prompt for {company_name} in {industry} industry")
+        # ADK ENHANCEMENT: Extract comprehensive context
+        product_context = business_context.get('product_context', {})
+        campaign_guidance = business_context.get('campaign_guidance', {})
+        campaign_media_tuning = business_context.get('campaign_media_tuning', '')
+        creative_direction = business_context.get('creative_direction', '')
+        visual_style = business_context.get('visual_style', {})
         
-        # Industry-specific visual prompt generation
-        if any(keyword in business_description.lower() for keyword in ['t-shirt', 'tshirt', 'apparel', 'clothing', 'print', 'custom']):
-            # T-shirt/Apparel Business
-            visual_context = f"Two diverse young adults (ages 20-30) wearing custom printed t-shirts with creative designs, laughing and having fun in an urban outdoor setting, natural lighting, lifestyle photography style"
-            if 'funny' in business_description.lower() or 'humor' in business_description.lower():
-                visual_context += ", humorous and playful t-shirt designs visible"
+        # PRIORITY: Use specific product context if available
+        has_specific_product = product_context.get('has_specific_product', False)
+        product_name = product_context.get('product_name', '')
+        product_themes = product_context.get('product_themes', [])
+        product_visual_elements = product_context.get('product_visual_elements', '')
+        
+        logger.info(f"Creating image prompt - Product: {product_name if has_specific_product else 'general'}, "
+                   f"Themes: {product_themes}, Company: {company_name}")
+        
+        # **PRODUCT-SPECIFIC GENERATION** (Priority over generic business context)
+        if has_specific_product and product_name:
             
-        elif any(keyword in business_description.lower() for keyword in ['restaurant', 'food', 'dining', 'kitchen', 'chef', 'cuisine']):
-            # Restaurant/Food Business
-            visual_context = f"Professional food photography showing delicious prepared dishes, warm restaurant atmosphere with satisfied customers dining, chef preparing food in background"
-            if 'italian' in business_description.lower():
-                visual_context += ", authentic Italian pasta and pizza dishes"
-            elif 'family' in business_description.lower():
-                visual_context += ", family-friendly dining atmosphere"
+            # Joker T-Shirt Example: Focus on the specific product
+            if 'joker' in product_name.lower() and any('t-shirt' in theme.lower() for theme in product_themes):
+                visual_context = (
+                    f"Young adult wearing a creative {product_name} t-shirt design, "
+                    f"showing the shirt prominently with visible graphic design, "
+                    f"in an urban outdoor setting, lifestyle photography style, "
+                    f"person laughing or having fun (matching Joker theme), "
+                    f"pop culture and comic book aesthetic"
+                )
                 
-        elif any(keyword in business_description.lower() for keyword in ['fitness', 'gym', 'training', 'workout', 'health', 'exercise']):
-            # Fitness/Health Business
-            visual_context = f"Dynamic fitness scene with trainer and client working out in modern gym, showing transformation and success, motivational atmosphere"
-            
-        elif any(keyword in business_description.lower() for keyword in ['tech', 'software', 'digital', 'app', 'platform', 'saas']):
-            # Technology Business
-            visual_context = f"Modern professionals collaborating with technology, clean office environment, digital interfaces and screens, innovation and productivity focus"
-            
-        elif any(keyword in business_description.lower() for keyword in ['consulting', 'service', 'professional', 'business']):
-            # Professional Services
-            visual_context = f"Professional business meeting with diverse team members, modern office setting, collaboration and success themes"
-            
-        elif any(keyword in business_description.lower() for keyword in ['retail', 'shop', 'store', 'ecommerce', 'marketplace']):
-            # Retail/E-commerce
-            visual_context = f"Happy customers shopping and discovering products, modern retail environment or online shopping experience"
-            
+                # Add campaign media tuning if provided
+                if campaign_media_tuning:
+                    if 'outdoor' in campaign_media_tuning.lower():
+                        visual_context += ", bright outdoor lighting"
+                    if 'bright' in campaign_media_tuning.lower():
+                        visual_context += ", vibrant colors"
+                    if 'cartoon' in campaign_media_tuning.lower():
+                        visual_context += ", emphasizing cartoon character design on shirt"
+                        
+            # Generic Product Focus (when product detected but not specifically mapped)
+            else:
+                visual_context = (
+                    f"Person using or wearing {product_name}, showcasing the product prominently, "
+                    f"real-world usage context, lifestyle photography"
+                )
+                
+                # Add product themes to visual context
+                if product_themes:
+                    theme_context = ', '.join(product_themes[:3])
+                    visual_context += f", incorporating {theme_context} themes"
+                    
+                # Add visual elements if specified
+                if product_visual_elements:
+                    visual_context += f", featuring {product_visual_elements}"
+                    
+        # **BUSINESS-TYPE SPECIFIC GENERATION** (Fallback when no specific product)
         else:
-            # Generic business fallback with more context
-            visual_context = f"Professional business environment representing {industry} industry, showing {objective} in action with satisfied customers"
+            # Extract detailed business context for visual generation
+            logger.info(f"No specific product detected, using business-type context for {company_name}")
+            
+            if any(keyword in business_description.lower() for keyword in ['t-shirt', 'tshirt', 'apparel', 'clothing', 'print', 'custom']):
+                # T-shirt/Apparel Business (Generic)
+                visual_context = f"Diverse young adults wearing custom printed t-shirts with creative designs, laughing and having fun in an urban outdoor setting, natural lighting, lifestyle photography style"
+                if 'funny' in business_description.lower() or 'humor' in business_description.lower():
+                    visual_context += ", humorous and playful t-shirt designs visible"
+                
+            elif any(keyword in business_description.lower() for keyword in ['restaurant', 'food', 'dining', 'kitchen', 'chef', 'cuisine']):
+                # Restaurant/Food Business
+                visual_context = f"Professional food photography showing delicious prepared dishes, warm restaurant atmosphere with satisfied customers dining"
+                
+            elif any(keyword in business_description.lower() for keyword in ['fitness', 'gym', 'training', 'workout', 'health', 'exercise']):
+                # Fitness/Health Business
+                visual_context = f"Dynamic fitness scene with trainer and client working out in modern gym, showing transformation and success"
+                
+            elif any(keyword in business_description.lower() for keyword in ['tech', 'software', 'digital', 'app', 'platform', 'saas']):
+                # Technology Business
+                visual_context = f"Modern professionals collaborating with technology, clean office environment, digital interfaces"
+                
+            else:
+                # Generic business fallback
+                visual_context = f"Professional business environment representing {industry} industry, showing {objective} in action"
+        
+        # **CAMPAIGN GUIDANCE ENHANCEMENT**
+        if campaign_guidance:
+            visual_style_guidance = campaign_guidance.get('visual_style', {})
+            if visual_style_guidance:
+                photography_style = visual_style_guidance.get('photography_style', '')
+                mood = visual_style_guidance.get('mood', '')
+                lighting = visual_style_guidance.get('lighting', '')
+                
+                if photography_style:
+                    visual_context += f", {photography_style} style"
+                if mood:
+                    visual_context += f", {mood} mood"
+                if lighting:
+                    visual_context += f", {lighting}"
+        
+        # **USER MEDIA TUNING INTEGRATION**
+        if campaign_media_tuning:
+            logger.info(f"Applying user media tuning: {campaign_media_tuning}")
+            visual_context += f", incorporating user guidance: {campaign_media_tuning}"
+        
+        # **CREATIVE DIRECTION INTEGRATION**
+        if creative_direction:
+            visual_context += f", {creative_direction}"
         
         # Add target audience context
         if 'young' in target_audience.lower() or '18-35' in target_audience:
@@ -527,10 +599,10 @@ class VisualContentOrchestrator:
         elif 'family' in target_audience.lower():
             visual_context += ", family-friendly scene"
         
-        # Create final marketing-optimized prompt
-        marketing_prompt = f"{visual_context}, representing {company_name}'s approach to {objective}, 16:9 aspect ratio, commercial photography style, high quality, professional lighting"
+        # Create final marketing-optimized prompt with technical specs
+        marketing_prompt = f"{visual_context}, representing {company_name}, 16:9 aspect ratio, commercial photography style, high quality, professional lighting, sharp focus"
         
-        logger.info(f"Generated business-specific image prompt: {marketing_prompt[:100]}...")
+        logger.info(f"Generated enhanced image prompt: {marketing_prompt[:150]}...")
         return marketing_prompt
     
     def _create_video_prompt(self, post: Dict[str, Any], business_context: Dict[str, Any], objective: str) -> str:
@@ -603,13 +675,78 @@ async def generate_visual_content_for_posts(
     social_posts: List[Dict[str, Any]], 
     business_context: Dict[str, Any],
     campaign_objective: str,
-    target_platforms: List[str] = None
+    target_platforms: List[str] = None,
+    # ADK ENHANCEMENT: Enhanced context parameters for business-aware generation
+    campaign_media_tuning: str = "",
+    campaign_guidance: Dict[str, Any] = None,
+    product_context: Dict[str, Any] = None,
+    visual_style: Dict[str, Any] = None,
+    creative_direction: str = ""
 ) -> Dict[str, Any]:
-    """Convenience function for visual content generation."""
-    orchestrator = VisualContentOrchestrator()
-    return await orchestrator.generate_visual_content(
-        social_posts, business_context, campaign_objective, target_platforms
-    )
+    """
+    Generate visual content for social media posts with enhanced business context.
+    
+    ADK Data Flow Enhancement:
+    This function now receives comprehensive business analysis context to ensure
+    visual content is aligned with the specific business, product, and campaign objectives.
+    
+    Args:
+        social_posts: List of social media posts to enhance with visuals
+        business_context: Core business context from URL analysis
+        campaign_objective: Campaign objective for content alignment
+        target_platforms: Target social media platforms
+        campaign_media_tuning: User-provided media style guidance
+        campaign_guidance: Business analysis campaign guidance
+        product_context: Specific product information for visual focus
+        visual_style: Brand visual style guidelines
+        creative_direction: Overall creative direction for the campaign
+    
+    Returns:
+        Dict containing posts with generated visual content
+    """
+    try:
+        logger.info("🎨 Generating visual content with enhanced ADK business context")
+        
+        # Merge all context sources for comprehensive visual generation
+        enhanced_context = {
+            **business_context,
+            "campaign_media_tuning": campaign_media_tuning,
+            "campaign_guidance": campaign_guidance or {},
+            "product_context": product_context or {},
+            "visual_style": visual_style or {},
+            "creative_direction": creative_direction
+        }
+        
+        # Log context richness for debugging
+        logger.info(f"Enhanced context includes: company={enhanced_context.get('company_name')}, "
+                   f"product={enhanced_context.get('product_context', {}).get('product_name', 'general')}, "
+                   f"creative_direction={len(creative_direction)} chars, "
+                   f"media_tuning={len(campaign_media_tuning)} chars")
+        
+        # Initialize orchestrator with enhanced context
+        orchestrator = VisualContentOrchestrator()
+        
+        # Generate visual content with full business awareness
+        result = await orchestrator.generate_visual_content(
+            social_posts=social_posts,
+            business_context=enhanced_context,
+            campaign_objective=campaign_objective,
+            target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
+        )
+        
+        logger.info("✅ Visual content generation completed with business context awareness")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Enhanced visual content generation failed: {e}", exc_info=True)
+        # Fallback to basic generation
+        orchestrator = VisualContentOrchestrator()
+        return await orchestrator.generate_visual_content(
+            social_posts=social_posts,
+            business_context=business_context,
+            campaign_objective=campaign_objective,
+            target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
+        )
 
 # Export functions for use in other modules
 __all__ = [

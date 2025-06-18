@@ -9,6 +9,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 import os
 import time
+import asyncio
 
 from ..models import (
     ContentGenerationRequest, ContentGenerationResponse,
@@ -353,12 +354,11 @@ def generate_contextual_hashtags(business_context: dict) -> List[str]:
 async def generate_visual_content(request: dict):
     """Generate visual content (images and videos) for social media posts.
     
-    NOTE: Real Imagen/Veo API calls temporarily disabled due to timeout issues.
-    Enhanced placeholders are used instead with proper prompts for future implementation.
+    RESTORED: Real Imagen/Veo API calls with timeout protection for optimal image generation.
     """
     
     try:
-        logger.info("Generating visual content for social media posts (using enhanced placeholders)")
+        logger.info("Generating visual content for social media posts using real Imagen/Veo APIs")
         
         # Extract request data
         social_posts = request.get("social_posts", [])
@@ -372,25 +372,65 @@ async def generate_visual_content(request: dict):
                 detail="No social media posts provided for visual content generation"
             )
         
-        # TEMPORARY: Use enhanced placeholder generation instead of real API calls
-        # TODO: Re-enable real visual generation with optimized batch processing
-        logger.info("Using enhanced placeholder generation to avoid API timeouts")
+        # Use real visual content generation with timeout protection
+        if generate_visual_content_for_posts:
+            logger.info("Using real visual content agent for Imagen/Veo generation")
+            
+            try:
+                # Real visual content generation with timeout
+                result = await asyncio.wait_for(
+                    generate_visual_content_for_posts(
+                        social_posts=social_posts,
+                        business_context=business_context,
+                        campaign_objective=campaign_objective,
+                        target_platforms=target_platforms
+                    ),
+                    timeout=60.0  # 60-second timeout for batch visual generation
+                )
+                
+                logger.info("Successfully generated real visual content")
+                return result
+                
+            except asyncio.TimeoutError:
+                logger.warning("Visual content generation timeout - falling back to enhanced placeholders")
+                # Fall through to placeholder generation
+            except Exception as e:
+                logger.error(f"Visual content generation failed: {e}")
+                # Fall through to placeholder generation
+        
+        # Enhanced placeholder generation with business context
+        logger.info("Using enhanced placeholder generation with business context")
+        
+        enhanced_posts = []
+        for i, post in enumerate(social_posts):
+            enhanced_post = post.copy()
+            company_name = business_context.get('company_name', 'Company')
+            
+            if post.get("type") == "text_image":
+                enhanced_post["image_url"] = f"https://picsum.photos/1024/576?random={i+1000}&text={company_name.replace(' ', '+')}"
+                enhanced_post["image_prompt"] = post.get("image_prompt", f"Professional marketing image for {company_name}")
+            elif post.get("type") == "text_video":
+                enhanced_post["video_url"] = f"https://picsum.photos/1024/576?random={i+2000}&text={company_name.replace(' ', '+')}"
+                enhanced_post["video_prompt"] = post.get("video_prompt", f"Marketing video for {company_name}")
+                enhanced_post["thumbnail_url"] = f"https://picsum.photos/1024/576?random={i+2000}&text=Video+Thumbnail"
+            
+            enhanced_posts.append(enhanced_post)
         
         result = {
-            "posts_with_visuals": social_posts,
+            "posts_with_visuals": enhanced_posts,
             "visual_strategy": {
-                "total_posts": len(social_posts),
-                "image_posts": len([p for p in social_posts if p.get("type") == "text_image"]),
-                "video_posts": len([p for p in social_posts if p.get("type") == "text_video"]),
-                "brand_consistency": "Enhanced placeholders with proper prompts",
+                "total_posts": len(enhanced_posts),
+                "image_posts": len([p for p in enhanced_posts if p.get("type") == "text_image"]),
+                "video_posts": len([p for p in enhanced_posts if p.get("type") == "text_video"]),
+                "brand_consistency": "Enhanced placeholders with business context",
                 "platform_optimization": "Multi-platform ready",
-                "note": "Real Imagen/Veo generation temporarily disabled for performance"
+                "note": "Real Imagen/Veo generation attempted but using placeholders as fallback"
             },
             "generation_metadata": {
-                "agent_used": "EnhancedPlaceholderAgent",
-                "processing_time": 0.1,
+                "agent_used": "RealAgentWithPlaceholderFallback",
+                "processing_time": 0.5,
                 "quality_score": 7.5,
-                "status": "placeholder_mode"
+                "status": "placeholder_fallback"
             }
         }
         
@@ -589,6 +629,12 @@ async def _generate_batch_content_with_gemini(
         - Make content specific to {company_name} and their {objective}
         - Follow campaign themes: {', '.join(primary_themes)}
 
+        CRITICAL URL REQUIREMENTS for TEXT_URL posts:
+        - ALWAYS use the PRODUCT/SERVICE URL: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
+        - If promoting a specific product, use the product page URL, NOT the main website
+        - CTAs must be creative and engaging: "Check this out", "See more", "Discover now", "Get yours", "Learn more", "Shop now", "Explore this", "Don't miss out"
+        - NEVER use generic "Call-to-Action" or "CTA" text
+
         Format your response as JSON:
         {{
             "posts": [
@@ -655,8 +701,10 @@ async def _generate_batch_content_with_gemini(
                     
                     # Add type-specific fields with proper URL/CTA handling
                     if post_type == PostType.TEXT_URL:
-                        # Get URL from post data or business context
-                        post_url = post_data.get('url') or business_context.get('business_website') or business_context.get('product_service_url')
+                        # PRIORITY: Use product/service URL first, then business website as fallback
+                        post_url = (post_data.get('url') or 
+                                   business_context.get('product_service_url') or 
+                                   business_context.get('business_website'))
                         if post_url and not post_url.startswith('http'):
                             post_url = f"https://{post_url}"
                         post.url = post_url
@@ -667,39 +715,108 @@ async def _generate_batch_content_with_gemini(
                     elif post_type == PostType.TEXT_IMAGE:
                         post.image_prompt = post_data.get('image_prompt', f'Professional marketing image for {company_name} showing {objective}')
                         
-                        # TEMPORARY FIX: Use enhanced placeholder instead of real API calls to avoid timeout
-                        # TODO: Optimize visual content generation for batch processing
+                        # RESTORED: Real visual content generation with timeout protection
                         try:
-                            # Enhanced placeholder with actual prompt for better context
-                            enhanced_prompt = post.image_prompt
-                            if has_specific_product and product_name:
-                                enhanced_prompt = f"Professional lifestyle photo: People wearing/using {product_name}, {enhanced_prompt}"
+                            # Create post data for visual content generation
+                            image_post_data = {
+                                "id": post.id,
+                                "type": "text_image",
+                                "content": post.content,
+                                "image_prompt": post.image_prompt
+                            }
                             
-                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&text={enhanced_company_name.replace(' ', '+')}"
-                            logger.info(f"Generated enhanced placeholder image for post {i+1} with prompt: {enhanced_prompt[:100]}...")
+                            # Generate real visual content with timeout protection
+                            visual_result = await asyncio.wait_for(
+                                generate_visual_content_for_posts(
+                                    social_posts=[image_post_data],
+                                    business_context=business_context,
+                                    campaign_objective=objective,
+                                    target_platforms=["instagram", "linkedin", "facebook"],
+                                    # ADK ENHANCEMENT: Pass campaign media tuning for context-aware generation
+                                    campaign_media_tuning=business_context.get('campaign_media_tuning', ''),
+                                    # ADK ENHANCEMENT: Pass campaign guidance from business analysis
+                                    campaign_guidance=business_context.get('campaign_guidance', {}),
+                                    # ADK ENHANCEMENT: Pass product context for specific product focus
+                                    product_context=business_context.get('product_context', {}),
+                                    # ADK ENHANCEMENT: Pass visual style from business analysis
+                                    visual_style=business_context.get('campaign_guidance', {}).get('visual_style', {}),
+                                    # ADK ENHANCEMENT: Pass creative direction for brand consistency
+                                    creative_direction=business_context.get('campaign_guidance', {}).get('creative_direction', '')
+                                ),
+                                timeout=20.0  # 20-second timeout per image generation
+                            )
+                            
+                            # Extract generated image URL
+                            if (visual_result and 
+                                visual_result.get("posts_with_visuals") and 
+                                len(visual_result["posts_with_visuals"]) > 0):
+                                generated_post = visual_result["posts_with_visuals"][0]
+                                post.image_url = generated_post.get("image_url", f"https://picsum.photos/1024/576?random={i+100}&text=Imagen+Timeout")
+                                logger.info(f"Generated real image for post {i+1}: {post.image_url}")
+                            else:
+                                post.image_url = f"https://picsum.photos/1024/576?random={i+100}&text=Imagen+Failed"
+                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
                                 
+                        except asyncio.TimeoutError:
+                            logger.warning(f"Image generation timeout for post {i+1}, using enhanced placeholder")
+                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&text={enhanced_company_name.replace(' ', '+')}"
                         except Exception as e:
-                            logger.error(f"Enhanced placeholder generation failed for post {i+1}: {e}")
-                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&blur=1"
+                            logger.error(f"Image generation failed for post {i+1}: {e}")
+                            post.image_url = f"https://picsum.photos/1024/576?random={i+100}&text=Error"
                         
                     elif post_type == PostType.TEXT_VIDEO:
                         post.video_prompt = post_data.get('video_prompt', f'Dynamic marketing video showcasing {company_name} approach to {objective}')
                         
-                        # TEMPORARY FIX: Use enhanced placeholder instead of real API calls to avoid timeout
-                        # TODO: Optimize visual content generation for batch processing
+                        # RESTORED: Real visual content generation with timeout protection
                         try:
-                            # Enhanced video placeholder with actual prompt for better context
-                            enhanced_prompt = post.video_prompt
-                            if has_specific_product and product_name:
-                                enhanced_prompt = f"Dynamic video: People enjoying/using {product_name}, {enhanced_prompt}"
+                            # Create post data for visual content generation
+                            video_post_data = {
+                                "id": post.id,
+                                "type": "text_video", 
+                                "content": post.content,
+                                "video_prompt": post.video_prompt
+                            }
                             
+                            # Generate real visual content with timeout protection
+                            visual_result = await asyncio.wait_for(
+                                generate_visual_content_for_posts(
+                                    social_posts=[video_post_data],
+                                    business_context=business_context,
+                                    campaign_objective=objective,
+                                    target_platforms=["tiktok", "instagram", "youtube"],
+                                    # ADK ENHANCEMENT: Pass campaign media tuning for context-aware generation
+                                    campaign_media_tuning=business_context.get('campaign_media_tuning', ''),
+                                    # ADK ENHANCEMENT: Pass campaign guidance from business analysis
+                                    campaign_guidance=business_context.get('campaign_guidance', {}),
+                                    # ADK ENHANCEMENT: Pass product context for specific product focus
+                                    product_context=business_context.get('product_context', {}),
+                                    # ADK ENHANCEMENT: Pass visual style from business analysis
+                                    visual_style=business_context.get('campaign_guidance', {}).get('visual_style', {}),
+                                    # ADK ENHANCEMENT: Pass creative direction for brand consistency
+                                    creative_direction=business_context.get('campaign_guidance', {}).get('creative_direction', '')
+                                ),
+                                timeout=30.0  # 30-second timeout per video generation
+                            )
+                            
+                            # Extract generated video URL
+                            if (visual_result and 
+                                visual_result.get("posts_with_visuals") and 
+                                len(visual_result["posts_with_visuals"]) > 0):
+                                generated_post = visual_result["posts_with_visuals"][0]
+                                post.video_url = generated_post.get("video_url", f"https://picsum.photos/1024/576?random={i+200}&text=Veo+Timeout")
+                                post.thumbnail_url = generated_post.get("thumbnail_url")
+                                logger.info(f"Generated real video for post {i+1}: {post.video_url}")
+                            else:
+                                post.video_url = f"https://picsum.photos/1024/576?random={i+200}&text=Veo+Failed"
+                                logger.warning(f"Visual content generation failed for post {i+1}, using placeholder")
+                                
+                        except asyncio.TimeoutError:
+                            logger.warning(f"Video generation timeout for post {i+1}, using enhanced placeholder")
                             post.video_url = f"https://picsum.photos/1024/576?random={i+200}&text={enhanced_company_name.replace(' ', '+')}"
                             post.thumbnail_url = f"https://picsum.photos/1024/576?random={i+200}&text=Video+Thumbnail"
-                            logger.info(f"Generated enhanced placeholder video for post {i+1} with prompt: {enhanced_prompt[:100]}...")
-                                
                         except Exception as e:
-                            logger.error(f"Enhanced placeholder generation failed for post {i+1}: {e}")
-                            post.video_url = f"https://picsum.photos/1024/576?random={i+200}&grayscale"
+                            logger.error(f"Video generation failed for post {i+1}: {e}")
+                            post.video_url = f"https://picsum.photos/1024/576?random={i+200}&text=Error"
                     
                     generated_posts.append(post)
                 
@@ -741,7 +858,9 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
         
         # Add type-specific fields for fallback posts
         if post_type == PostType.TEXT_URL:
-            post_url = business_context.get('business_website') or business_context.get('product_service_url')
+            # PRIORITY: Use product/service URL first, then business website as fallback
+            post_url = (business_context.get('product_service_url') or 
+                       business_context.get('business_website'))
             if post_url and not post_url.startswith('http'):
                 post_url = f"https://{post_url}"
             post.url = post_url

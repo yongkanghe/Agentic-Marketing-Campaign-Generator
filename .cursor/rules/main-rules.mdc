@@ -5,6 +5,18 @@ alwaysApply: true
 ---
 use makefiles for application operations, running, testing and similar.
 
+do not create or use mocks, or stubs, unleass this is aprt of the test suite.
+
+Use Graceful error exception handling highlighing the missing functionality where appropriate
+
+You must Use Real, complete, and validate, tested feature and capability implemetation 
+
+Use Makefile targets for runtime testing and validation.
+
+read application logs to validate solution is compelte is valid
+
+Ensure applicaiton emits the relevant debug level logging to validate functionality and prove capability implementation
+
 Read the documentation and readme files to understand the solution architecture and solution intent before proceeding with any further additional code improvements or functional extensions to the solution.
 
 the app is on port 8080. ensure this is consistent and well documented.
@@ -13,15 +25,15 @@ use system 'date' command to ascertain the latest datetime before writing date s
 
 always review the documentation first and evaluate the solution maturity and completeness. 
 
-assess if the functionality and features have been implemented sucessfully by running the appropriate, relevant tests. 
+assess if the functionality and features have been implemented sucessfully by running the appropriate, relevant quick tests. 
 
 Mark the TODO/EPIC activities as done once relevant features/functioanltiy has been implemented
 
-Commit and push once the testing and documentation  update tasks are performed
+Commit and push once the quick testing and documentation  update tasks are performed
 
 We are working towards MVP grade solution. 
 
-ensure you regularly test and validate the solution architecture, before committing and pushing the changes to github
+ensure you regularly quick test and validate the solution architecture, before committing and pushing the changes to github
 
 do not use stubs or mock data, as we target a functionally complete solution capability
 

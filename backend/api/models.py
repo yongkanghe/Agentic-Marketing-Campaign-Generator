@@ -34,14 +34,30 @@ class PostType(str, Enum):
 
 # Base Models
 class BusinessAnalysis(BaseModel):
-    """Business analysis results from URL and file processing."""
+    """
+    Business analysis results from URL and file processing.
+    
+    ADK Enhancement: This model now includes all fields required for 
+    proper data flow to downstream content generation agents.
+    """
+    # Core business information
     company_name: Optional[str] = None
+    business_description: Optional[str] = None  # ADK ENHANCEMENT: Required for content generation
     industry: Optional[str] = None
     target_audience: Optional[str] = None
+    
+    # Business context
     value_propositions: List[str] = Field(default_factory=list)
     brand_voice: Optional[str] = None
     competitive_advantages: List[str] = Field(default_factory=list)
     market_positioning: Optional[str] = None
+    key_messaging: List[str] = Field(default_factory=list)  # ADK ENHANCEMENT
+    
+    # ADK ENHANCEMENT: Product-specific context for Visual Content Agent
+    product_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    
+    # ADK ENHANCEMENT: Campaign guidance for UI and content generation
+    campaign_guidance: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class FileUpload(BaseModel):
     """File upload information."""
@@ -60,6 +76,7 @@ class SocialMediaPost(BaseModel):
     image_url: Optional[str] = None
     video_prompt: Optional[str] = None
     video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None  # ADK ENHANCEMENT: Missing field for video thumbnails
     hashtags: List[str] = Field(default_factory=list)
     platform_optimized: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     engagement_score: Optional[float] = None

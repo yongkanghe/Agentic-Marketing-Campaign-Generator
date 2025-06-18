@@ -190,22 +190,64 @@ const IdeationPage: React.FC = () => {
   const regenerateAIAnalysis = async () => {
     setIsRegeneratingAnalysis(true);
     try {
-      // TODO: Replace with real API call to backend
-      // const response = await fetch(`/api/v1/campaigns/${currentCampaign.id}/regenerate-analysis`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' }
-      // });
-      // const data = await response.json();
-      
-      // Mock regeneration for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('AI analysis regenerated successfully!');
-      
-      // In real implementation, this would update the aiSummary in context
-      // updateAISummary(data.analysis);
+      // Real API call to analyze URLs and get themes/tags
+      if (currentCampaign && (currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl)) {
+        const urls = [
+          currentCampaign.businessUrl,
+          currentCampaign.aboutPageUrl,
+          currentCampaign.productServiceUrl
+        ].filter(url => url && url.trim());
+
+        const response = await fetch('/api/v1/analysis/url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            urls: urls,
+            analysis_depth: 'comprehensive'
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Analysis failed: ${response.status}`);
+        }
+
+        const analysisResult = await response.json();
+        
+        // Extract themes and tags from analysis result
+        const suggestedThemes = analysisResult.suggested_themes || [];
+        const suggestedTags = analysisResult.suggested_tags || [];
+        
+        // Update the marketing context with real themes and tags
+        if (suggestedThemes.length > 0) {
+          // Clear existing themes and add new ones
+          selectedThemes.forEach(theme => unselectTheme(theme));
+          suggestedThemes.slice(0, 3).forEach((theme: string) => selectTheme(theme));
+        }
+        
+        if (suggestedTags.length > 0) {
+          // Clear existing tags and add new ones  
+          selectedTags.forEach(tag => unselectTag(tag));
+          suggestedTags.slice(0, 4).forEach((tag: string) => selectTag(tag));
+        }
+
+        // Update AI summary with business analysis
+        if (analysisResult.business_analysis) {
+          const businessAnalysis = analysisResult.business_analysis;
+          const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Key strengths: ${businessAnalysis.competitive_advantages?.join(', ') || 'Not specified'}.`;
+          // Note: We would need to add setAiSummary to the context to update this
+        }
+
+        toast.success(`✨ AI Analysis Complete! Found ${suggestedThemes.length} themes and ${suggestedTags.length} tags from your business context.`);
+      } else {
+        // Fallback for campaigns without URLs
+        toast.warning('No URLs provided for analysis. Using default themes and tags.');
+      }
       
     } catch (error) {
-      toast.error('Failed to regenerate AI analysis');
+      console.error('AI analysis regeneration failed:', error);
+      toast.error('Failed to regenerate AI analysis. Please check your connection and try again.');
     } finally {
       setIsRegeneratingAnalysis(false);
     }
