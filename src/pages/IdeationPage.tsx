@@ -157,23 +157,26 @@ const IdeationPage: React.FC = () => {
       });
       
       // Transform API response to match frontend format
-      const transformedPosts = data.new_posts.map((post: any, idx: number) => ({
-        id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
-        type: columnId as 'text-only' | 'text-with-image' | 'text-with-video',
-        platform: 'linkedin' as const,
-        content: {
-          text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
-          hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-          imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
-          videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
-          productUrl: (columnId === 'text-only' && post.url) ? post.url : 
-                     (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
-        },
-        generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
-        selected: false,
-        engagement_score: post.engagement_score || (7.0 + idx * 0.1),
-        platform_optimized: post.platform_optimized || {}
-      }));
+      const transformedPosts = data.new_posts.map((post: any, idx: number) => {
+        const column = socialMediaColumns.find(col => col.id === columnId);
+        return {
+          id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
+          type: column?.mediaType || columnId as 'text-only' | 'text-with-image' | 'text-with-video',
+          platform: 'linkedin' as const,
+          content: {
+            text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
+            hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
+            imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
+            videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
+            productUrl: (columnId === 'text-only' && post.url) ? post.url : 
+                       (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
+          },
+          generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
+          selected: false,
+          engagement_score: post.engagement_score || (7.0 + idx * 0.1),
+          platform_optimized: post.platform_optimized || {}
+        };
+      });
       
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { ...col, posts: transformedPosts, isGenerating: false } : col
@@ -869,7 +872,7 @@ const IdeationPage: React.FC = () => {
                               <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                                 <div className="flex items-center gap-2 mb-1">
                                   <ExternalLink className="text-blue-400" size={14} />
-                                  <span className="text-xs font-medium text-blue-400">Call-to-Action Link</span>
+                                  <span className="text-xs font-medium text-blue-400">See More</span>
                                 </div>
                                 <a 
                                   href={post.content.productUrl} 

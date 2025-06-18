@@ -12,6 +12,12 @@ NODE_AVAILABLE := $(shell command -v node 2> /dev/null)
 BUN_AVAILABLE := $(shell command -v bun 2> /dev/null)
 PYTHON_AVAILABLE := $(shell command -v python3 2> /dev/null)
 
+# Load environment variables from backend/.env if it exists
+ifneq (,$(wildcard backend/.env))
+    include backend/.env
+    export
+endif
+
 # Default target
 help: ## Show this help message
 	@echo "AI Marketing Campaign Post Generator - Available Commands:"

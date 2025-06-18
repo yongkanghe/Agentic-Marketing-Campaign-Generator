@@ -16,7 +16,7 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../.env'))
 
 from google import genai
 from google.genai import types

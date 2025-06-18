@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../.env'))
 
 from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.agents.llm_agent import LlmAgent
