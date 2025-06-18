@@ -1,13 +1,14 @@
 /**
  * API Client Configuration
  * 
- * Author: JP + 2025-06-15
+ * Author: JP + 2025-06-18
  * 
  * Centralized API client for AI Marketing Campaign Post Generator frontend-backend communication.
- * Handles HTTP requests, error handling, and response formatting.
+ * Handles HTTP requests, error handling, and response formatting with comprehensive DEBUG logging.
  */
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { logApiRequest, logApiResponse, logApiError, debug, info, warn, error } from '@/utils/logger';
 
 // API Configuration - Environment-based URL resolution
 const getApiBaseUrl = (): string => {
@@ -30,11 +31,10 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Log configuration for debugging (dev only)
-if (import.meta.env.DEV) {
-  console.log(`🔗 API Base URL: ${API_BASE_URL}`);
-  console.log(`🌍 Environment: ${import.meta.env.MODE}`);
-}
+// Log configuration for debugging
+debug(`🔗 API Base URL: ${API_BASE_URL}`, undefined, 'API');
+debug(`🌍 Environment: ${import.meta.env.MODE}`, undefined, 'API');
+info('🚀 API Client initialized', { baseURL: API_BASE_URL, timeout: 45000 }, 'API');
 
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
@@ -45,40 +45,96 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor for adding auth tokens (future use)
+// Track request timing
+const requestTimings = new Map<string, number>();
+
+// Request interceptor for adding auth tokens and logging
 apiClient.interceptors.request.use(
   (config) => {
+    // Log API request and track timing
+    const requestKey = `${config.method?.toUpperCase()}_${config.url}_${Date.now()}`;
+    requestTimings.set(requestKey, Date.now());
+    
+    logApiRequest(
+      config.method?.toUpperCase() || 'UNKNOWN', 
+      config.url || 'unknown', 
+      config.data
+    );
+    
+    // Store request key for response timing
+    config.headers['X-Request-ID'] = requestKey;
+    
     // Add auth token when available
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      debug('🔐 Auth token added to request', undefined, 'API');
     }
+    
     return config;
   },
   (error) => {
+    error('💥 Request interceptor error', error, 'API');
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling and logging
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    return response;
-  },
-  (error: AxiosError) => {
-    // Handle common error scenarios
-    if (error.response?.status === 401) {
-      // Unauthorized - clear auth and redirect to login (future)
-      localStorage.removeItem('auth_token');
-    } else if (error.response?.status === 429) {
-      // Rate limited
-      console.warn('API rate limit exceeded');
-    } else if (error.code === 'ECONNABORTED') {
-      // Timeout
-      console.error('API request timeout');
+    // Calculate request duration
+    const requestKey = response.config.headers['X-Request-ID'] as string;
+    const startTime = requestTimings.get(requestKey);
+    const duration = startTime ? Date.now() - startTime : undefined;
+    
+    // Clean up timing map
+    if (requestKey) {
+      requestTimings.delete(requestKey);
     }
     
-    return Promise.reject(error);
+    // Log successful response
+    logApiResponse(
+      response.config.method?.toUpperCase() || 'UNKNOWN',
+      response.config.url || 'unknown',
+      response.status,
+      response.data,
+      duration
+    );
+    
+    return response;
+  },
+  (axiosError: AxiosError) => {
+    // Calculate request duration for failed requests
+    const requestKey = axiosError.config?.headers?.['X-Request-ID'] as string;
+    const startTime = requestKey ? requestTimings.get(requestKey) : undefined;
+    const duration = startTime ? Date.now() - startTime : undefined;
+    
+    // Clean up timing map
+    if (requestKey) {
+      requestTimings.delete(requestKey);
+    }
+    
+    // Log API error
+    logApiError(
+      axiosError.config?.method?.toUpperCase() || 'UNKNOWN',
+      axiosError.config?.url || 'unknown',
+      axiosError
+    );
+    
+    // Handle common error scenarios
+    if (axiosError.response?.status === 401) {
+      // Unauthorized - clear auth and redirect to login (future)
+      localStorage.removeItem('auth_token');
+      warn('🔐 Unauthorized - clearing auth token', undefined, 'API');
+    } else if (axiosError.response?.status === 429) {
+      // Rate limited
+      warn('⏰ API rate limit exceeded', { retryAfter: axiosError.response.headers['retry-after'] }, 'API');
+    } else if (axiosError.code === 'ECONNABORTED') {
+      // Timeout
+      error('⏱️ API request timeout', { timeout: '45s', duration }, 'API');
+    }
+    
+    return Promise.reject(axiosError);
   }
 );
 

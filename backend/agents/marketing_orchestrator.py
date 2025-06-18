@@ -367,25 +367,7 @@ async def create_hashtag_optimization_agent() -> LlmAgent:
         """,
         description="Optimizes hashtags for social media posts to maximize reach and engagement",
         output_key="optimized_posts",
-        tools=[optimize_hashtags],
-        tool_configs={
-            "optimize_hashtags": {
-                "name": "optimize_hashtags",
-                "description": "Optimizes hashtags for a list of social media posts.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "social_posts": {"type": "OBJECT"},
-                        "business_context": {"type": "OBJECT"},
-                        "target_platforms": {
-                            "type": "ARRAY",
-                            "items": {"type": "STRING"}
-                        }
-                    },
-                    "required": ["social_posts", "business_context", "target_platforms"]
-                }
-            }
-        }
+        tools=[optimize_hashtags]
     )
 
 # --- Sequential Agent Orchestration ---

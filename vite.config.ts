@@ -9,20 +9,32 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
-      // Proxy API requests to backend
+      // Proxy API requests to backend with DEBUG logging
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
+          proxy.on('error', (err, req, _res) => {
+            const timestamp = new Date().toISOString();
+            console.error(`[${timestamp}] 🔥 PROXY ERROR: ${req.method} ${req.url}`, err);
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
+            const timestamp = new Date().toISOString();
+            console.log(`[${timestamp}] 🔌 PROXY REQUEST: ${req.method} ${req.url} -> ${proxyReq.getHeader('host')}`);
+            if (req.method === 'POST' || req.method === 'PUT') {
+              console.log(`[${timestamp}] 📦 Request Headers:`, req.headers);
+            }
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+            const timestamp = new Date().toISOString();
+            const duration = req.headers['x-request-start'] ? 
+              Date.now() - parseInt(req.headers['x-request-start'] as string) : 'unknown';
+            const statusCode = proxyRes.statusCode || 0;
+            console.log(`[${timestamp}] ✅ PROXY RESPONSE: ${req.method} ${req.url} - ${statusCode} (${duration}ms)`);
+            if (statusCode >= 400) {
+              console.warn(`[${timestamp}] ⚠️ Response Headers:`, proxyRes.headers);
+            }
           });
         },
       }

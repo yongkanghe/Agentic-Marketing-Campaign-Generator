@@ -35,9 +35,9 @@ from .routes.analysis import router as analysis_router
 from .models import CampaignRequest, CampaignResponse, ErrorResponse
 from agents.marketing_orchestrator import create_marketing_orchestrator_agent
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure comprehensive logging
+from config.logging import setup_logging, get_logger
+logger = setup_logging()
 
 # Global agent instance
 marketing_agent: SequentialAgent = None
@@ -49,23 +49,42 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager for ADK agent initialization."""
     global marketing_agent
     
-    logger.info("Initializing AI Marketing Campaign Post Generator backend...")
+    logger.info("=== AI Marketing Campaign Post Generator Backend Startup ===")
+    logger.debug(f"Environment variables loaded from: {os.path.join(os.path.dirname(__file__), '../.env')}")
     
-    # Validate environment
-    if not os.getenv("GEMINI_API_KEY"):
+    # Log environment status
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+    log_file = os.getenv("LOG_FILE", "not set")
+    
+    logger.info(f"Configuration:")
+    logger.info(f"  - Log Level: {log_level}")
+    logger.info(f"  - Log File: {log_file}")
+    logger.info(f"  - GEMINI_API_KEY: {'SET' if gemini_key else 'NOT SET'}")
+    
+    if gemini_key:
+        logger.debug(f"GEMINI_API_KEY length: {len(gemini_key)} characters")
+    else:
         logger.warning("GEMINI_API_KEY not set - AI functionality will be limited")
     
     # Initialize the marketing orchestrator agent
+    logger.debug("Initializing marketing orchestrator agent...")
     try:
         marketing_agent = await create_marketing_orchestrator_agent()
-        logger.info("Marketing orchestrator agent initialized successfully")
+        logger.info("✅ Marketing orchestrator agent initialized successfully")
+        logger.debug(f"Agent details: {type(marketing_agent).__name__}")
     except Exception as e:
-        logger.error(f"Failed to initialize marketing agent: {e}")
+        logger.error(f"❌ Failed to initialize marketing agent: {e}")
+        logger.exception("Full exception details:")
         raise
+    
+    logger.info("=== Backend startup complete ===")
     
     yield
     
-    logger.info("Shutting down AI Marketing Campaign Post Generator backend...")
+    logger.info("=== AI Marketing Campaign Post Generator Backend Shutdown ===")
+    logger.debug("Cleaning up resources...")
+    logger.info("✅ Shutdown complete")
 
 # Create FastAPI application
 app = FastAPI(
@@ -131,15 +150,25 @@ async def root():
 @app.get("/health", response_model=dict)
 async def health_check():
     """Health check endpoint for monitoring."""
-    return {
+    logger.debug("Health check endpoint called")
+    
+    agent_initialized = marketing_agent is not None
+    gemini_configured = bool(os.getenv("GEMINI_API_KEY"))
+    
+    logger.debug(f"Health check status: agent_initialized={agent_initialized}, gemini_configured={gemini_configured}")
+    
+    health_status = {
         "status": "healthy",
-        "agent_initialized": marketing_agent is not None,
-        "gemini_key_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "agent_initialized": agent_initialized,
+        "gemini_key_configured": gemini_configured,
         "services": {
             "session_service": "in_memory",
             "artifact_service": "in_memory"
         }
     }
+    
+    logger.debug(f"Returning health status: {health_status}")
+    return health_status
 
 @app.get("/api/v1/agent/status", response_model=dict)
 async def agent_status():
@@ -160,6 +189,10 @@ async def agent_status():
 async def http_exception_handler(request, exc):
     """Handle HTTP exceptions with proper error response format."""
     from fastapi.responses import JSONResponse
+    
+    logger.warning(f"HTTP Exception: {exc.status_code} - {exc.detail} - Path: {request.url}")
+    logger.debug(f"Request details: Method={request.method}, Headers={dict(request.headers)}")
+    
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -173,7 +206,12 @@ async def http_exception_handler(request, exc):
 async def general_exception_handler(request, exc):
     """Handle general exceptions with proper logging."""
     from fastapi.responses import JSONResponse
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    
+    logger.error(f"❌ Unhandled exception: {exc}")
+    logger.error(f"Request: {request.method} {request.url}")
+    logger.error(f"Headers: {dict(request.headers)}")
+    logger.exception("Full exception traceback:")
+    
     return JSONResponse(
         status_code=500,
         content={

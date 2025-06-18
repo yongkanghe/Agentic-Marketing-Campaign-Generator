@@ -29,6 +29,7 @@ const IdeationPage: React.FC = () => {
     selectTag,
     unselectTag,
     updateCurrentCampaign,
+    updateAiSummary,
     generateIdeas
   } = useMarketingContext();
   
@@ -251,8 +252,58 @@ const IdeationPage: React.FC = () => {
         });
         
         // Extract themes and tags from analysis result
-        const suggestedThemes = analysisResult.suggested_themes || [];
-        const suggestedTags = analysisResult.suggested_tags || [];
+        let suggestedThemes = analysisResult.suggested_themes || [];
+        let suggestedTags = analysisResult.suggested_tags || [];
+        
+        // Fallback: extract from nested structure if top-level fields are empty
+        if (suggestedThemes.length === 0) {
+          const nestedThemes = (analysisResult as any)?.business_analysis?.campaign_guidance?.content_themes?.primary_themes;
+          if (nestedThemes && Array.isArray(nestedThemes)) {
+            suggestedThemes = nestedThemes;
+            console.log('📝 Extracted themes from nested structure:', suggestedThemes);
+          }
+        }
+        
+        if (suggestedTags.length === 0) {
+          // Generate tags from business analysis
+          const businessAnalysis = (analysisResult as any)?.business_analysis;
+          if (businessAnalysis) {
+            const generatedTags: string[] = [];
+            
+            // Extract from value propositions
+            if (businessAnalysis.value_propositions && Array.isArray(businessAnalysis.value_propositions)) {
+              businessAnalysis.value_propositions.slice(0, 3).forEach((prop: string) => {
+                const tag = prop.replace(/[^a-zA-Z0-9]/g, '').slice(0, 15);
+                if (tag.length > 3) generatedTags.push(tag);
+              });
+            }
+            
+            // Extract from industry
+            if (businessAnalysis.industry && typeof businessAnalysis.industry === 'string') {
+              const industryWords = businessAnalysis.industry.split(/[\s(),]+/).filter((word: string) => word.length > 3);
+              generatedTags.push(...industryWords.slice(0, 3));
+            }
+            
+            // Extract from competitive advantages
+            if (businessAnalysis.competitive_advantages && Array.isArray(businessAnalysis.competitive_advantages)) {
+              businessAnalysis.competitive_advantages.slice(0, 2).forEach((advantage: string) => {
+                const words = advantage.split(' ').slice(0, 2);
+                words.forEach((word: string) => {
+                  const cleanWord = word.replace(/[^a-zA-Z0-9]/g, '');
+                  if (cleanWord.length > 3) generatedTags.push(cleanWord);
+                });
+              });
+            }
+            
+            // Fallback tags
+            if (generatedTags.length === 0) {
+              generatedTags.push('Business', 'Quality', 'Value', 'Innovation', 'Growth');
+            }
+            
+            suggestedTags = [...new Set(generatedTags)].slice(0, 8); // Remove duplicates and limit
+            console.log('🏷️ Generated tags from business analysis:', suggestedTags);
+          }
+        }
         
         // Update the marketing context with real themes and tags
         if (suggestedThemes.length > 0) {
@@ -269,18 +320,38 @@ const IdeationPage: React.FC = () => {
 
         // Update AI summary with business analysis
         if (analysisResult.business_analysis) {
-          const businessAnalysis = analysisResult.business_analysis;
-          const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Analysis regenerated successfully.`;
+          const businessAnalysis = (analysisResult as any).business_analysis;
+          const companyName = businessAnalysis.company_name || 'Your Company';
+          const industry = businessAnalysis.industry || 'your industry';
+          const targetAudience = businessAnalysis.target_audience || 'your target audience';
+          const valuePropositions = businessAnalysis.value_propositions || [];
+          const competitiveAdvantages = businessAnalysis.competitive_advantages || [];
           
-                  // Update the current campaign with the COMPLETE new analysis
-        updateCurrentCampaign({
-          aiAnalysis: {
-            summary: newSummary,
-            businessAnalysis: businessAnalysis,
-            campaignGuidance: businessAnalysis.campaign_guidance || {},
-            lastUpdated: new Date().toISOString()
+          // Create a comprehensive AI summary
+          let newSummary = `AI Analysis: ${companyName} operates in ${industry}, targeting ${targetAudience}.`;
+          
+          if (valuePropositions.length > 0) {
+            newSummary += ` Key value propositions: ${valuePropositions.slice(0, 2).join(', ')}.`;
           }
-        });
+          
+          if (competitiveAdvantages.length > 0) {
+            newSummary += ` Competitive advantages: ${competitiveAdvantages.slice(0, 2).join(', ')}.`;
+          }
+          
+          newSummary += ` Campaign analysis regenerated successfully with ${suggestedThemes.length} themes and ${suggestedTags.length} tags.`;
+          
+          // Update the AI summary in the context immediately
+          updateAiSummary(newSummary);
+          
+          // Update the current campaign with the COMPLETE new analysis
+          updateCurrentCampaign({
+            aiAnalysis: {
+              summary: newSummary,
+              businessAnalysis: businessAnalysis,
+              campaignGuidance: businessAnalysis.campaign_guidance || {},
+              lastUpdated: new Date().toISOString()
+            }
+          });
         }
 
         toast.success(`✨ AI Analysis Complete! Found ${suggestedThemes.length} themes and ${suggestedTags.length} tags from your business context.`);
@@ -640,7 +711,7 @@ const IdeationPage: React.FC = () => {
                   <Hash className="text-blue-400" size={16} />
                   <span className="text-sm font-medium text-blue-400">Text + URL Posts</span>
                 </div>
-                <p className="text-lg font-bold vvl-text-primary">Up to 10 posts</p>
+                <p className="text-lg font-bold vvl-text-primary">Up to 4 posts</p>
                 <p className="text-xs vvl-text-secondary">Optimized for link sharing and traffic generation</p>
               </div>
               

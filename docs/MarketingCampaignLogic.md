@@ -23,7 +23,7 @@ The system generates three distinct post types optimized for different marketing
 - **Purpose**: Link unfurling and traffic driving
 - **Character Limit**: 40-120 characters (social media optimized)
 - **Requirements**: MUST include Call-To-Action (CTA) and clickable URL
-- **Cost Control**: Up to 10 posts (low API cost - text generation only)
+- **Cost Control**: Up to 4 posts (low API cost - text generation only)
 
 ##### B. Text + Image Posts (ENHANCED Tier)  
 - **Purpose**: Visual engagement and brand representation

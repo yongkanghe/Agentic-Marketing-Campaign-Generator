@@ -1,9 +1,9 @@
 # AI Marketing Campaign Post Generator - Makefile
-# Author: JP + 2025-06-16
+# Author: JP + 2025-06-18
 # 3 Musketeers pattern for consistent development workflow
 # Uses Docker, Docker Compose, and Make for environment consistency
 
-.PHONY: help install install-frontend install-backend dev dev-frontend dev-backend test test-frontend test-backend test-ui test-api health-check launch runtime status-check build clean lint format docker-build docker-run docker-dev docker-test test-unit test-integration test-e2e test-coverage launch-all test-full-stack setup-database start-backend start-frontend stop-all
+.PHONY: help install install-frontend install-backend dev dev-frontend dev-backend test test-frontend test-backend test-ui test-api health-check launch runtime status-check build clean lint format docker-build docker-run docker-dev docker-test test-unit test-integration test-e2e test-coverage launch-all test-full-stack setup-database start-backend start-frontend stop-all clean-logs
 
 # Environment Detection
 DOCKER_AVAILABLE := $(shell command -v docker 2> /dev/null)
@@ -11,6 +11,11 @@ DOCKER_COMPOSE_AVAILABLE := $(shell command -v docker-compose 2> /dev/null)
 NODE_AVAILABLE := $(shell command -v node 2> /dev/null)
 BUN_AVAILABLE := $(shell command -v bun 2> /dev/null)
 PYTHON_AVAILABLE := $(shell command -v python3 2> /dev/null)
+
+# Log file paths
+BACKEND_LOG_FILE := logs/backend-debug.log
+FRONTEND_LOG_FILE := logs/frontend-debug.log
+LOG_DIR := logs
 
 # Load environment variables from backend/.env if it exists
 ifneq (,$(wildcard backend/.env))
@@ -25,25 +30,79 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
-# FULL STACK LAUNCH & TESTING TARGETS
+# LOGGING INFRASTRUCTURE
 # =============================================================================
 
-launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Frontend)
+setup-logging: ## 🔧 Setup logging infrastructure (create log directory and files)
+	@echo "🔧 Setting up logging infrastructure..."
+	@mkdir -p $(LOG_DIR)
+	@echo "📁 Created logs directory: $(LOG_DIR)"
+	@echo "# AI Marketing Campaign Post Generator - Backend Debug Log" > $(BACKEND_LOG_FILE)
+	@echo "# Started: $$(date)" >> $(BACKEND_LOG_FILE)
+	@echo "# Log Level: DEBUG" >> $(BACKEND_LOG_FILE)
+	@echo "# =========================================================" >> $(BACKEND_LOG_FILE)
+	@echo "" >> $(BACKEND_LOG_FILE)
+	@echo "# AI Marketing Campaign Post Generator - Frontend Debug Log" > $(FRONTEND_LOG_FILE)
+	@echo "# Started: $$(date)" >> $(FRONTEND_LOG_FILE)
+	@echo "# Log Level: DEBUG" >> $(FRONTEND_LOG_FILE)
+	@echo "# =========================================================" >> $(FRONTEND_LOG_FILE)
+	@echo "" >> $(FRONTEND_LOG_FILE)
+	@echo "✅ Debug log files initialized:"
+	@echo "   📄 Backend:  $(BACKEND_LOG_FILE)"
+	@echo "   📄 Frontend: $(FRONTEND_LOG_FILE)"
+
+clean-logs: ## 🧹 Clean all log files
+	@echo "🧹 Cleaning log files..."
+	@rm -rf $(LOG_DIR)
+	@echo "✅ All log files cleaned"
+
+view-backend-logs: ## 📖 View backend debug logs (live tail)
+	@echo "📖 Viewing backend debug logs (press Ctrl+C to exit)..."
+	@if [ -f $(BACKEND_LOG_FILE) ]; then \
+		tail -f $(BACKEND_LOG_FILE); \
+	else \
+		echo "❌ Backend log file not found. Run 'make setup-logging' first."; \
+	fi
+
+view-frontend-logs: ## 📖 View frontend debug logs (live tail)
+	@echo "📖 Viewing frontend debug logs (press Ctrl+C to exit)..."
+	@if [ -f $(FRONTEND_LOG_FILE) ]; then \
+		tail -f $(FRONTEND_LOG_FILE); \
+	else \
+		echo "❌ Frontend log file not found. Run 'make setup-logging' first."; \
+	fi
+
+view-all-logs: ## 📖 View all debug logs (both backend and frontend)
+	@echo "📖 Viewing all debug logs (press Ctrl+C to exit)..."
+	@if [ -f $(BACKEND_LOG_FILE) ] && [ -f $(FRONTEND_LOG_FILE) ]; then \
+		tail -f $(BACKEND_LOG_FILE) $(FRONTEND_LOG_FILE); \
+	else \
+		echo "❌ Log files not found. Run 'make setup-logging' first."; \
+	fi
+
+# =============================================================================
+# FULL STACK LAUNCH & TESTING TARGETS (Updated with Logging)
+# =============================================================================
+
+launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Frontend) with DEBUG logging
 	@echo "🚀 Launching AI Marketing Campaign Post Generator - Full Application Stack"
 	@echo "=========================================================="
 	@echo ""
 	@echo "📋 Pre-flight checks..."
 	@make status-check-quiet
 	@echo ""
+	@echo "🔧 Setting up debug logging..."
+	@make setup-logging
+	@echo ""
 	@echo "🗄️  Step 1: Setting up SQLite database..."
 	@make setup-database
 	@echo ""
-	@echo "🔧 Step 2: Starting backend server (port 8000)..."
+	@echo "🔧 Step 2: Starting backend server with DEBUG logging (port 8000)..."
 	@make start-backend &
 	@echo "⏳ Waiting for backend to initialize..."
 	@sleep 5
 	@echo ""
-	@echo "🎨 Step 3: Starting frontend server (port 8080)..."
+	@echo "🎨 Step 3: Starting frontend server with DEBUG logging (port 8080)..."
 	@make start-frontend &
 	@echo "⏳ Waiting for frontend to initialize..."
 	@sleep 3
@@ -57,7 +116,12 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@echo "🔌 Backend:  http://localhost:8000"
 	@echo "🗄️  Database: SQLite (backend/database.db)"
 	@echo ""
+	@echo "📄 Debug Logs:"
+	@echo "   Backend:  $(BACKEND_LOG_FILE)"
+	@echo "   Frontend: $(FRONTEND_LOG_FILE)"
+	@echo ""
 	@echo "🧪 Run 'make test-full-stack' to test the entire application"
+	@echo "📖 Run 'make view-all-logs' to monitor debug logs"
 	@echo "🛑 Run 'make stop-all' to stop all services"
 
 test-full-stack: ## 🧪 Comprehensive full-stack testing (Frontend + Backend + Database)
@@ -90,23 +154,39 @@ setup-database: ## 🗄️ Initialize SQLite database with schema
 	@echo "🗄️  Setting up SQLite database..."
 	@cd backend && python3 -c "import os; os.makedirs('data', exist_ok=True); from database.database import init_database; init_database(); print('✅ Database setup complete!')"
 
-start-backend: ## 🔧 Start backend server with database
-	@echo "🔧 Starting backend server..."
+start-backend: ## 🔧 Start backend server with DEBUG logging to file
+	@echo "🔧 Starting backend server with DEBUG logging to file..."
+	@make setup-logging
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
-		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
-		echo "GEMINI_MODEL=gemini-2.0-flash-preview-0827" >> backend/.env; \
 		echo "DATABASE_URL=sqlite:///./data/database.db" >> backend/.env; \
+		echo "LOG_LEVEL=DEBUG" >> backend/.env; \
+		echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
 		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
+	else \
+		echo "✅ Using existing backend/.env file"; \
+		if ! grep -q "LOG_LEVEL" backend/.env; then \
+			echo "LOG_LEVEL=DEBUG" >> backend/.env; \
+			echo "🐛 Added LOG_LEVEL=DEBUG to existing .env file"; \
+		fi; \
+		if ! grep -q "LOG_FILE" backend/.env; then \
+			echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
+			echo "📄 Added LOG_FILE path to existing .env file"; \
+		fi; \
 	fi
-	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+	@echo "🐛 DEBUG logging enabled - Backend logs: $(BACKEND_LOG_FILE)"
+	@echo "🔧 Starting backend server..."
+	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level debug --reload 2>&1 | tee -a ../$(BACKEND_LOG_FILE)
 
-start-frontend: ## 🎨 Start frontend development server
+start-frontend: ## 🎨 Start frontend server with DEBUG logging to file
+	@echo "🎨 Starting frontend server with DEBUG logging to file..."
+	@make setup-logging
+	@echo "🐛 DEBUG logging enabled - Frontend logs: $(FRONTEND_LOG_FILE)"
 	@echo "🎨 Starting frontend server..."
 	@if [ "$(BUN_AVAILABLE)" ]; then \
-		bun run dev --port 8080; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug bun run dev --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	elif [ "$(NODE_AVAILABLE)" ]; then \
-		npm run dev -- --port 8080; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug npm run dev -- --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	else \
 		echo "❌ No JavaScript runtime available"; \
 		exit 1; \
@@ -120,6 +200,9 @@ stop-all: ## 🛑 Stop all running services
 	@echo "Stopping backend server (port 8000)..."
 	@-pkill -f "uvicorn.*8000" 2>/dev/null || true
 	@echo "✅ All services stopped"
+	@echo "📄 Debug logs preserved in:"
+	@echo "   Backend:  $(BACKEND_LOG_FILE)"
+	@echo "   Frontend: $(FRONTEND_LOG_FILE)"
 
 validate-stack-running: ## 🔍 Validate that full stack is running
 	@echo "🔍 Validating full stack is running..."
@@ -257,22 +340,27 @@ dev-local: ## Start both frontend and backend locally
 	@make dev-backend-local &
 	@make dev-frontend-local
 
-dev-with-env: ## Start both frontend and backend with .env file loaded
-	@echo "🚀 Starting AI Marketing Campaign Post Generator with environment variables..."
+dev-with-env: ## Start both frontend and backend with .env file loaded and DEBUG logging
+	@echo "🚀 Starting AI Marketing Campaign Post Generator with environment variables and DEBUG logging..."
+	@make setup-logging
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
-		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
+		echo "DATABASE_URL=sqlite:///./data/database.db" >> backend/.env; \
+		echo "LOG_LEVEL=DEBUG" >> backend/.env; \
+		echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
 		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
+	else \
+		echo "✅ Using existing backend/.env file"; \
 	fi
 	@echo "Loading environment variables from backend/.env..."
 	@set -a && . backend/.env && set +a && \
-	echo "Starting backend server with loaded environment..." && \
-	cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload &
-	@echo "Starting frontend server..."
+	echo "Starting backend server with loaded environment and DEBUG logging..." && \
+	cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level debug --reload 2>&1 | tee -a ../$(BACKEND_LOG_FILE) &
+	@echo "Starting frontend server with DEBUG logging..."
 	@if [ "$(BUN_AVAILABLE)" ]; then \
-		bun run dev; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug bun run dev --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	elif [ "$(NODE_AVAILABLE)" ]; then \
-		npm run dev; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug npm run dev -- --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	else \
 		echo "Error: Neither bun nor npm found. Please install Node.js or Bun."; \
 		exit 1; \
@@ -287,12 +375,14 @@ dev-frontend: ## Start frontend development server (Docker-first)
 		make dev-frontend-local; \
 	fi
 
-dev-frontend-local: ## Start frontend development server locally
-	@echo "Starting frontend development server locally..."
+dev-frontend-local: ## Start frontend development server locally with DEBUG logging
+	@echo "Starting frontend development server locally with DEBUG logging..."
+	@make setup-logging
+	@echo "🐛 DEBUG logging enabled - Frontend logs: $(FRONTEND_LOG_FILE)"
 	@if [ "$(BUN_AVAILABLE)" ]; then \
-		bun run dev; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug bun run dev --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	elif [ "$(NODE_AVAILABLE)" ]; then \
-		npm run dev; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug npm run dev -- --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	else \
 		echo "Error: Neither bun nor npm found. Please install Node.js or Bun."; \
 		exit 1; \
@@ -307,14 +397,25 @@ dev-backend: ## Start backend development server (Docker-first)
 		make dev-backend-local; \
 	fi
 
-dev-backend-local: ## Start backend development server locally
-	@echo "🚀 Starting AI Marketing Campaign Post Generator backend server..."
+dev-backend-local: ## Start backend development server locally with DEBUG logging
+	@echo "🚀 Starting AI Marketing Campaign Post Generator backend server with DEBUG logging..."
+	@make setup-logging
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
 		echo "GEMINI_API_KEY=your_gemini_api_key_here" > backend/.env; \
+		echo "LOG_LEVEL=DEBUG" >> backend/.env; \
+		echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
 		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
+	else \
+		if ! grep -q "LOG_LEVEL" backend/.env; then \
+			echo "LOG_LEVEL=DEBUG" >> backend/.env; \
+		fi; \
+		if ! grep -q "LOG_FILE" backend/.env; then \
+			echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
+		fi; \
 	fi
-	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+	@echo "🐛 DEBUG logging enabled - Backend logs: $(BACKEND_LOG_FILE)"
+	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level debug --reload 2>&1 | tee -a ../$(BACKEND_LOG_FILE)
 
 # Testing targets
 test: test-frontend test-backend ## Run all tests

@@ -5,13 +5,13 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 280 15% 15%;
+    --foreground: 280 15% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 280 15% 15%;
+    --card-foreground: 280 15% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 280 15% 15%;
+    --popover-foreground: 280 15% 5%;
 
     --primary: 270 60% 54%;
     --primary-foreground: 0 0% 100%;
@@ -20,7 +20,7 @@
     --secondary-foreground: 0 0% 100%;
 
     --muted: 270 10% 96%;
-    --muted-foreground: 270 10% 40%;
+    --muted-foreground: 270 10% 25%;
 
     --accent: 270 10% 96%;
     --accent-foreground: 270 60% 54%;
@@ -166,8 +166,35 @@
     @apply bg-white/10 backdrop-blur-sm border border-white/30 text-white placeholder-gray-300 rounded-lg px-4 py-3 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-200;
   }
 
+  /* Ensure input text is always visible and dark on light backgrounds */
+  .vvl-input input, .vvl-input {
+    color: white !important;
+  }
+
+  /* For select dropdowns, ensure options are visible */
+  .vvl-input select {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
   .vvl-input option {
     @apply bg-slate-800 text-white;
+  }
+
+  /* Override shadcn/ui input text color for VVL styling */
+  input.vvl-input, 
+  textarea.vvl-input,
+  textarea.vvl-textarea,
+  select.vvl-input {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Ensure placeholder text is visible */
+  input.vvl-input::placeholder,
+  textarea.vvl-input::placeholder,
+  textarea.vvl-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
   }
 
   /* Textarea specific styling for consistency */
@@ -224,6 +251,25 @@
 
 .animate-ai-pulse {
   animation: ai-pulse 1.5s ease-in-out infinite;
+}
+
+/* Global text visibility improvements */
+.vvl-gradient-bg input:not(.vvl-input),
+.vvl-gradient-bg textarea:not(.vvl-textarea),
+.vvl-gradient-bg select {
+  color: #1f2937 !important; /* Dark gray text for non-VVL inputs */
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.vvl-gradient-bg input:not(.vvl-input)::placeholder,
+.vvl-gradient-bg textarea:not(.vvl-textarea)::placeholder {
+  color: rgba(31, 41, 55, 0.6) !important;
+}
+
+/* Ensure labels are always visible */
+.vvl-gradient-bg label {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Progress bar animation */

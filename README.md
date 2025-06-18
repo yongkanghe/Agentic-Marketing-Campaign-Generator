@@ -310,15 +310,22 @@ Before you begin, ensure you have:
    echo "GEMINI_API_KEY=your_actual_api_key_here" > backend/.env
    ```
 
-4. **Launch the Application**
+4. **Launch the Application with DEBUG Logging**
    ```bash
-   make dev-with-env
+   make launch-all
    ```
 
 5. **Access Your Application**
    - 🌐 **Frontend**: http://localhost:8080
    - 🔧 **Backend API**: http://localhost:8000
    - 📚 **API Docs**: http://localhost:8000/docs
+   - 📄 **Debug Logs**: `logs/backend-debug.log` & `logs/frontend-debug.log`
+
+6. **Monitor Debug Logs (Optional)**
+   ```bash
+   # In a separate terminal - live tail all logs
+   make view-all-logs
+   ```
 
 ### 🛠️ Development Workflow
 
@@ -326,6 +333,7 @@ Before you begin, ensure you have:
 
 ```bash
 # 🚀 Development
+make launch-all            # Full stack with DEBUG logging
 make dev-with-env          # Start both frontend + backend with environment
 make dev-frontend          # Frontend only (React + Vite)
 make dev-backend           # Backend only (FastAPI + ADK agents)
@@ -345,6 +353,13 @@ make test-backend         # Test ADK agents
 make status              # System health check
 make clean              # Clean build artifacts
 make release            # Generate release documentation
+
+# 📄 Debugging & Logging
+make setup-logging       # Initialize DEBUG log files
+make view-all-logs       # Live tail all debug logs
+make view-backend-logs   # Live tail backend logs only
+make view-frontend-logs  # Live tail frontend logs only
+make clean-logs          # Clean all log files
 ```
 
 #### Project Structure
