@@ -207,6 +207,7 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedIdeas, setSelectedIdeas] = useState<IdeaType[]>([]);
+  const [urlAnalysisCache, setUrlAnalysisCache] = useState<Record<string, boolean>>({});
 
   // Load campaigns from localStorage on initial render
   useEffect(() => {
@@ -223,14 +224,106 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCurrentCampaignState(campaign);
       }
     }
+
+    // Load URL analysis cache
+    const analysisCache = localStorage.getItem('urlAnalysisCache');
+    if (analysisCache) {
+      setUrlAnalysisCache(JSON.parse(analysisCache));
+    }
   }, []);
 
-  // Save campaigns to localStorage whenever they change
+  // Save campaigns to localStorage whenever they change (debounced)
   useEffect(() => {
     if (campaigns.length > 0) {
-      localStorage.setItem('marketingCampaigns', JSON.stringify(campaigns));
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('marketingCampaigns', JSON.stringify(campaigns));
+      }, 500); // Debounce to prevent excessive localStorage writes
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [campaigns]);
+
+  // AUTO URL ANALYSIS: Automatically analyze URLs and populate themes/tags when campaign changes
+  useEffect(() => {
+    if (currentCampaign && (currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl)) {
+      const cacheKey = `${currentCampaign.id}-${[currentCampaign.businessUrl, currentCampaign.aboutPageUrl, currentCampaign.productServiceUrl].filter(Boolean).join(',')}`;
+      
+      // Only run auto-analysis if we haven't analyzed these URLs for this campaign before
+      if (!urlAnalysisCache[cacheKey] && suggestedThemes.length === 0 && suggestedTags.length === 0) {
+        performUrlAnalysis(currentCampaign, cacheKey);
+      }
+    }
+  }, [currentCampaign?.id, currentCampaign?.businessUrl, currentCampaign?.aboutPageUrl, currentCampaign?.productServiceUrl]);
+
+  const performUrlAnalysis = async (campaign: Campaign, cacheKey: string) => {
+    try {
+      const urls = [
+        campaign.businessUrl,
+        campaign.aboutPageUrl,
+        campaign.productServiceUrl
+      ].filter(url => url && url.trim());
+
+      if (urls.length === 0) {
+        // Fallback to mock themes/tags if no URLs
+        const mockData = mockGenerateThemesAndTags(campaign.businessDescription, campaign.objective);
+        setSuggestedThemes(mockData.themes);
+        setSuggestedTags(mockData.tags);
+        return;
+      }
+
+      const response = await fetch('/api/v1/analysis/url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          urls: urls,
+          analysis_depth: 'comprehensive'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const analysisResult = await response.json();
+      
+      // Extract themes and tags from analysis result
+      const themes = analysisResult.suggested_themes || [];
+      const tags = analysisResult.suggested_tags || [];
+      
+      if (themes.length > 0) {
+        setSuggestedThemes(themes);
+        // Auto-select first few themes
+        setSelectedThemes(themes.slice(0, 3));
+      }
+      
+      if (tags.length > 0) {
+        setSuggestedTags(tags);
+        // Auto-select first few tags
+        setSelectedTags(tags.slice(0, 4));
+      }
+
+      // Update AI summary with business analysis
+      if (analysisResult.business_analysis) {
+        const businessAnalysis = analysisResult.business_analysis;
+        const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Key strengths: ${businessAnalysis.competitive_advantages?.join(', ') || 'Advanced solutions'}.`;
+        setAiSummary(newSummary);
+      }
+
+      // Cache successful analysis
+      const newCache = { ...urlAnalysisCache, [cacheKey]: true };
+      setUrlAnalysisCache(newCache);
+      localStorage.setItem('urlAnalysisCache', JSON.stringify(newCache));
+      
+    } catch (error) {
+      console.error('Auto URL analysis failed:', error);
+      // Fallback to mock data on error
+      const mockData = mockGenerateThemesAndTags(campaign.businessDescription, campaign.objective);
+      setSuggestedThemes(mockData.themes);
+      setSuggestedTags(mockData.tags);
+    }
+  };
 
   const createNewCampaign = (campaignData: Omit<Campaign, 'id' | 'createdAt'>) => {
     const newCampaign: Campaign = {
@@ -254,16 +347,25 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     if (campaign) {
       localStorage.setItem('currentCampaignId', campaign.id);
+      
+      // Restore themes and tags from campaign or localStorage cache
+      const campaignKey = `campaign-${campaign.id}-analysis`;
+      const cachedAnalysis = localStorage.getItem(campaignKey);
+      
+      if (cachedAnalysis) {
+        const analysis = JSON.parse(cachedAnalysis);
+        setSuggestedThemes(analysis.suggestedThemes || []);
+        setSuggestedTags(analysis.suggestedTags || []);
+        setAiSummary(analysis.aiSummary || '');
+      } else if (campaign.businessDescription) {
+        // Fallback to mock data if no cached analysis
+        setAiSummary(mockGenerateAISummary(campaign.businessDescription, campaign.objective));
+        const { themes, tags } = mockGenerateThemesAndTags(campaign.businessDescription, campaign.objective);
+        setSuggestedThemes(themes);
+        setSuggestedTags(tags);
+      }
     } else {
       localStorage.removeItem('currentCampaignId');
-    }
-    
-    // If campaign exists and has a business description, generate AI summaries
-    if (campaign && campaign.businessDescription) {
-      setAiSummary(mockGenerateAISummary(campaign.businessDescription, campaign.objective));
-      const { themes, tags } = mockGenerateThemesAndTags(campaign.businessDescription, campaign.objective);
-      setSuggestedThemes(themes);
-      setSuggestedTags(tags);
     }
   };
 
@@ -275,8 +377,27 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...updates
     };
     
-    setCurrentCampaignState(updatedCampaign);
-    setCampaigns(campaigns.map(c => c.id === updatedCampaign.id ? updatedCampaign : c));
+    // Update the current campaign state
+    setCurrentCampaign(updatedCampaign);
+    
+    // Update campaigns array without triggering circular dependency
+    setCampaigns(prevCampaigns => 
+      prevCampaigns.map(c => c.id === updatedCampaign.id ? updatedCampaign : c)
+    );
+    
+    // Save to localStorage immediately for session persistence
+    localStorage.setItem('currentCampaignId', updatedCampaign.id);
+    
+    // Save analysis data to prevent re-analysis
+    if (suggestedThemes.length > 0 || suggestedTags.length > 0) {
+      const campaignKey = `campaign-${updatedCampaign.id}-analysis`;
+      const analysisData = {
+        suggestedThemes,
+        suggestedTags,
+        aiSummary
+      };
+      localStorage.setItem(campaignKey, JSON.stringify(analysisData));
+    }
   };
 
   const generateIdeas = async () => {

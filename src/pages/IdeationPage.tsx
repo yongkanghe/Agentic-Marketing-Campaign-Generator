@@ -82,9 +82,41 @@ const IdeationPage: React.FC = () => {
       setPreferredDesign(currentCampaign.preferredDesign);
     }
     
-    // Auto-generate initial posts when page loads
-    generateAllPosts();
+    // SESSION PERSISTENCE: Restore social media columns from localStorage or campaign data
+    const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+    const savedColumns = localStorage.getItem(campaignColumnsKey);
+    
+    if (savedColumns) {
+      try {
+        const parsedColumns = JSON.parse(savedColumns);
+        // Ensure type compatibility
+        setSocialMediaColumns(parsedColumns as typeof socialMediaColumns);
+        console.log('Restored social media columns from localStorage for campaign:', currentCampaign.id);
+      } catch (error) {
+        console.error('Failed to parse saved columns:', error);
+        // Auto-generate initial posts when page loads if no saved data
+        generateAllPosts();
+      }
+    } else if (currentCampaign.socialMediaColumns && currentCampaign.socialMediaColumns.length > 0) {
+      // Restore from campaign data if available
+      setSocialMediaColumns(currentCampaign.socialMediaColumns as typeof socialMediaColumns);
+      console.log('Restored social media columns from campaign data');
+    } else {
+      // Auto-generate initial posts when page loads
+      generateAllPosts();
+    }
   }, [currentCampaign, navigate]);
+
+  // SESSION PERSISTENCE: Save social media columns to localStorage whenever they change
+  useEffect(() => {
+    if (currentCampaign && socialMediaColumns.some(col => col.posts.length > 0)) {
+      const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+      localStorage.setItem(campaignColumnsKey, JSON.stringify(socialMediaColumns));
+      
+      // Also update the campaign in the marketing context
+      updateCurrentCampaign({ socialMediaColumns });
+    }
+  }, [socialMediaColumns, currentCampaign?.id]);
 
   const generateAllPosts = async () => {
     if (selectedThemes.length === 0 || selectedTags.length === 0) {

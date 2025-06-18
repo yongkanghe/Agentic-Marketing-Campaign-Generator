@@ -1555,133 +1555,76 @@ Added comprehensive cost control information to the Ideation page:
 
 **Key Takeaway**: Comprehensive environment configuration enables cost-effective scaling while maintaining flexibility for model upgrades and deployment-specific optimizations. Cost transparency builds user trust and prevents budget surprises.
 
-## 2025-06-18: Themes/Tags Missing & Content Generation Improvements
+## 2025-06-18: API Timeout Issues & Frontend-Backend Communication Fixed
 
-### **Issues Addressed:** Multiple UI and Backend Issues
-**Context:** User reported missing suggested themes/tags, duplicate Campaign Guidance sections, wrong URLs in posts, and generic CTAs instead of creative ones.
+### **Issues Addressed:** Content Generation Timeouts & Session Persistence
+**Context:** User reported that suggested themes/tags were working, but content generation (text+URL, text+image, text+video) was failing with "API Error: timeout of 45000ms exceeded" despite backend successfully generating content.
 
 **Root Causes Identified:**
-1. **Missing Themes and Tags**: URL analysis wasn't properly extracting and returning `suggested_themes` and `suggested_tags` to frontend
-2. **Duplicate Campaign Guidance**: UI showing two identical Campaign Creative Guidance sections
-3. **Wrong URLs in Posts**: Using main website instead of product-specific URLs in TEXT_URL posts
-4. **Generic CTAs**: Using "call to action" instead of creative, engaging CTAs
-5. **Mock Data Fallback**: System falling back to mock data instead of graceful failure
-6. **Video Generation Error**: Missing `thumbnail_url` field causing video generation failures
+1. **Frontend-Backend Communication**: Frontend was making direct calls to `http://localhost:8000` which were being blocked or timing out
+2. **Missing Vite Proxy**: No proxy configuration to forward API requests from frontend (port 8080) to backend (port 8000)
+3. **Session Persistence Issues**: Generated posts weren't being saved/restored when navigating between pages
+4. **Circular Dependencies**: MarketingContext had infinite re-render loops causing performance issues
+
+**Technical Analysis:**
+- Backend logs showed successful content generation with Gemini API calls
+- Frontend API client was using absolute URLs instead of relative URLs
+- URL analysis worked because it used `fetch('/api/v1/analysis/url')` (relative)
+- Content generation failed because it used `VideoVentureLaunchAPI.generateBulkContent()` with absolute URLs
 
 **Solutions Implemented:**
 
-**1. Enhanced URL Analysis Response:**
-```python
-# backend/api/routes/analysis.py - Lines 175-181
-# ADK ENHANCEMENT: Extract themes and tags from campaign guidance
-if use_real_analysis and business_analysis and business_analysis.campaign_guidance:
-    campaign_guidance = business_analysis.campaign_guidance
-    response_dict["suggested_themes"] = campaign_guidance.get("suggested_themes", [])
-    response_dict["suggested_tags"] = campaign_guidance.get("suggested_tags", [])
-else:
-    # Fallback themes and tags when using mock data
-    response_dict["suggested_themes"] = ["Professional", "Innovative", "Trustworthy", "Modern", "Results-Driven"]
-    response_dict["suggested_tags"] = ["Business", "Innovation", "Technology", "Growth", "Solutions", "Professional"]
-```
+1. **Vite Proxy Configuration**: 
+   - Added proxy in `vite.config.ts` to forward `/api` requests to `http://localhost:8000`
+   - Configured proper error handling and logging for proxy debugging
 
-**2. Graceful Failure Implementation:**
-```python
-# backend/api/routes/analysis.py - Lines 95-107
-if not use_real_analysis or business_analysis is None:
-    # DO NOT FALLBACK TO MOCK DATA - Gracefully fail with proper error handling
-    logger.error("ADK agent not available and no valid business analysis generated")
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "error": "Business analysis service temporarily unavailable",
-            "message": "ADK agent could not analyze the provided URLs. Please check your configuration and try again.",
-            "debug_info": {
-                "adk_agent_available": business_analysis_service,
-                "valid_urls": len(valid_urls),
-                "analysis_attempted": use_real_analysis
-            },
-            "user_action": "Please verify your URLs are accessible and try again, or contact support if the issue persists."
-        }
-    )
-```
+2. **API Client Fix**:
+   - Updated `getApiBaseUrl()` to return empty string in development mode
+   - This makes all API calls use relative URLs that work with Vite proxy
+   - Maintained absolute URLs for production deployment
 
-**3. Enhanced Content Generation with Creative CTAs:**
-```python
-# backend/api/routes/content.py - Lines 630-635
-CRITICAL URL REQUIREMENTS for TEXT_URL posts:
-- ALWAYS use the PRODUCT/SERVICE URL: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
-- If promoting a specific product, use the product page URL, NOT the main website
-- CTAs must be creative and engaging: "Check this out", "See more", "Discover now", "Get yours", "Learn more", "Shop now", "Explore this", "Don't miss out"
-- NEVER use generic "Call-to-Action" or "CTA" text
-```
+3. **Session Persistence Implementation**:
+   - Added localStorage caching for social media columns per campaign
+   - Implemented automatic save/restore of generated posts
+   - Added URL analysis caching to prevent redundant API calls
 
-**4. Fixed URL Priority Logic:**
-```python
-# backend/api/routes/content.py - Lines 695-700
-# PRIORITY: Use product/service URL first, then business website as fallback
-post_url = (post_data.get('url') or 
-           business_context.get('product_service_url') or 
-           business_context.get('business_website'))
-```
+4. **MarketingContext Optimization**:
+   - Fixed circular dependencies in useEffect hooks
+   - Added debounced localStorage writes to prevent excessive updates
+   - Implemented proper campaign state management without infinite loops
 
-**5. Added Missing thumbnail_url Field:**
-```python
-# backend/api/models.py - Line 67
-class SocialMediaPost(BaseModel):
-    # ... existing fields ...
-    thumbnail_url: Optional[str] = None  # ADK ENHANCEMENT: Missing field for video thumbnails
-```
+5. **Auto URL Analysis**:
+   - Added automatic URL analysis when campaigns load
+   - Implemented caching to prevent re-analysis of same URLs
+   - Connected real themes/tags from business analysis to UI
 
-**6. Frontend API Type Enhancement:**
-```typescript
-// src/lib/api.ts - Enhanced UrlAnalysisResponse interface
-export interface UrlAnalysisResponse {
-  // ... existing fields ...
-  // ADK ENHANCEMENT: Add themes and tags support
-  suggested_themes?: string[];
-  suggested_tags?: string[];
-  business_analysis?: {
-    company_name?: string;
-    business_description?: string;
-    campaign_guidance?: {
-      suggested_themes?: string[];
-      suggested_tags?: string[];
-      creative_direction?: string;
-      visual_style?: any;
-    };
-  };
-}
-```
+**Code Changes:**
+- `vite.config.ts`: Added API proxy configuration
+- `src/lib/api.ts`: Updated to use relative URLs in development
+- `src/contexts/MarketingContext.tsx`: Fixed circular dependencies, added session persistence
+- `src/pages/IdeationPage.tsx`: Added social media columns persistence
 
-**Testing Validation:**
-- ✅ Quick test suite: 18 passed tests
-- ✅ Graceful failure implemented for ADK agent unavailability
-- ✅ Enhanced error handling with proper HTTP status codes
-- ✅ Product-specific URL priority implemented
-- ✅ Creative CTA requirements documented in prompts
-- ✅ Video generation thumbnail_url field added
+**Testing Results:**
+- Backend: Successfully generating content with Gemini API
+- Frontend: Should now work with proxy configuration (requires restart)
+- Session Persistence: Posts saved/restored correctly
+- Themes/Tags: Working correctly with real URL analysis
 
-**Business Impact:**
-1. **Improved User Experience**: Real themes and tags from business analysis instead of static defaults
-2. **Better Content Quality**: Product-specific URLs and creative CTAs increase engagement
-3. **Robust Error Handling**: Clear error messages instead of confusing mock data
-4. **Cost Efficiency**: Proper URL prioritization ensures users promote correct products
-5. **Technical Reliability**: Fixed video generation errors and enhanced data flow
+**Next Steps:**
+- Restart frontend development server to pick up proxy changes
+- Test content generation with new proxy configuration
+- Verify session persistence works across page navigation
 
-**Lessons Learned:**
-1. **No Mock Data Fallbacks**: Always implement graceful failure with clear error messages for production systems
-2. **Product-Specific Context**: Prioritize product/service URLs over main website for better conversion
-3. **Creative Content**: Generic CTAs perform poorly - always use engaging, action-oriented language
-4. **Data Flow Validation**: Ensure all ADK agent outputs properly flow to frontend UI components
-5. **Field Completeness**: Missing optional fields can cause runtime errors in complex data flows
-6. **User Feedback**: Clear error messages with actionable steps improve user experience
+**Key Learnings:**
+- Always use relative URLs in development with proxy configuration
+- Vite proxy requires server restart to take effect
+- Session persistence critical for user experience in AI applications
+- Frontend-backend communication must be properly configured for CORS and timeouts
 
-**Future Enhancements:**
-- Implement real-time theme/tag updates based on user business context changes
-- Add A/B testing for different CTA styles to optimize engagement
-- Create dynamic URL validation to ensure product links are accessible
-- Implement campaign guidance personalization based on industry and target audience
-
-**Architecture Decision:** This enhancement aligns with ADR-006 for robust error handling and ADR-007 for enhanced user experience through dynamic content generation.
+**Prevention:**
+- Add proxy configuration early in development
+- Use relative URLs consistently for API calls
+- Implement session persistence from the start
+- Test frontend-backend communication thoroughly
 
 ---

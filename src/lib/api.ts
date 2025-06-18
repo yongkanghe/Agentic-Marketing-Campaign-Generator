@@ -16,17 +16,12 @@ const getApiBaseUrl = (): string => {
     return import.meta.env.VITE_API_BASE_URL;
   }
   
-  // Development environment - detect backend location
+  // Development environment - use relative URLs to work with Vite proxy
   const isDevelopment = import.meta.env.DEV;
-  const currentHost = window.location.hostname;
   
   if (isDevelopment) {
-    // Local development
-    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-      return 'http://localhost:8000';
-    }
-    // Network development (e.g., testing on mobile devices)
-    return `http://${currentHost}:8000`;
+    // Use relative URL in development to work with Vite proxy
+    return '';
   }
   
   // Production fallback - same origin API
