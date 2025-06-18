@@ -232,99 +232,144 @@ Output comprehensive business context that provides SPECIFIC, ACTIONABLE visual 
 # --- Content Generation Agents ---
 
 async def create_social_content_agent() -> LlmAgent:
-    """Creates the social media content generation agent."""
+    """Creates a proper ADK LlmAgent for social content generation."""
+    
+    def generate_social_posts(
+        business_context: dict,
+        objective: str,
+        target_audience: str,
+        campaign_type: str,
+        creativity_level: int = 5,
+        post_count: int = 9
+    ) -> dict:
+        """Generate social media posts based on business context."""
+        
+        # This tool function will be called by the LlmAgent
+        # The actual AI generation will be handled by the agent's instruction
+        return {
+            "business_context": business_context,
+            "objective": objective,
+            "target_audience": target_audience,
+            "campaign_type": campaign_type,
+            "creativity_level": creativity_level,
+            "post_count": post_count,
+            "tool_called": True
+        }
+    
     return LlmAgent(
         name="SocialContentAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
-        instruction="""You are an expert social media content creator specializing in multi-format campaign content.
-
-Input Context:
-- Business Context: {business_context}
-- Campaign Objective: {objective}
-- Creativity Level: {creativity_level}
-- Post Count: {post_count}
-
-Generate diverse social media content across three formats:
-
-**1. Text + URL Posts (3 posts)**:
-- Engaging copy with product/service URLs
-- Clear value propositions
-- Strong calls-to-action
-- Link preview optimization
-- Platform-specific adaptations
-
-**2. Text + Image Posts (3 posts)**:
-- Compelling visual concepts
-- Detailed image generation prompts
-- Text overlay recommendations
-- Brand-consistent visual style
-- Engagement-optimized composition
-
-**3. Text + Video Posts (3 posts)**:
-- Dynamic video concepts
-- Detailed Veo generation prompts
-- Storyboard descriptions
-- Audio and music suggestions
-- Platform format specifications
-
-For each post, provide:
-- Primary content text (optimized for engagement)
-- Platform variations (LinkedIn, Twitter/X, Instagram, Facebook, TikTok)
-- Hashtag recommendations (trending and niche)
-- Engagement prediction score (1-10)
-- Best posting time recommendations
-- Call-to-action variations
-
-Ensure content variety, brand consistency, and platform optimization while maintaining the specified creativity level.""",
-        description="Generates diverse social media content across text+URL, text+image, and text+video formats",
-        output_key="social_content"
+        model="gemini-2.5-flash",
+        description="Generates engaging social media posts based on business context and campaign objectives.",
+        instruction="""
+        You are a social media content generation expert. Your task is to create engaging, 
+        platform-optimized social media posts based on the provided business context.
+        
+        When the generate_social_posts tool is called, use the provided parameters to create 
+        a comprehensive set of social media posts in the following JSON format:
+        
+        {
+            "text_url_posts": [
+                {
+                    "id": "post_1",
+                    "content": "Engaging post content here...",
+                    "hashtags": ["#relevant", "#hashtags"],
+                    "platform_optimized": {
+                        "twitter": {"content": "Twitter-optimized version"},
+                        "linkedin": {"content": "LinkedIn-optimized version"},
+                        "facebook": {"content": "Facebook-optimized version"}
+                    },
+                    "engagement_score": 0.85,
+                    "selected": true
+                }
+            ],
+            "text_image_posts": [
+                {
+                    "id": "post_2", 
+                    "content": "Visual post content...",
+                    "image_prompt": "Detailed image generation prompt",
+                    "hashtags": ["#visual", "#content"],
+                    "platform_optimized": {
+                        "instagram": {"content": "Instagram-optimized version"},
+                        "facebook": {"content": "Facebook-optimized version"}
+                    },
+                    "engagement_score": 0.90,
+                    "selected": true
+                }
+            ],
+            "text_video_posts": [
+                {
+                    "id": "post_3",
+                    "content": "Video post content...", 
+                    "video_prompt": "Detailed video generation prompt",
+                    "hashtags": ["#video", "#content"],
+                    "platform_optimized": {
+                        "tiktok": {"content": "TikTok-optimized version"},
+                        "youtube": {"content": "YouTube-optimized version"}
+                    },
+                    "engagement_score": 0.95,
+                    "selected": true
+                }
+            ]
+        }
+        
+        Generate exactly the number of posts requested, ensuring variety in content types and 
+        high engagement potential. Make the content authentic to the business context and 
+        aligned with the campaign objective.
+        """,
+        tools=[generate_social_posts],
+        output_key="social_posts"
     )
 
 async def create_hashtag_optimization_agent() -> LlmAgent:
-    """Creates the hashtag optimization and trend analysis agent."""
+    """Creates a proper ADK LlmAgent for hashtag optimization."""
+    
+    def optimize_hashtags(
+        social_posts: dict,
+        business_context: dict,
+        target_platforms: list = None
+    ) -> dict:
+        """Optimize hashtags for social media posts."""
+        
+        # This tool function will be called by the LlmAgent
+        # The actual optimization will be handled by the agent's instruction
+        return {
+            "social_posts": social_posts,
+            "business_context": business_context,
+            "target_platforms": target_platforms or ["instagram", "twitter", "linkedin", "facebook"],
+            "tool_called": True
+        }
+    
     return LlmAgent(
         name="HashtagOptimizationAgent",
-        model=Gemini(model_name=GEMINI_MODEL, api_key=GEMINI_API_KEY) if GEMINI_API_KEY else "mock",
-        instruction="""You are a social media hashtag strategist and trend analyst.
-
-Input Context:
-- Business Context: {business_context}
-- Generated Content: {social_content}
-- Campaign Objective: {objective}
-
-Analyze and optimize hashtags for maximum reach and engagement:
-
-1. **Hashtag Categories**:
-   - Brand hashtags (company-specific)
-   - Industry hashtags (sector-relevant)
-   - Trending hashtags (current popularity)
-   - Niche hashtags (targeted communities)
-   - Location hashtags (geographic relevance)
-
-2. **Platform Optimization**:
-   - LinkedIn: Professional and industry-focused
-   - Twitter/X: Trending and conversational
-   - Instagram: Visual and lifestyle-oriented
-   - Facebook: Community and engagement-focused
-   - TikTok: Viral and entertainment-focused
-
-3. **Hashtag Strategy**:
-   - High-volume vs. niche balance
-   - Competition analysis
-   - Engagement potential scoring
-   - Trend lifecycle assessment
-   - Cross-platform adaptation
-
-4. **Performance Optimization**:
-   - Hashtag mix recommendations (3-5 per post)
-   - A/B testing suggestions
-   - Seasonal and temporal considerations
-   - Audience behavior alignment
-   - Conversion potential assessment
-
-Output optimized hashtag strategies for each post with performance predictions and platform-specific recommendations.""",
-        description="Optimizes hashtags and analyzes social media trends for maximum engagement",
-        output_key="hashtag_optimization"
+        model="gemini-2.5-flash",
+        description="Optimizes hashtags for social media posts to maximize reach and engagement.",
+        instruction="""
+        You are a hashtag optimization expert. Your task is to enhance the hashtags in social media posts
+        to maximize reach, engagement, and discoverability across different platforms.
+        
+        When the optimize_hashtags tool is called, analyze the provided social posts and business context
+        to create optimized hashtag strategies. Return the enhanced posts in the same JSON format but with
+        improved hashtags:
+        
+        For each post, optimize hashtags by:
+        1. Adding trending hashtags relevant to the business/industry
+        2. Including niche-specific hashtags for targeted reach
+        3. Balancing popular vs. less competitive hashtags
+        4. Ensuring platform-specific hashtag strategies
+        5. Maintaining relevance to the post content
+        
+        Platform-specific hashtag guidelines:
+        - Instagram: 20-30 hashtags, mix of popular and niche
+        - Twitter: 1-2 hashtags, focus on trending topics
+        - LinkedIn: 3-5 professional hashtags
+        - Facebook: 1-2 hashtags, focus on community building
+        - TikTok: 3-5 trending hashtags
+        
+        Return the posts with enhanced hashtag arrays and updated platform_optimized sections.
+        Ensure all hashtags are relevant, properly formatted, and likely to increase engagement.
+        """,
+        tools=[optimize_hashtags],
+        output_key="optimized_posts"
     )
 
 # --- Sequential Agent Orchestration ---
@@ -452,7 +497,53 @@ async def execute_campaign_workflow(
         generation_context["business_context"] = business_analysis_result
 
         content_generation_agent = await create_content_generation_agent()
-        adk_result = await content_generation_agent.invoke(generation_context)
+        
+        # Correct ADK Runner pattern for executing SequentialAgent
+        from google.adk.runners import InMemoryRunner
+        from google.genai import types
+        
+        runner = InMemoryRunner(
+            app_name='marketing_campaign_generator',
+            agent=content_generation_agent,
+        )
+        
+        # Create a user message with the generation context
+        user_message = f"""
+        Generate social media content for the following campaign:
+        Business Context: {generation_context.get('business_context', {})}
+        Objective: {generation_context.get('objective', 'Generate engaging content')}
+        Target Audience: {generation_context.get('target_audience', 'General audience')}
+        Campaign Type: {generation_context.get('campaign_type', 'general')}
+        Creativity Level: {generation_context.get('creativity_level', 5)}
+        """
+        
+        content = types.Content(
+            role='user', 
+            parts=[types.Part.from_text(text=user_message)]
+        )
+        
+        # Create a session for the runner
+        session = await runner.session_service.create_session(
+            app_name='marketing_campaign_generator', 
+            user_id='system'
+        )
+        
+        # Execute the agent through the runner
+        adk_results = []
+        async for event in runner.run_async(
+            user_id='system',
+            session_id=session.id,
+            new_message=content,
+        ):
+            if event.content and event.content.parts:
+                if event.content.parts[0].text:
+                    adk_results.append(event.content.parts[0].text)
+        
+        # Compile the results
+        adk_result = {
+            "generated_content": adk_results,
+            "success": True
+        }
 
         # STEP 3: Formatting and Final Output
         generated_content = _format_generated_content(
