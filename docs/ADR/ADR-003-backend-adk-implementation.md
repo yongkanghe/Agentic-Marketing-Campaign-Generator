@@ -29,6 +29,47 @@ We implemented a comprehensive backend API service using FastAPI with ADK sequen
        - SocialContentAgent (LLM)
        - HashtagOptimizationAgent (LLM)
 
+### Agent Relationship Diagram
+```ascii
+[ MarketingOrchestratorAgent (Sequential Root) ]
+    |
+    |--- 1. [ BusinessAnalysisAgent (Sequential) ]
+    |         |
+    |         |--- 1a. [ URLAnalysisAgent (LLM) ]
+    |         |         (Input: URLs; Output: url_analysis)
+    |         |
+    |         |--- 1b. [ FileAnalysisAgent (LLM) ]
+    |         |         (Input: Uploaded files; Output: file_analysis)
+    |         |
+    |         |--- 1c. [ BusinessContextAgent (LLM) ]
+    |                   (Input: url_analysis, file_analysis, user_input, etc.;
+    |                    Output: business_context with detailed visual direction)
+    |
+    |--- 2. [ ContentGenerationAgent (Sequential) ]
+              |
+              |--- 2a. [ SocialContentAgent (LLM) ]
+              |         (Input: business_context, objective, etc.;
+              |          Output: social_content including text & prompts for images/videos)
+              |
+              |--- 2b. [ HashtagOptimizationAgent (LLM) ]
+                        (Input: business_context, social_content;
+                         Output: hashtag_optimization)
+
+---------------------------------------------------------------------
+Separate, but invoked by API layer using outputs from above:
+
+[ VisualContentOrchestrator ]
+    |
+    |--- [ ImageGenerationAgent ]
+    |     (Input: Image prompts from SocialContentAgent output, business_context;
+    |      Output: Generated images (real via Imagen or placeholders))
+    |
+    |--- [ VideoGenerationAgent ]
+          (Input: Video prompts from SocialContentAgent output, business_context;
+           Output: Mocked video data)
+---------------------------------------------------------------------
+```
+
 3. **API Endpoints**
    - `POST /api/v1/campaigns/create` - Enhanced campaign creation
    - `POST /api/v1/analysis/url` - Business URL analysis
@@ -50,8 +91,8 @@ We implemented a comprehensive backend API service using FastAPI with ADK sequen
 
 #### 3. Multi-Format Content Generation
 - **Text + URL Posts**: Product/service link integration
-- **Text + Image Posts**: AI-generated visual concepts with detailed prompts
-- **Text + Video Posts**: Veo video generation with storyboard descriptions
+- **Text + Image Posts**: AI-generated visual concepts with detailed prompts. Actual image generation via Imagen API is attempted if `GEMINI_API_KEY` is available, with fallbacks to placeholders upon API error. Note: `ImageGenerationAgent` initialization fails if the API key is absent at startup.
+- **Text + Video Posts**: AI-generated video concepts and storyboard descriptions. Actual video generation via Veo API is currently mocked; the system does not yet integrate with a live Veo service.
 
 #### 4. Platform Optimization
 - **Cross-Platform Content**: LinkedIn, Twitter/X, Instagram, Facebook, TikTok
@@ -89,7 +130,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 
 ### Mock vs Real Implementation
 - **Development Mode**: Mock responses when GEMINI_API_KEY not configured
-- **Production Mode**: Real ADK agent execution with Gemini integration
+- **Production Mode**: Real ADK agent execution with Gemini integration for text-based analysis and content. Image generation is attempted with Imagen API if configured, otherwise uses fallbacks. Video generation is mocked.
 - **Graceful Fallback**: Comprehensive error handling and logging
 
 ## Consequences
@@ -100,7 +141,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 - **Comprehensive Workflow**: End-to-end campaign creation from analysis to content generation
 - **Scalable Architecture**: Sequential agents can be easily extended or modified
 - **Type Safety**: Pydantic models ensure API contract validation
-- **Development Ready**: Mock mode enables development without API keys
+- **Development Ready**: Mock mode and fallbacks enable development without API keys for most features, though `ImageGenerationAgent` will raise an error on initialization if `GEMINI_API_KEY` is missing.
 
 ### Negative
 - **Sequential Execution**: May be slower than parallel processing for some operations
@@ -136,7 +177,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
 - ✅ **Mock Implementation**: Development-ready with fallback responses
 - ✅ **Documentation**: Comprehensive code documentation and ADR
 - ⏳ **Frontend Integration**: Next step - connect React frontend to API
-- ⏳ **Real AI Testing**: Requires GEMINI_API_KEY configuration
+- ⏳ **Real AI Testing**: Required for text analysis/generation and image generation (conditional on `GEMINI_API_KEY`). Video generation uses mock data.
 - ⏳ **Production Deployment**: Cloud Run deployment configuration needed
 
 ## Next Steps
