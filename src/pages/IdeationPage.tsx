@@ -235,7 +235,7 @@ const IdeationPage: React.FC = () => {
   const regenerateAIAnalysis = async () => {
     setIsRegeneratingAnalysis(true);
     try {
-      // Real API call to analyze URLs and get themes/tags
+      // Real API call to analyze URLs and get themes/tags using proper API client
       if (currentCampaign && (currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl)) {
         const urls = [
           currentCampaign.businessUrl,
@@ -243,22 +243,12 @@ const IdeationPage: React.FC = () => {
           currentCampaign.productServiceUrl
         ].filter(url => url && url.trim());
 
-        const response = await fetch('/api/v1/analysis/url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            urls: urls,
-            analysis_depth: 'comprehensive'
-          }),
+        console.log('🔄 Regenerating AI analysis for URLs:', urls);
+
+        const analysisResult = await VideoVentureLaunchAPI.analyzeUrls({
+          urls: urls,
+          analysis_type: 'business_context'
         });
-
-        if (!response.ok) {
-          throw new Error(`Analysis failed: ${response.status}`);
-        }
-
-        const analysisResult = await response.json();
         
         // Extract themes and tags from analysis result
         const suggestedThemes = analysisResult.suggested_themes || [];
@@ -280,7 +270,7 @@ const IdeationPage: React.FC = () => {
         // Update AI summary with business analysis
         if (analysisResult.business_analysis) {
           const businessAnalysis = analysisResult.business_analysis;
-          const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Key strengths: ${businessAnalysis.competitive_advantages?.join(', ') || 'Not specified'}.`;
+          const newSummary = `AI Analysis: ${businessAnalysis.company_name} operates in ${businessAnalysis.industry}, targeting ${businessAnalysis.target_audience}. Analysis regenerated successfully.`;
           
                   // Update the current campaign with the COMPLETE new analysis
         updateCurrentCampaign({

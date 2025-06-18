@@ -68,8 +68,20 @@ class URLAnalysisAgent:
             else:
                 business_context = self._generate_enhanced_mock_analysis(url_contents, analysis_type)
             
+            # Extract suggested themes and tags for frontend display
+            suggested_themes = business_context.get('campaign_guidance', {}).get('suggested_themes', [])
+            suggested_tags = business_context.get('campaign_guidance', {}).get('suggested_tags', [])
+            
+            # If not in campaign guidance, extract from other sources
+            if not suggested_themes:
+                suggested_themes = business_context.get('suggested_themes', [])
+            if not suggested_tags:
+                suggested_tags = business_context.get('suggested_tags', [])
+            
             return {
                 "business_analysis": business_context,
+                "suggested_themes": suggested_themes,
+                "suggested_tags": suggested_tags,
                 "url_insights": url_contents,
                 "analysis_metadata": {
                     "urls_analyzed": len(urls),
@@ -302,6 +314,19 @@ class URLAnalysisAgent:
         }}
 
         **CRITICAL**: If you detect a specific product (like a t-shirt design, specific artwork, particular service offering), make sure ALL guidance is tailored to that SPECIFIC PRODUCT, not generic company-level advice.
+
+        **BUSINESS-SPECIFIC THEMES & TAGS REQUIREMENT**:
+        Based on your analysis, provide SPECIFIC themes and tags that are relevant to this exact business and industry:
+        - For footwear/athletic: Focus on performance, style, sports culture, authentic brands
+        - For fashion: Focus on trends, style, seasonal collections, brand authenticity  
+        - For tech: Focus on innovation, efficiency, digital transformation, user experience
+        - For services: Focus on expertise, results, customer success, professional solutions
+        
+        AVOID generic themes like "Professional", "Modern", "Quality" - instead use industry-specific themes that reflect the actual business focus and target audience interests.
+        
+        Include these specific fields in your JSON response:
+        "suggested_themes": ["business-specific theme 1", "business-specific theme 2", "business-specific theme 3", "business-specific theme 4", "business-specific theme 5"],
+        "suggested_tags": ["#BusinessSpecificTag1", "#BusinessSpecificTag2", "#BusinessSpecificTag3", "#BusinessSpecificTag4", "#BusinessSpecificTag5", "#BusinessSpecificTag6"]
         """
         
         return prompt
@@ -376,6 +401,16 @@ class URLAnalysisAgent:
             # Extract campaign guidance
             campaign_guidance = self._extract_real_campaign_guidance(ai_response, product_context)
             
+            # Extract suggested themes and tags from AI response
+            suggested_themes = self._extract_suggested_themes(ai_response)
+            suggested_tags = self._extract_suggested_tags(ai_response)
+            
+            # Add themes and tags to campaign guidance if they exist
+            if suggested_themes:
+                campaign_guidance['suggested_themes'] = suggested_themes
+            if suggested_tags:
+                campaign_guidance['suggested_tags'] = suggested_tags
+            
             # Extract brand voice
             brand_voice = self._extract_brand_voice(ai_response)
             
@@ -395,7 +430,9 @@ class URLAnalysisAgent:
                 "campaign_guidance": campaign_guidance,
                 "brand_voice": brand_voice,
                 "key_messaging": key_messaging,
-                "competitive_advantages": competitive_advantages
+                "competitive_advantages": competitive_advantages,
+                "suggested_themes": suggested_themes,
+                "suggested_tags": suggested_tags
             }
             
             logger.info(f"✅ REAL AI ANALYSIS COMPLETE:")
@@ -598,7 +635,29 @@ class URLAnalysisAgent:
                 if themes:
                     return themes[:6]  # Limit to 6 themes
         
-        return ["professional", "modern", "quality", "innovative"]
+        # Extract themes from AI response - no hardcoded fallbacks
+        logger.info("🎯 Extracting visual themes from AI response (no hardcoded values)")
+        
+        # Try multiple patterns to extract themes
+        theme_patterns = [
+            r'"visual_themes":\s*\[(.*?)\]',
+            r'"business_themes":\s*\[(.*?)\]',
+            r'"key_themes":\s*\[(.*?)\]',
+            r'"themes":\s*\[(.*?)\]'
+        ]
+        
+        for pattern in theme_patterns:
+            match = re.search(pattern, ai_response, re.IGNORECASE | re.DOTALL)
+            if match:
+                themes_text = match.group(1)
+                themes = re.findall(r'"([^"]+)"', themes_text)
+                if themes:
+                    logger.info(f"✅ Extracted {len(themes)} themes from AI response")
+                    return themes[:6]  # Limit to 6 themes
+        
+        # If no themes found, return empty list (let downstream handle)
+        logger.warning("⚠️ No themes found in AI response")
+        return []
     
     def _extract_suggested_themes(self, ai_response: str) -> List[str]:
         """Extract suggested themes for campaign."""
@@ -625,7 +684,9 @@ class URLAnalysisAgent:
                     if hashtags:
                         return hashtags[:8]
         
-        return ["#Business", "#Professional", "#Quality", "#Innovation"]
+        # If no hashtags found, return empty list (let downstream handle)
+        logger.warning("⚠️ No hashtags found in AI response")
+        return []
     
     def _generate_content_based_analysis(self, url_contents: Dict[str, Dict]) -> Dict[str, Any]:
         """Generate analysis based on scraped content when AI parsing fails."""
@@ -647,55 +708,114 @@ class URLAnalysisAgent:
         # Analyze content for business type
         text_lower = all_text.lower()
         
-        # Determine industry based on content
-        if any(word in text_lower for word in ['sneaker', 'shoe', 'footwear', 'trainer', 'athletic']):
-            industry = "Footwear & Athletic Apparel"
-            target_audience = "Athletes, fitness enthusiasts, sneaker collectors, fashion-conscious consumers"
-            themes = ["Performance", "Style", "Athletic", "Fashion", "Comfort"]
-            tags = ["#Sneakers", "#Athletic", "#Performance", "#Style", "#Footwear"]
-        elif any(word in text_lower for word in ['fashion', 'clothing', 'apparel', 'style']):
-            industry = "Fashion & Apparel"
-            target_audience = "Fashion-conscious consumers, style enthusiasts"
-            themes = ["Fashion", "Style", "Trendy", "Quality", "Design"]
-            tags = ["#Fashion", "#Style", "#Apparel", "#Trendy", "#Design"]
-        elif any(word in text_lower for word in ['tech', 'software', 'digital', 'app']):
-            industry = "Technology"
-            target_audience = "Tech professionals, businesses, digital users"
-            themes = ["Innovation", "Technology", "Digital", "Efficiency", "Modern"]
-            tags = ["#Tech", "#Innovation", "#Digital", "#Software", "#Technology"]
-        else:
-            industry = "Professional Services"
-            target_audience = "Business professionals, consumers"
-            themes = ["Professional", "Quality", "Service", "Trust", "Excellence"]
-            tags = ["#Business", "#Professional", "#Quality", "#Service"]
+        # Use AI to analyze content and generate business insights
+        # NO HARDCODED MAPPINGS - let AI determine everything from actual content
+        logger.info("🤖 Using AI-driven content analysis instead of hardcoded mappings")
+        
+        # Generate AI analysis prompt for content-based analysis
+        content_analysis_prompt = f"""
+        Analyze the following scraped website content and generate comprehensive business analysis:
+
+        CONTENT TO ANALYZE:
+        {all_text[:3000]}
+
+        COMPANY NAME DETECTED: {company_name}
+
+        Generate a detailed business analysis in JSON format with the following structure:
+        {{
+            "industry": "specific industry based on actual content analysis",
+            "target_audience": "specific target audience based on content and offerings",
+            "business_themes": ["theme1", "theme2", "theme3", "theme4", "theme5"],
+            "suggested_hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6"],
+            "business_description": "comprehensive description based on actual content",
+            "value_propositions": ["prop1", "prop2", "prop3"],
+            "competitive_advantages": ["advantage1", "advantage2", "advantage3"],
+            "brand_voice": "brand voice analysis from content",
+            "campaign_direction": "marketing campaign direction based on business analysis"
+        }}
+
+        Base your analysis ENTIRELY on the actual website content provided. Do not use generic categories.
+        """
+        
+        try:
+            if self.client:
+                # Use AI to analyze content
+                response = self.client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=content_analysis_prompt
+                )
+                
+                ai_analysis = response.text
+                logger.info(f"🤖 AI Content Analysis Generated: {len(ai_analysis)} characters")
+                
+                # Parse AI response
+                import json
+                import re
+                json_match = re.search(r'\{.*\}', ai_analysis, re.DOTALL)
+                if json_match:
+                    try:
+                        analysis_data = json.loads(json_match.group())
+                        industry = analysis_data.get('industry', 'Business')
+                        target_audience = analysis_data.get('target_audience', 'General audience')
+                        themes = analysis_data.get('business_themes', [])
+                        tags = analysis_data.get('suggested_hashtags', [])
+                        business_desc = analysis_data.get('business_description', '')
+                        value_props = analysis_data.get('value_propositions', [])
+                        competitive_advantages = analysis_data.get('competitive_advantages', [])
+                        brand_voice = analysis_data.get('brand_voice', 'professional')
+                        
+                        logger.info(f"✅ AI-Generated Analysis: {industry} | {len(themes)} themes | {len(tags)} tags")
+                        
+                    except json.JSONDecodeError:
+                        logger.warning("Failed to parse AI analysis JSON, using content-based fallback")
+                        raise Exception("JSON parsing failed")
+                else:
+                    logger.warning("No JSON found in AI response, using content-based fallback")
+                    raise Exception("No JSON structure found")
+            else:
+                raise Exception("No AI client available")
+                
+        except Exception as e:
+            logger.warning(f"AI content analysis failed: {e}, using basic content analysis")
+            # Minimal fallback - analyze content structure without hardcoded mappings
+            industry = "Business Services"
+            target_audience = "Professional audience"
+            themes = ["Business Growth", "Professional Service", "Customer Focus"]
+            tags = ["#Business", "#Professional", "#Growth"]
+            business_desc = f"Professional business providing specialized services"
+            value_props = ["Quality service", "Professional expertise", "Customer satisfaction"]
+            competitive_advantages = ["Experience", "Quality", "Service"]
+            brand_voice = "professional"
         
         return {
             "company_name": company_name,
-            "business_description": f"Professional {industry.lower()} business providing quality products and services",
+            "business_description": business_desc or f"Professional {industry.lower()} business providing specialized services",
             "industry": industry,
             "target_audience": target_audience,
             "product_context": {
-                "primary_products": ["Products and services"],
+                "primary_products": value_props or ["Professional services"],
                 "design_style": "Professional and modern",
                 "visual_themes": themes,
                 "color_palette": ["professional", "modern", "clean"],
                 "target_scenarios": ["people using products", "lifestyle contexts"],
-                "brand_personality": "professional, trustworthy, quality-focused"
+                "brand_personality": brand_voice
             },
             "campaign_guidance": {
                 "suggested_themes": themes,
                 "suggested_tags": tags,
-                "creative_direction": f"Focus on showcasing quality {industry.lower()} products in professional, appealing contexts",
+                "creative_direction": f"Focus on showcasing {company_name}'s {industry.lower()} offerings to {target_audience.lower()}",
                 "visual_style": {
                     "photography_style": "professional lifestyle photography",
                     "environment": "modern, clean, professional settings",
-                    "mood": "confident, professional, appealing"
+                    "mood": f"{brand_voice}, appealing, trustworthy"
                 },
-                "campaign_media_tuning": "Show products being used by satisfied customers in authentic contexts"
+                "campaign_media_tuning": f"Show {company_name}'s offerings being used by satisfied customers in authentic contexts"
             },
-            "brand_voice": "professional, trustworthy, customer-focused",
-            "key_messaging": ["Quality products", "Professional service", "Customer satisfaction"],
-            "competitive_advantages": ["Quality", "Service", "Experience"]
+            "brand_voice": brand_voice,
+            "key_messaging": value_props or ["Quality service", "Professional expertise"],
+            "competitive_advantages": competitive_advantages,
+            "suggested_themes": themes,
+            "suggested_tags": tags
         }
     
     # Helper methods for extraction
