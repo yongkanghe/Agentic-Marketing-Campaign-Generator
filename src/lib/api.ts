@@ -248,6 +248,7 @@ export interface UrlAnalysisResponse {
       visual_style?: any;
     };
   };
+  processing_time: number;
 }
 
 export interface FileAnalysisRequest {
@@ -527,15 +528,25 @@ export class VideoVentureLaunchAPI {
   // URL Analysis
   static async analyzeUrls(request: UrlAnalysisRequest): Promise<UrlAnalysisResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<UrlAnalysisResponse>>('/api/v1/analysis/url', request);
+      info('🔍 Starting URL analysis', { urls: request.urls, analysisType: request.analysis_type }, 'API');
       
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to analyze URLs');
+      const response = await apiClient.post('/api/v1/analysis/url', request);
+      
+      // Backend returns URLAnalysisResponse directly, not wrapped in ApiResponse
+      if (!response.data) {
+        throw new Error('No response data received from backend');
       }
       
-      return response.data.data;
+      info('✅ URL analysis completed successfully', { 
+        businessAnalysis: !!response.data.business_analysis,
+        themes: response.data.suggested_themes?.length || 0,
+        tags: response.data.suggested_tags?.length || 0,
+        processingTime: response.data.processing_time 
+      }, 'API');
+      
+      return response.data;
     } catch (error) {
-      console.error('Analyze URLs error:', error);
+      error('❌ Analyze URLs error', error, 'API');
       throw this.handleApiError(error);
     }
   }

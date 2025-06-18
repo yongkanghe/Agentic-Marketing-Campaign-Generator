@@ -251,60 +251,34 @@ const IdeationPage: React.FC = () => {
           analysis_type: 'business_context'
         });
         
-        // Extract themes and tags from analysis result
+        console.log('📊 AI Analysis Result:', {
+          hasSuggestedThemes: !!analysisResult.suggested_themes,
+          themesCount: analysisResult.suggested_themes?.length || 0,
+          themes: analysisResult.suggested_themes,
+          hasSuggestedTags: !!analysisResult.suggested_tags,
+          tagsCount: analysisResult.suggested_tags?.length || 0,
+          tags: analysisResult.suggested_tags,
+          hasBusinessAnalysis: !!analysisResult.business_analysis
+        });
+        
+        // Use AI-generated themes and tags directly from backend
         let suggestedThemes = analysisResult.suggested_themes || [];
         let suggestedTags = analysisResult.suggested_tags || [];
         
-        // Fallback: extract from nested structure if top-level fields are empty
+        console.log('🎨 Using AI-generated themes:', suggestedThemes);
+        console.log('🏷️ Using AI-generated tags:', suggestedTags);
+        
+        // Fallback only if AI didn't generate any themes/tags
         if (suggestedThemes.length === 0) {
-          const nestedThemes = (analysisResult as any)?.business_analysis?.campaign_guidance?.content_themes?.primary_themes;
-          if (nestedThemes && Array.isArray(nestedThemes)) {
-            suggestedThemes = nestedThemes;
-            console.log('📝 Extracted themes from nested structure:', suggestedThemes);
-          }
+          console.log('⚠️ No AI themes found, using fallback themes');
+          suggestedThemes = ['Professional', 'Modern', 'Innovative', 'Quality', 'Growth'];
         }
         
         if (suggestedTags.length === 0) {
-          // Generate tags from business analysis
-          const businessAnalysis = (analysisResult as any)?.business_analysis;
-          if (businessAnalysis) {
-            const generatedTags: string[] = [];
-            
-            // Extract from value propositions
-            if (businessAnalysis.value_propositions && Array.isArray(businessAnalysis.value_propositions)) {
-              businessAnalysis.value_propositions.slice(0, 3).forEach((prop: string) => {
-                const tag = prop.replace(/[^a-zA-Z0-9]/g, '').slice(0, 15);
-                if (tag.length > 3) generatedTags.push(tag);
-              });
-            }
-            
-            // Extract from industry
-            if (businessAnalysis.industry && typeof businessAnalysis.industry === 'string') {
-              const industryWords = businessAnalysis.industry.split(/[\s(),]+/).filter((word: string) => word.length > 3);
-              generatedTags.push(...industryWords.slice(0, 3));
-            }
-            
-            // Extract from competitive advantages
-            if (businessAnalysis.competitive_advantages && Array.isArray(businessAnalysis.competitive_advantages)) {
-              businessAnalysis.competitive_advantages.slice(0, 2).forEach((advantage: string) => {
-                const words = advantage.split(' ').slice(0, 2);
-                words.forEach((word: string) => {
-                  const cleanWord = word.replace(/[^a-zA-Z0-9]/g, '');
-                  if (cleanWord.length > 3) generatedTags.push(cleanWord);
-                });
-              });
-            }
-            
-            // Fallback tags
-            if (generatedTags.length === 0) {
-              generatedTags.push('Business', 'Quality', 'Value', 'Innovation', 'Growth');
-            }
-            
-            suggestedTags = [...new Set(generatedTags)].slice(0, 8); // Remove duplicates and limit
-            console.log('🏷️ Generated tags from business analysis:', suggestedTags);
-          }
+          console.log('⚠️ No AI tags found, using fallback tags');
+          suggestedTags = ['Business', 'Quality', 'Innovation', 'Growth', 'Success'];
         }
-        
+
         // Update the marketing context with real themes and tags
         if (suggestedThemes.length > 0) {
           // Clear existing themes and add new ones
@@ -327,6 +301,16 @@ const IdeationPage: React.FC = () => {
           const valuePropositions = businessAnalysis.value_propositions || [];
           const competitiveAdvantages = businessAnalysis.competitive_advantages || [];
           
+          // Debug logging for campaign guidance
+          console.log('🔍 AI Analysis Debug - Business Analysis:', {
+            companyName,
+            industry,
+            targetAudience,
+            hasCampaignGuidance: !!businessAnalysis.campaign_guidance,
+            campaignGuidanceKeys: businessAnalysis.campaign_guidance ? Object.keys(businessAnalysis.campaign_guidance) : [],
+            campaignGuidance: businessAnalysis.campaign_guidance
+          });
+          
           // Create a comprehensive AI summary
           let newSummary = `AI Analysis: ${companyName} operates in ${industry}, targeting ${targetAudience}.`;
           
@@ -344,13 +328,22 @@ const IdeationPage: React.FC = () => {
           updateAiSummary(newSummary);
           
           // Update the current campaign with the COMPLETE new analysis
+          const updatedAnalysis = {
+            summary: newSummary,
+            businessAnalysis: businessAnalysis,
+            campaignGuidance: businessAnalysis.campaign_guidance || {},
+            lastUpdated: new Date().toISOString()
+          };
+          
+          console.log('🔄 Updating Campaign with AI Analysis:', {
+            hasBusinessAnalysis: !!updatedAnalysis.businessAnalysis,
+            hasCampaignGuidance: !!updatedAnalysis.campaignGuidance,
+            campaignGuidanceKeys: Object.keys(updatedAnalysis.campaignGuidance),
+            updatedAnalysis
+          });
+          
           updateCurrentCampaign({
-            aiAnalysis: {
-              summary: newSummary,
-              businessAnalysis: businessAnalysis,
-              campaignGuidance: businessAnalysis.campaign_guidance || {},
-              lastUpdated: new Date().toISOString()
-            }
+            aiAnalysis: updatedAnalysis
           });
         }
 
@@ -412,8 +405,8 @@ const IdeationPage: React.FC = () => {
             </div>
             
             {/* Campaign Overview */}
-            <div className="grid lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-2">
+            <div className="grid lg:grid-cols-2 gap-6 mb-6">
+              <div className="lg:col-span-1">
                 <h3 className="text-lg font-semibold vvl-text-primary mb-3">{currentCampaign.name}</h3>
                 <p className="vvl-text-secondary mb-4 text-sm leading-relaxed">{currentCampaign.objective}</p>
                 
@@ -598,40 +591,110 @@ const IdeationPage: React.FC = () => {
                 <div>
                   <h5 className="text-sm font-semibold text-white mb-2">Creative Direction</h5>
                   <p className="text-sm text-gray-200 leading-relaxed mb-3">
-                    {currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction || 
-                     "Professional lifestyle photography with modern, clean composition focusing on authentic customer scenarios. Emphasize trustworthy, competent brand personality through natural lighting and business-appropriate settings."}
+                    {(() => {
+                      // Debug logging for campaign guidance
+                      console.log('Campaign Guidance Debug:', {
+                        hasAiAnalysis: !!currentCampaign?.aiAnalysis,
+                        hasCampaignGuidance: !!currentCampaign?.aiAnalysis?.campaignGuidance,
+                        campaignGuidanceKeys: currentCampaign?.aiAnalysis?.campaignGuidance ? Object.keys(currentCampaign.aiAnalysis.campaignGuidance) : [],
+                        creativeDirection: currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction
+                      });
+                      
+                      const creativeDirection = currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction;
+                      if (creativeDirection && creativeDirection.trim() !== '') {
+                        return creativeDirection;
+                      }
+                      
+                      // Fallback to business analysis if campaign guidance not available
+                      const businessAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+                      if (businessAnalysis?.campaign_guidance?.creative_direction) {
+                        return businessAnalysis.campaign_guidance.creative_direction;
+                      }
+                      
+                      return "AI-generated creative direction will appear here after analysis. Click 'Regenerate Analysis' to generate tailored creative guidance based on your business context.";
+                    })()}
                   </p>
                   
                   <h5 className="text-sm font-semibold text-white mb-2 mt-4">Visual Style</h5>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-gray-300">Photography: {currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style?.photography_style || "Professional lifestyle"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                      <span className="text-gray-300">Mood: {currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style?.mood || "Professional, trustworthy, competent"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-300">Lighting: {currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style?.lighting || "Natural lighting"}</span>
-                    </div>
+                    {(() => {
+                      const visualStyle = currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style || 
+                                         currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.visual_style;
+                      
+                      if (visualStyle) {
+                        return (
+                          <>
+                            <div className="flex items-center gap-2 text-xs">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              <span className="text-gray-300">Photography: {visualStyle.photography_style || visualStyle.photography || "Professional lifestyle"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                              <span className="text-gray-300">Mood: {visualStyle.mood || visualStyle.brand_mood || "Professional, trustworthy"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              <span className="text-gray-300">Lighting: {visualStyle.lighting || visualStyle.lighting_style || "Natural lighting"}</span>
+                            </div>
+                          </>
+                        );
+                      }
+                      
+                      return (
+                        <div className="text-xs text-gray-400 italic">
+                          AI-generated visual style guidelines will appear here after analysis.
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 
                 <div>
                   <h5 className="text-sm font-semibold text-white mb-2">Content Themes</h5>
                   <p className="text-sm text-gray-200 leading-relaxed mb-3">
-                    {currentCampaign?.aiAnalysis?.campaignGuidance?.target_context || 
-                     "Focus on authenticity, results, and community building. Use inspiring and action-oriented calls-to-action that trigger aspiration, trust, and excitement in your target audience."}
+                    {(() => {
+                      const targetContext = currentCampaign?.aiAnalysis?.campaignGuidance?.target_context ||
+                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.target_context;
+                      
+                      if (targetContext && targetContext.trim() !== '') {
+                        return targetContext;
+                      }
+                      
+                      // Try to build from content themes
+                      const contentThemes = currentCampaign?.aiAnalysis?.campaignGuidance?.content_themes ||
+                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.content_themes;
+                      
+                      if (contentThemes?.primary_themes?.length > 0) {
+                        return `Focus on ${contentThemes.primary_themes.slice(0, 3).join(', ').toLowerCase()}. Use compelling calls-to-action that resonate with your target audience and drive engagement.`;
+                      }
+                      
+                      return "AI-generated content strategy will appear here after analysis. This will include tailored messaging themes based on your business context.";
+                    })()}
                   </p>
                   
                   <div className="flex flex-wrap gap-2">
-                    {(currentCampaign?.aiAnalysis?.campaignGuidance?.content_themes?.primary_themes || ['Authenticity', 'Results', 'Community', 'Growth', 'Innovation']).map((theme: string) => (
-                      <span key={theme} className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
-                        {theme}
-                      </span>
-                    ))}
+                    {(() => {
+                      const contentThemes = currentCampaign?.aiAnalysis?.campaignGuidance?.content_themes ||
+                                           currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.content_themes;
+                      
+                      const primaryThemes = contentThemes?.primary_themes || [];
+                      const productThemes = contentThemes?.product_specific_themes || [];
+                      const allThemes = [...primaryThemes, ...productThemes].slice(0, 6); // Limit to 6 themes
+                      
+                      if (allThemes.length > 0) {
+                        return allThemes.map((theme: string) => (
+                          <span key={theme} className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
+                            {theme}
+                          </span>
+                        ));
+                      }
+                      
+                      return (
+                        <span className="text-xs text-gray-400 italic">
+                          AI-generated content themes will appear here
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -641,13 +704,39 @@ const IdeationPage: React.FC = () => {
                   <div>
                     <span className="font-semibold text-blue-400">Image Generation:</span>
                     <span className="text-gray-300 ml-2">
-                      {currentCampaign?.aiAnalysis?.campaignGuidance?.imagen_prompts?.technical_specs || "Following Imagen best practices with 35mm lens, natural lighting, high resolution"}
+                      {(() => {
+                        const imagenPrompts = currentCampaign?.aiAnalysis?.campaignGuidance?.imagen_prompts ||
+                                             currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.imagen_prompts;
+                        
+                        if (imagenPrompts?.technical_specs) {
+                          return imagenPrompts.technical_specs;
+                        }
+                        
+                        if (imagenPrompts?.style_guidance) {
+                          return imagenPrompts.style_guidance;
+                        }
+                        
+                        return "AI-generated image guidance will appear after analysis";
+                      })()}
                     </span>
                   </div>
                   <div>
                     <span className="font-semibold text-purple-400">Video Generation:</span>
                     <span className="text-gray-300 ml-2">
-                      {currentCampaign?.aiAnalysis?.campaignGuidance?.veo_prompts?.duration_focus || "Following Veo best practices with smooth movements, 15-30 second social clips"}
+                      {(() => {
+                        const veoPrompts = currentCampaign?.aiAnalysis?.campaignGuidance?.veo_prompts ||
+                                          currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.veo_prompts;
+                        
+                        if (veoPrompts?.duration_focus) {
+                          return veoPrompts.duration_focus;
+                        }
+                        
+                        if (veoPrompts?.style_guidance) {
+                          return veoPrompts.style_guidance;
+                        }
+                        
+                        return "AI-generated video guidance will appear after analysis";
+                      })()}
                     </span>
                   </div>
                 </div>
