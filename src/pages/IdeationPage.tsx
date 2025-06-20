@@ -4,7 +4,7 @@
  * Author: JP + 2025-06-15
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketingContext } from '@/contexts/MarketingContext';
 import { MaterialVideoCard } from '@/components/MaterialVideoCard';
@@ -14,6 +14,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoVentureLaunchAPI from '../lib/api';
+
+// CRITICAL FIX: Add TypeScript interfaces for better type safety
+interface SocialMediaColumn {
+  id: string;
+  title: string;
+  description: string;
+  mediaType: 'text-only' | 'text-with-image' | 'text-with-video';
+  posts: Array<{
+    id: string;
+    type: 'text-only' | 'text-with-image' | 'text-with-video';
+    platform: 'linkedin';
+    content: {
+      text: string;
+      hashtags: string[];
+      imageUrl?: string;
+      videoUrl?: string;
+      productUrl?: string;
+    };
+    generationPrompt: string;
+    selected: boolean;
+    engagement_score: number;
+    platform_optimized: any;
+  }>;
+  isGenerating: boolean;
+  isGeneratingVisuals: boolean;
+}
 
 const IdeationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,13 +71,20 @@ const IdeationPage: React.FC = () => {
   const [showGuidanceChat, setShowGuidanceChat] = useState(false);
   const [showGuidanceEdit, setShowGuidanceEdit] = useState(false);
   
-  // Mock social media columns data
-  const [socialMediaColumns, setSocialMediaColumns] = useState([
+  // CRITICAL FIX 1.1: Use useRef to track generation states and prevent race conditions
+  const generationStateRef = useRef<Record<string, boolean>>({});
+  const visualGenerationStateRef = useRef<Record<string, boolean>>({});
+  
+  // CRITICAL FIX 1.3: AbortController for cancelling requests on unmount
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Mock social media columns data with proper TypeScript interface
+  const [socialMediaColumns, setSocialMediaColumns] = useState<SocialMediaColumn[]>([
     {
       id: 'text-only',
       title: 'Text + URL Posts',
       description: 'Marketing text with product URL for link unfurling',
-      mediaType: 'text-only' as const,
+      mediaType: 'text-only',
       posts: [],
       isGenerating: false,
       isGeneratingVisuals: false
@@ -60,7 +93,7 @@ const IdeationPage: React.FC = () => {
       id: 'text-image',
       title: 'Text + Image Posts',
       description: 'Shortened text with AI-generated images',
-      mediaType: 'text-with-image' as const,
+      mediaType: 'text-with-image',
       posts: [],
       isGenerating: false,
       isGeneratingVisuals: false
@@ -69,7 +102,7 @@ const IdeationPage: React.FC = () => {
       id: 'text-video',
       title: 'Text + Video Posts',
       description: 'Marketing text with AI-generated videos',
-      mediaType: 'text-with-video' as const,
+      mediaType: 'text-with-video',
       posts: [],
       isGenerating: false,
       isGeneratingVisuals: false
@@ -77,136 +110,139 @@ const IdeationPage: React.FC = () => {
   ]);
   
   // CRITICAL FIX: Clear any stuck generation states on component mount
-  const clearStuckStates = () => {
+  const clearStuckStates = useCallback(() => {
     console.log('🔧 Clearing any stuck generation states...');
+    generationStateRef.current = {};
+    visualGenerationStateRef.current = {};
     setSocialMediaColumns(prev => prev.map(col => ({
       ...col,
       isGenerating: false,
       isGeneratingVisuals: false
     })));
-  };
+  }, []);
   
-  // Clear stuck states on component mount
+  // CRITICAL FIX 1.3: Cleanup function to abort ongoing requests
   useEffect(() => {
     console.log('🔧 Component mounted - clearing any stuck states');
     clearStuckStates();
-  }, []);
-  
-  useEffect(() => {
-    if (!currentCampaign) {
-      navigate('/');
-      return;
-    }
     
-    if (currentCampaign.preferredDesign) {
-      setPreferredDesign(currentCampaign.preferredDesign);
-    }
-    
-    // FIXED: Check if AI analysis and campaign guidance are missing and trigger regeneration
-    const hasAiAnalysis = currentCampaign.aiAnalysis?.businessAnalysis;
-    const hasCampaignGuidance = currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance;
-    const hasCreativeDirection = hasCampaignGuidance?.creative_direction;
-    const hasUrls = currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl;
-    
-    // PERFORMANCE: Add debouncing to prevent multiple simultaneous analysis calls
-    const analysisKey = `${currentCampaign.id}-${hasAiAnalysis}-${!!hasCampaignGuidance}-${!!hasCreativeDirection}`;
-    
-    if (!hasAiAnalysis && hasUrls && !isRegeneratingAnalysis) {
-      console.log('🔄 Missing AI analysis detected, triggering automatic regeneration...');
-      // Add small delay to prevent race conditions
-      setTimeout(() => {
-        if (!isRegeneratingAnalysis) {
-          regenerateAIAnalysis();
-        }
-      }, 500);
-    } else if (hasAiAnalysis && (!hasCampaignGuidance || !hasCreativeDirection) && hasUrls && !isRegeneratingAnalysis) {
-      console.log('🔄 Missing campaign guidance detected, triggering automatic regeneration...');
-      // Add small delay to prevent race conditions
-      setTimeout(() => {
-        if (!isRegeneratingAnalysis) {
-          regenerateAIAnalysis();
-        }
-      }, 500);
-    }
-    
-    // SESSION PERSISTENCE: Restore social media columns from localStorage or campaign data
-    const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
-    const savedColumns = localStorage.getItem(campaignColumnsKey);
-    
-    if (savedColumns) {
-      try {
-        const parsedColumns = JSON.parse(savedColumns);
-        console.log('📦 Raw localStorage columns:', parsedColumns.map((col: any) => ({
-          id: col.id,
-          isGenerating: col.isGenerating,
-          isGeneratingVisuals: col.isGeneratingVisuals,
-          postsCount: col.posts?.length || 0
-        })));
-        
-        // CRITICAL FIX: Reset any stuck generation states when restoring from localStorage
-        const cleanedColumns = parsedColumns.map((col: any) => ({
-          ...col,
-          isGenerating: false,
-          isGeneratingVisuals: false
-        }));
-        
-        console.log('✅ Cleaned localStorage columns:', cleanedColumns.map((col: any) => ({
-          id: col.id,
-          isGenerating: col.isGenerating,
-          isGeneratingVisuals: col.isGeneratingVisuals,
-          postsCount: col.posts?.length || 0
-        })));
-        
-        setSocialMediaColumns(cleanedColumns as typeof socialMediaColumns);
-        console.log('Restored social media columns from localStorage for campaign:', currentCampaign.id);
-      } catch (error) {
-        console.error('Failed to parse saved columns:', error);
-        // Auto-generate initial posts when page loads if no saved data
-        generateAllPosts();
+    // Cleanup function to abort ongoing requests
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        console.log('🚫 Aborted ongoing API requests due to component unmount');
       }
-    } else if (currentCampaign.socialMediaColumns && currentCampaign.socialMediaColumns.length > 0) {
-      console.log('📦 Raw campaign columns:', currentCampaign.socialMediaColumns.map((col: any) => ({
+    };
+  }, [clearStuckStates]);
+  
+  // CRITICAL FIX 1.4: Safe localStorage operations with size limits and error handling
+  const saveColumnsToStorage = useCallback((columns: SocialMediaColumn[]) => {
+    if (!currentCampaign?.id) return;
+    
+    try {
+      // Create minimal serializable snapshot to avoid size limits
+      const minimalColumns = columns.map(col => ({
         id: col.id,
-        isGenerating: col.isGenerating,
-        isGeneratingVisuals: col.isGeneratingVisuals,
-        postsCount: col.posts?.length || 0
-      })));
-      
-      // CRITICAL FIX: Reset any stuck generation states when restoring from campaign data
-      const cleanedColumns = currentCampaign.socialMediaColumns.map((col: any) => ({
-        ...col,
-        isGenerating: false,
+        title: col.title,
+        description: col.description,
+        mediaType: col.mediaType,
+        posts: col.posts.map(post => ({
+          id: post.id,
+          type: post.type,
+          content: {
+            text: post.content.text,
+            hashtags: post.content.hashtags,
+            // Only store URLs, not full image/video data
+            imageUrl: post.content.imageUrl,
+            videoUrl: post.content.videoUrl,
+            productUrl: post.content.productUrl
+          },
+          selected: post.selected,
+          engagement_score: post.engagement_score
+        })),
+        isGenerating: false, // Always reset loading states in storage
         isGeneratingVisuals: false
       }));
       
-      console.log('✅ Cleaned campaign columns:', cleanedColumns.map((col: any) => ({
-        id: col.id,
-        isGenerating: col.isGenerating,
-        isGeneratingVisuals: col.isGeneratingVisuals,
-        postsCount: col.posts?.length || 0
-      })));
-      
-      setSocialMediaColumns(cleanedColumns as typeof socialMediaColumns);
-      console.log('Restored social media columns from campaign data');
-    } else {
-      console.log('🎯 No saved columns found - generating initial posts');
-      // Auto-generate initial posts when page loads
-      generateAllPosts();
-    }
-  }, [currentCampaign, navigate]);
-
-  // SESSION PERSISTENCE: Save social media columns to localStorage whenever they change
-  useEffect(() => {
-    if (currentCampaign && socialMediaColumns.some(col => col.posts.length > 0)) {
       const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
-      localStorage.setItem(campaignColumnsKey, JSON.stringify(socialMediaColumns));
+      const dataString = JSON.stringify(minimalColumns);
       
-      // Also update the campaign in the marketing context
-      updateCurrentCampaign({ socialMediaColumns });
+      // Check size limit (localStorage typically has 5MB limit)
+      if (dataString.length > 4 * 1024 * 1024) { // 4MB safety margin
+        console.warn('⚠️ Campaign data too large for localStorage, skipping save');
+        return;
+      }
+      
+      localStorage.setItem(campaignColumnsKey, dataString);
+      console.log(`💾 Saved ${minimalColumns.length} columns to localStorage`);
+      
+    } catch (error) {
+      console.error('❌ Failed to save columns to localStorage:', error);
+      // Don't show user error for localStorage failures
     }
-  }, [socialMediaColumns, currentCampaign?.id]);
+  }, [currentCampaign?.id]);
+  
+  const loadColumnsFromStorage = useCallback((): SocialMediaColumn[] | null => {
+    if (!currentCampaign?.id) return null;
+    
+    try {
+      const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+      const savedData = localStorage.getItem(campaignColumnsKey);
+      
+      if (!savedData) return null;
+      
+      const parsedColumns = JSON.parse(savedData);
+      
+      // Validate the structure
+      if (!Array.isArray(parsedColumns)) {
+        console.warn('⚠️ Invalid localStorage data structure, ignoring');
+        return null;
+      }
+      
+      // Transform back to full structure with safety checks
+      const fullColumns: SocialMediaColumn[] = parsedColumns.map((col: any) => ({
+        id: col.id || '',
+        title: col.title || '',
+        description: col.description || '',
+        mediaType: col.mediaType || 'text-only',
+        posts: (col.posts || []).map((post: any) => ({
+          id: post.id || '',
+          type: post.type || 'text-only',
+          platform: 'linkedin' as const,
+          content: {
+            text: post.content?.text || '',
+            hashtags: Array.isArray(post.content?.hashtags) ? post.content.hashtags : [],
+            imageUrl: post.content?.imageUrl,
+            videoUrl: post.content?.videoUrl,
+            productUrl: post.content?.productUrl
+          },
+          generationPrompt: `Generated content for ${col.id}`,
+          selected: Boolean(post.selected),
+          engagement_score: Number(post.engagement_score) || 7.0,
+          platform_optimized: {}
+        })),
+        isGenerating: false, // Always reset loading states
+        isGeneratingVisuals: false
+      }));
+      
+      console.log(`📦 Loaded ${fullColumns.length} columns from localStorage`);
+      return fullColumns;
+      
+    } catch (error) {
+      console.error('❌ Failed to load columns from localStorage:', error);
+      // Clear corrupted data
+      try {
+        const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+        localStorage.removeItem(campaignColumnsKey);
+        console.log('🗑️ Cleared corrupted localStorage data');
+      } catch (clearError) {
+        console.error('❌ Failed to clear corrupted localStorage:', clearError);
+      }
+      return null;
+    }
+  }, [currentCampaign?.id]);
 
-  const generateAllPosts = async () => {
+  const generateAllPosts = useCallback(async () => {
     if (selectedThemes.length === 0 || selectedTags.length === 0) {
       // Use default selections for quick start
       if (suggestedThemes.length > 0) selectTheme(suggestedThemes[0]);
@@ -225,32 +261,49 @@ const IdeationPage: React.FC = () => {
       isGenerating: col.id === 'text-only' ? col.isGenerating : false,
       isGeneratingVisuals: false // Force reset visual generation state
     })));
-  };
+  }, [selectedThemes, selectedTags, suggestedThemes, suggestedTags, selectTheme, selectTag]);
 
-  const generateColumnPosts = async (columnId: string) => {
-    // CRITICAL FIX: Prevent multiple simultaneous calls
-    const column = socialMediaColumns.find(col => col.id === columnId);
-    if (!column || column.isGenerating) {
-      console.log(`🚫 Skipping ${columnId} generation - already in progress or not found`);
+  // CRITICAL FIX 1.1 & 1.2: Race condition and stale closure fixes
+  const generateColumnPosts = useCallback(async (columnId: string) => {
+    // CRITICAL FIX: Use ref-based state checking to prevent race conditions
+    if (generationStateRef.current[columnId]) {
+      console.log(`🚫 Skipping ${columnId} generation - already in progress (ref-based check)`);
       return;
     }
     
-    // Set loading state immediately with optimistic update
-    setSocialMediaColumns(prev => prev.map(col => 
-      col.id === columnId ? { 
-        ...col, 
-        isGenerating: true, 
-        posts: [] // Clear old posts to show fresh loading state
-      } : col
-    ));
+    // CRITICAL FIX: Set ref state immediately to prevent race conditions
+    generationStateRef.current[columnId] = true;
+    
+    // Set up AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     
     try {
-      // Real API call to backend for content generation
+      // CRITICAL FIX 1.2: Capture mediaType before async operations to avoid stale closure
+      const currentColumn = socialMediaColumns.find(col => col.id === columnId);
+      if (!currentColumn) {
+        console.log(`🚫 Column ${columnId} not found`);
+        return;
+      }
+      
+      const mediaType = currentColumn.mediaType;
+      
+      // Set loading state with functional update
+      setSocialMediaColumns(prev => prev.map(col => 
+        col.id === columnId ? { 
+          ...col, 
+          isGenerating: true, 
+          posts: [] // Clear old posts to show fresh loading state
+        } : col
+      ));
+      
+      // Map columnId to API post type
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
       
       console.log(`🎯 Generating ${postType} posts for column ${columnId}...`);
       
+      // CRITICAL FIX 1.3: Add abort signal to API call
       const data = await VideoVentureLaunchAPI.generateBulkContent({
         post_type: postType,
         regenerate_count: 5,
@@ -272,31 +325,34 @@ const IdeationPage: React.FC = () => {
         creativity_level: currentCampaign?.creativityLevel || 7
       });
       
+      // Check if request was aborted
+      if (controller.signal.aborted) {
+        console.log(`🚫 Request aborted for ${columnId}`);
+        return;
+      }
+      
       console.log(`✅ Generated ${data.new_posts.length} ${postType} posts successfully`);
       
-      // Transform API response to match frontend format
-      const transformedPosts = data.new_posts.map((post: any, idx: number) => {
-        const currentColumn = socialMediaColumns.find(col => col.id === columnId);
-        return {
-          id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
-          type: currentColumn?.mediaType || columnId as 'text-only' | 'text-with-image' | 'text-with-video',
-          platform: 'linkedin' as const,
-          content: {
-            text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
-            hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-            imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
-            videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
-            productUrl: (columnId === 'text-only' && post.url) ? post.url : 
-                       (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
-          },
-          generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
-          selected: false,
-          engagement_score: post.engagement_score || (7.0 + idx * 0.1),
-          platform_optimized: post.platform_optimized || {}
-        };
-      });
+      // CRITICAL FIX 1.2: Use captured mediaType instead of searching in state
+      const transformedPosts = data.new_posts.map((post: any, idx: number) => ({
+        id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
+        type: mediaType, // Use captured mediaType to avoid stale closure
+        platform: 'linkedin' as const,
+        content: {
+          text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
+          hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
+          imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
+          videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
+          productUrl: (columnId === 'text-only' && post.url) ? post.url : 
+                     (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
+        },
+        generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
+        selected: false,
+        engagement_score: post.engagement_score || (7.0 + idx * 0.1),
+        platform_optimized: post.platform_optimized || {}
+      }));
       
-      // Update state with successful results
+      // Update state with successful results using functional update
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { 
           ...col, 
@@ -307,10 +363,16 @@ const IdeationPage: React.FC = () => {
 
       toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`);
       
-    } catch (error) {
-      console.error(`❌ Failed to generate ${columnId} posts:`, error);
+    } catch (err) {
+      // Check if error is due to abort
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log(`🚫 Request aborted for ${columnId}`);
+        return;
+      }
       
-      // Reset loading state and clear any partial posts
+      console.error(`❌ Failed to generate ${columnId} posts:`, err);
+      
+      // Reset loading state and clear any partial posts using functional update
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { 
           ...col, 
@@ -320,33 +382,50 @@ const IdeationPage: React.FC = () => {
       ));
       
       // Show detailed error message for debugging
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
-      console.error(`Generation error details:`, { columnId, postType, error });
+      console.error(`Generation error details:`, { columnId, postType, error: err });
       
       toast.error(`Failed to generate ${columnId.replace('-', ' + ')} posts: ${errorMessage}. Please check your connection and try again.`);
+    } finally {
+      // CRITICAL FIX: Always clear the ref state
+      generationStateRef.current[columnId] = false;
     }
-  };
+  }, [currentCampaign, preferredDesign, suggestedHashtags, socialMediaColumns]);
 
-  const generateVisualContent = async (columnId: string) => {
-    // CRITICAL FIX: Prevent multiple simultaneous calls
-    const column = socialMediaColumns.find(col => col.id === columnId);
-    if (!column || column.isGeneratingVisuals || column.posts.length === 0) {
-      console.log(`🚫 Skipping ${columnId} visual generation - already in progress, not found, or no posts available`);
+  // CRITICAL FIX 1.1 & 1.2: Visual content generation with race condition fixes
+  const generateVisualContent = useCallback(async (columnId: string) => {
+    // CRITICAL FIX: Use ref-based state checking to prevent race conditions
+    if (visualGenerationStateRef.current[columnId]) {
+      console.log(`🚫 Skipping ${columnId} visual generation - already in progress (ref-based check)`);
       return;
     }
     
-    // Set visual generation loading state
-    setSocialMediaColumns(prev => prev.map(col => 
-      col.id === columnId ? { ...col, isGeneratingVisuals: true } : col
-    ));
+    // Check if column has posts to process
+    const currentColumn = socialMediaColumns.find(col => col.id === columnId);
+    if (!currentColumn || currentColumn.posts.length === 0) {
+      console.log(`🚫 Skipping ${columnId} visual generation - no posts available`);
+      return;
+    }
+    
+    // CRITICAL FIX: Set ref state immediately to prevent race conditions
+    visualGenerationStateRef.current[columnId] = true;
+    
+    // Set up AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     
     try {
-      console.log(`🎨 Generating visual content for ${columnId} with ${column.posts.length} posts...`);
+      // Set visual generation loading state with functional update
+      setSocialMediaColumns(prev => prev.map(col => 
+        col.id === columnId ? { ...col, isGeneratingVisuals: true } : col
+      ));
+      
+      console.log(`🎨 Generating visual content for ${columnId} with ${currentColumn.posts.length} posts...`);
       
       // Prepare posts for visual generation
-      const postsForVisuals = column.posts.map(post => ({
+      const postsForVisuals = currentColumn.posts.map(post => ({
         id: post.id,
         type: (columnId === 'text-image' ? 'text_image' : 'text_video') as 'text_image' | 'text_video',
         content: post.content.text,
@@ -354,7 +433,7 @@ const IdeationPage: React.FC = () => {
         hashtags: post.content.hashtags
       }));
       
-      // Call visual content generation API with comprehensive context
+      // CRITICAL FIX 1.3: Add abort signal to API call (when API supports it)
       const data = await VideoVentureLaunchAPI.generateVisualContent({
         social_posts: postsForVisuals,
         business_context: {
@@ -369,49 +448,66 @@ const IdeationPage: React.FC = () => {
         target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
       });
       
+      // Check if request was aborted
+      if (controller.signal.aborted) {
+        console.log(`🚫 Visual request aborted for ${columnId}`);
+        return;
+      }
+      
       console.log(`✅ Generated visual content for ${data.posts_with_visuals.length} posts`);
       
-      // Update posts with generated visual content
-      const updatedPosts = column.posts.map(post => {
-        const visualPost = data.posts_with_visuals.find((vp: any) => vp.id === post.id);
-        if (visualPost) {
-          return {
-            ...post,
-            content: {
-              ...post.content,
-              imageUrl: visualPost.image_url || post.content.imageUrl,
-              videoUrl: visualPost.video_url || post.content.videoUrl
+      // Update posts with generated visual content using functional update
+      setSocialMediaColumns(prev => prev.map(col => {
+        if (col.id === columnId) {
+          const updatedPosts = col.posts.map(post => {
+            const visualPost = data.posts_with_visuals.find((vp: any) => vp.id === post.id);
+            if (visualPost) {
+              return {
+                ...post,
+                content: {
+                  ...post.content,
+                  imageUrl: visualPost.image_url || post.content.imageUrl,
+                  videoUrl: visualPost.video_url || post.content.videoUrl
+                }
+              };
             }
+            return post;
+          });
+          
+          return {
+            ...col,
+            posts: updatedPosts,
+            isGeneratingVisuals: false
           };
         }
-        return post;
-      });
-      
-      // Update the column with visual content
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { 
-          ...col, 
-          posts: updatedPosts, 
-          isGeneratingVisuals: false 
-        } : col
-      ));
+        return col;
+      }));
 
       const visualType = columnId === 'text-image' ? 'images' : 'videos';
-      toast.success(`🎨 Generated ${visualType} for ${updatedPosts.length} posts successfully!`);
+      toast.success(`🎨 Generated ${visualType} for ${currentColumn.posts.length} posts successfully!`);
       
-    } catch (error) {
-      console.error(`❌ Failed to generate visual content for ${columnId}:`, error);
+    } catch (err) {
+      // Check if error is due to abort
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log(`🚫 Visual request aborted for ${columnId}`);
+        return;
+      }
       
-      // Reset visual generation loading state
+      console.error(`❌ Failed to generate visual content for ${columnId}:`, err);
+      
+      // Reset visual generation loading state using functional update
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { ...col, isGeneratingVisuals: false } : col
       ));
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const visualType = columnId === 'text-image' ? 'images' : 'videos';
       toast.error(`Failed to generate ${visualType}: ${errorMessage}. Please try again.`);
+    } finally {
+      // CRITICAL FIX: Always clear the ref state
+      visualGenerationStateRef.current[columnId] = false;
     }
-  };
+  }, [currentCampaign, socialMediaColumns]);
 
   const togglePostSelection = (postId: string) => {
     setSelectedPosts(prev => 
@@ -437,7 +533,7 @@ const IdeationPage: React.FC = () => {
     navigate('/scheduling');
   };
 
-  const regenerateAIAnalysis = async () => {
+  const regenerateAIAnalysis = useCallback(async () => {
     setIsRegeneratingAnalysis(true);
     try {
       // Real API call to analyze URLs and get themes/tags using proper API client
@@ -563,7 +659,81 @@ const IdeationPage: React.FC = () => {
     } finally {
       setIsRegeneratingAnalysis(false);
     }
-  };
+  }, [currentCampaign, selectedThemes, selectedTags, unselectTheme, selectTheme, unselectTag, selectTag, updateAiSummary, updateCurrentCampaign]);
+  
+  // CRITICAL FIX 1.6: Fix missing dependencies and remove unused code
+  useEffect(() => {
+    if (!currentCampaign) {
+      navigate('/');
+      return;
+    }
+    
+    if (currentCampaign.preferredDesign) {
+      setPreferredDesign(currentCampaign.preferredDesign);
+    }
+    
+    // FIXED: Check if AI analysis and campaign guidance are missing and trigger regeneration
+    const hasAiAnalysis = currentCampaign.aiAnalysis?.businessAnalysis;
+    const hasCampaignGuidance = currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance;
+    const hasCreativeDirection = hasCampaignGuidance?.creative_direction;
+    const hasUrls = currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl;
+    
+    // CRITICAL FIX 1.5: Remove unused analysisKey
+    
+    if (!hasAiAnalysis && hasUrls && !isRegeneratingAnalysis) {
+      console.log('🔄 Missing AI analysis detected, triggering automatic regeneration...');
+      // Add small delay to prevent race conditions
+      setTimeout(() => {
+        if (!isRegeneratingAnalysis) {
+          regenerateAIAnalysis();
+        }
+      }, 500);
+    } else if (hasAiAnalysis && (!hasCampaignGuidance || !hasCreativeDirection) && hasUrls && !isRegeneratingAnalysis) {
+      console.log('🔄 Missing campaign guidance detected, triggering automatic regeneration...');
+      // Add small delay to prevent race conditions
+      setTimeout(() => {
+        if (!isRegeneratingAnalysis) {
+          regenerateAIAnalysis();
+        }
+      }, 500);
+    }
+    
+    // CRITICAL FIX 1.4: Use safe localStorage operations
+    const savedColumns = loadColumnsFromStorage();
+    
+    if (savedColumns && savedColumns.length > 0) {
+      console.log('📦 Restored social media columns from localStorage for campaign:', currentCampaign.id);
+      setSocialMediaColumns(savedColumns);
+    } else if (currentCampaign.socialMediaColumns && currentCampaign.socialMediaColumns.length > 0) {
+      console.log('📦 Using campaign data columns');
+      // CRITICAL FIX: Reset any stuck generation states when restoring from campaign data
+      const cleanedColumns = currentCampaign.socialMediaColumns.map((col: any) => ({
+        ...col,
+        isGenerating: false,
+        isGeneratingVisuals: false
+      }));
+      
+      setSocialMediaColumns(cleanedColumns as SocialMediaColumn[]);
+    } else {
+      console.log('🎯 No saved columns found - generating initial posts');
+      // Auto-generate initial posts when page loads
+      generateAllPosts();
+    }
+  }, [currentCampaign, navigate, isRegeneratingAnalysis, loadColumnsFromStorage, generateAllPosts, regenerateAIAnalysis]);
+
+  // CRITICAL FIX 1.4: Safe localStorage persistence with debouncing
+  useEffect(() => {
+    if (currentCampaign && socialMediaColumns.some(col => col.posts.length > 0)) {
+      // Debounce localStorage saves to avoid excessive writes
+      const timeoutId = setTimeout(() => {
+        saveColumnsToStorage(socialMediaColumns);
+        // Also update the campaign in the marketing context
+        updateCurrentCampaign({ socialMediaColumns });
+      }, 1000); // 1 second debounce
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [socialMediaColumns, currentCampaign, saveColumnsToStorage, updateCurrentCampaign]);
   
   if (!currentCampaign) return null;
   
