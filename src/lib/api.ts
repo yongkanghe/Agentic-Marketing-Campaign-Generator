@@ -39,7 +39,7 @@ info('🚀 API Client initialized', { baseURL: API_BASE_URL, timeout: 45000 }, '
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 45000, // 45 seconds timeout for AI operations (Gemini batch generation can take 20-30s)
+  timeout: 60000, // 60 seconds timeout for AI operations (Gemini/Imagen/Veo generation can be slow)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -282,44 +282,52 @@ export class VideoVentureLaunchAPI {
   // Campaign Management
   static async createCampaign(campaignData: CreateCampaignRequest): Promise<Campaign> {
     try {
-      // Convert frontend format to backend format
-      const backendData = {
-        name: campaignData.name,
-        objective: campaignData.objective,
-        business_description: campaignData.businessDescription,
-        example_content: campaignData.exampleContent,
-        business_url: campaignData.businessUrl,
-        about_page_url: campaignData.aboutPageUrl,
-        product_service_url: campaignData.productServiceUrl,
-        campaign_type: campaignData.campaignType,
-        creativity_level: campaignData.creativityLevel,
-      };
+      const formData = new FormData();
+      
+      // Append all the campaign data
+      formData.append('name', campaignData.name);
+      formData.append('objective', campaignData.objective);
+      formData.append('businessDescription', campaignData.businessDescription);
+      formData.append('campaignType', campaignData.campaignType);
+      formData.append('creativityLevel', campaignData.creativityLevel.toString());
+      
+      if (campaignData.exampleContent) formData.append('exampleContent', campaignData.exampleContent);
+      if (campaignData.businessUrl) formData.append('businessUrl', campaignData.businessUrl);
+      if (campaignData.aboutPageUrl) formData.append('aboutPageUrl', campaignData.aboutPageUrl);
+      if (campaignData.productServiceUrl) formData.append('productServiceUrl', campaignData.productServiceUrl);
 
-      const response = await apiClient.post<ApiResponse<Campaign>>('/api/v1/campaigns/create', backendData);
+      // Append files if they exist
+      campaignData.uploadedImages?.forEach(file => formData.append('uploadedImages', file));
+      campaignData.uploadedDocuments?.forEach(file => formData.append('uploadedDocuments', file));
+      campaignData.campaignAssets?.forEach(file => formData.append('campaignAssets', file));
+
+      const response = await apiClient.post<ApiResponse<Campaign>>('/api/v1/campaigns', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
       if (!response.data.success || !response.data.data) {
         throw new Error(response.data.error || 'Failed to create campaign');
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Create campaign error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Create campaign error:', err);
+      throw this.handleApiError(err);
     }
   }
 
   static async getCampaigns(page: number = 1, limit: number = 10): Promise<{ campaigns: Campaign[], total: number }> {
     try {
-      const response = await apiClient.get<ApiResponse<{ campaigns: Campaign[], total: number }>>(`/api/v1/campaigns/?page=${page}&limit=${limit}`);
+      const response = await apiClient.get<ApiResponse<{ campaigns: Campaign[], total: number }>>(`/api/v1/campaigns?page=${page}&limit=${limit}`);
       
       if (!response.data.success || !response.data.data) {
         throw new Error(response.data.error || 'Failed to fetch campaigns');
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Get campaigns error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Get campaigns error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -332,9 +340,9 @@ export class VideoVentureLaunchAPI {
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Get campaign error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Get campaign error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -347,9 +355,9 @@ export class VideoVentureLaunchAPI {
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Update campaign error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Update campaign error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -360,9 +368,9 @@ export class VideoVentureLaunchAPI {
       if (!response.data.success) {
         throw new Error(response.data.error || 'Failed to delete campaign');
       }
-    } catch (error) {
-      console.error('Delete campaign error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Delete campaign error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -376,9 +384,9 @@ export class VideoVentureLaunchAPI {
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Generate content error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Generate content error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -394,9 +402,9 @@ export class VideoVentureLaunchAPI {
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Regenerate content error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Regenerate content error:', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -436,46 +444,19 @@ export class VideoVentureLaunchAPI {
     processing_time: number;
   }> {
     try {
-      console.log('🎯 Generating bulk content with request:', {
-        post_type: request.post_type,
-        count: request.regenerate_count,
-        company: request.business_context.company_name
-      });
+      debug('🎯 Generating bulk content', request, 'API');
       
-      const response = await apiClient.post('/api/v1/content/regenerate', request);
+      const response = await apiClient.post('/api/v1/content/generate-bulk', request);
       
-      // Backend returns SocialPostRegenerationResponse directly, not wrapped in ApiResponse
-      if (!response.data) {
-        throw new Error('No response data received from backend');
-      }
-
-      // Validate required fields exist
-      if (!response.data.new_posts || !Array.isArray(response.data.new_posts)) {
-        throw new Error('Invalid response format: missing new_posts array');
-      }
-      
-      console.log('✅ Bulk content generated successfully:', {
-        posts_count: response.data.new_posts.length,
-        processing_time: response.data.processing_time,
-        method: response.data.regeneration_metadata?.generation_method
-      });
+      info('✅ Bulk content generated successfully', { 
+        postCount: response.data.new_posts?.length || 0,
+        postType: request.post_type 
+      }, 'API');
       
       return response.data;
-    } catch (error) {
-      console.error('❌ Generate bulk content error:', error);
-      
-      // Enhanced error logging for debugging
-      if (axios.isAxiosError(error)) {
-        console.error('API Error Details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          url: error.config?.url,
-          method: error.config?.method
-        });
-      }
-      
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('❌ Bulk content generation failed', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -513,46 +494,18 @@ export class VideoVentureLaunchAPI {
     generation_metadata: any;
   }> {
     try {
-      console.log('🎨 Generating visual content with request:', {
-        posts_count: request.social_posts.length,
-        business_name: request.business_context.business_name,
-        objective: request.campaign_objective
-      });
+      debug('🎨 Generating visual content', request, 'API');
       
       const response = await apiClient.post('/api/v1/content/generate-visuals', request);
       
-      // Backend returns the result directly, not wrapped in ApiResponse
-      if (!response.data) {
-        throw new Error('No response data received from backend');
-      }
-
-      // Validate required fields exist
-      if (!response.data.posts_with_visuals || !Array.isArray(response.data.posts_with_visuals)) {
-        throw new Error('Invalid response format: missing posts_with_visuals array');
-      }
-      
-      console.log('✅ Visual content generated successfully:', {
-        posts_count: response.data.posts_with_visuals.length,
-        generation_method: response.data.generation_metadata?.agent_used,
-        status: response.data.generation_metadata?.status
-      });
+      info('✅ Visual content generated successfully', { 
+        postsCount: response.data.posts_with_visuals?.length || 0 
+      }, 'API');
       
       return response.data;
-    } catch (error) {
-      console.error('❌ Generate visual content error:', error);
-      
-      // Enhanced error logging for debugging
-      if (axios.isAxiosError(error)) {
-        console.error('Visual API Error Details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          url: error.config?.url,
-          method: error.config?.method
-        });
-      }
-      
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('❌ Visual content generation failed', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -576,9 +529,9 @@ export class VideoVentureLaunchAPI {
       }, 'API');
       
       return response.data;
-    } catch (error) {
-      error('❌ Analyze URLs error', error, 'API');
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('❌ Analyze URLs error', err);
+      throw this.handleApiError(err);
     }
   }
 
@@ -605,9 +558,9 @@ export class VideoVentureLaunchAPI {
       }
       
       return response.data.data;
-    } catch (error) {
-      console.error('Analyze files error:', error);
-      throw this.handleApiError(error);
+    } catch (err) {
+      console.error('Analyze files error:', err);
+      throw this.handleApiError(err);
     }
   }
 

@@ -228,9 +228,20 @@ const IdeationPage: React.FC = () => {
   };
 
   const generateColumnPosts = async (columnId: string) => {
-    // Set loading state immediately
+    // CRITICAL FIX: Prevent multiple simultaneous calls
+    const column = socialMediaColumns.find(col => col.id === columnId);
+    if (!column || column.isGenerating) {
+      console.log(`🚫 Skipping ${columnId} generation - already in progress or not found`);
+      return;
+    }
+    
+    // Set loading state immediately with optimistic update
     setSocialMediaColumns(prev => prev.map(col => 
-      col.id === columnId ? { ...col, isGenerating: true, posts: [] } : col
+      col.id === columnId ? { 
+        ...col, 
+        isGenerating: true, 
+        posts: [] // Clear old posts to show fresh loading state
+      } : col
     ));
     
     try {
@@ -265,10 +276,10 @@ const IdeationPage: React.FC = () => {
       
       // Transform API response to match frontend format
       const transformedPosts = data.new_posts.map((post: any, idx: number) => {
-        const column = socialMediaColumns.find(col => col.id === columnId);
+        const currentColumn = socialMediaColumns.find(col => col.id === columnId);
         return {
           id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
-          type: column?.mediaType || columnId as 'text-only' | 'text-with-image' | 'text-with-video',
+          type: currentColumn?.mediaType || columnId as 'text-only' | 'text-with-image' | 'text-with-video',
           platform: 'linkedin' as const,
           content: {
             text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
@@ -285,8 +296,13 @@ const IdeationPage: React.FC = () => {
         };
       });
       
+      // Update state with successful results
       setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, posts: transformedPosts, isGenerating: false } : col
+        col.id === columnId ? { 
+          ...col, 
+          posts: transformedPosts, 
+          isGenerating: false 
+        } : col
       ));
 
       toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`);
@@ -296,7 +312,11 @@ const IdeationPage: React.FC = () => {
       
       // Reset loading state and clear any partial posts
       setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, isGenerating: false, posts: [] } : col
+        col.id === columnId ? { 
+          ...col, 
+          isGenerating: false, 
+          posts: [] // Keep posts empty on error for clean state
+        } : col
       ));
       
       // Show detailed error message for debugging
@@ -310,17 +330,19 @@ const IdeationPage: React.FC = () => {
   };
 
   const generateVisualContent = async (columnId: string) => {
+    // CRITICAL FIX: Prevent multiple simultaneous calls
+    const column = socialMediaColumns.find(col => col.id === columnId);
+    if (!column || column.isGeneratingVisuals || column.posts.length === 0) {
+      console.log(`🚫 Skipping ${columnId} visual generation - already in progress, not found, or no posts available`);
+      return;
+    }
+    
     // Set visual generation loading state
     setSocialMediaColumns(prev => prev.map(col => 
       col.id === columnId ? { ...col, isGeneratingVisuals: true } : col
     ));
     
     try {
-      const column = socialMediaColumns.find(col => col.id === columnId);
-      if (!column || column.posts.length === 0) {
-        throw new Error('No posts available for visual content generation');
-      }
-      
       console.log(`🎨 Generating visual content for ${columnId} with ${column.posts.length} posts...`);
       
       // Prepare posts for visual generation
@@ -560,15 +582,87 @@ const IdeationPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={() => {
-                  // Clear localStorage for debugging
+                  // AGGRESSIVE RESET: Clear all stuck states
+                  console.log('🔧 AGGRESSIVE RESET: Clearing all stuck states');
                   localStorage.removeItem(`campaign-${currentCampaign?.id}-columns`);
-                  clearStuckStates();
-                  toast.success('Cleared stuck states and localStorage');
+                  
+                  // Reset all columns to initial state
+                  setSocialMediaColumns([
+                    {
+                      id: 'text-only',
+                      title: 'Text + URL Posts',
+                      description: 'Marketing text with product URL for link unfurling',
+                      mediaType: 'text-only' as const,
+                      posts: [],
+                      isGenerating: false,
+                      isGeneratingVisuals: false
+                    },
+                    {
+                      id: 'text-image',
+                      title: 'Text + Image Posts',
+                      description: 'Shortened text with AI-generated images',
+                      mediaType: 'text-with-image' as const,
+                      posts: [],
+                      isGenerating: false,
+                      isGeneratingVisuals: false
+                    },
+                    {
+                      id: 'text-video',
+                      title: 'Text + Video Posts',
+                      description: 'Marketing text with AI-generated videos',
+                      mediaType: 'text-with-video' as const,
+                      posts: [],
+                      isGenerating: false,
+                      isGeneratingVisuals: false
+                    }
+                  ]);
+                  
+                  toast.success('🔧 AGGRESSIVE RESET: All states cleared');
                 }}
                 className="vvl-button-secondary text-xs flex items-center gap-2 px-2 py-1"
-                title="Clear stuck generation states"
+                title="Aggressive reset - clear all stuck states"
               >
-                🔧 Clear States
+                🔧 Reset All
+              </button>
+              <button 
+                onClick={async () => {
+                  // DEBUG: Test visual generation with mock data
+                  console.log('🧪 DEBUG: Testing visual generation with mock data');
+                  try {
+                    const mockPosts = [
+                      {
+                        id: 'mock-1',
+                        type: 'text_image' as const,
+                        content: 'Test post for image generation',
+                        platform: 'instagram',
+                        hashtags: ['#test', '#debug']
+                      }
+                    ];
+                    
+                    const result = await VideoVentureLaunchAPI.generateVisualContent({
+                      social_posts: mockPosts,
+                      business_context: {
+                        business_name: 'Test Company',
+                        industry: 'Technology',
+                        objective: 'test visual generation',
+                        target_audience: 'developers',
+                        brand_voice: 'professional'
+                      },
+                      campaign_objective: 'test visual generation',
+                      target_platforms: ['instagram']
+                    });
+                    
+                    console.log('✅ DEBUG: Visual generation test result:', result);
+                    toast.success('🧪 Visual generation test completed - check console');
+                  } catch (error) {
+                    console.error('❌ DEBUG: Visual generation test failed:', error);
+                    toast.error('🧪 Visual generation test failed - check console');
+                  }
+                }}
+                className="vvl-button-secondary text-xs flex items-center gap-2 px-2 py-1"
+                title="Test visual generation API"
+              >
+                🧪 Test Visual
               </button>
               <button 
                 onClick={() => navigate('/')}

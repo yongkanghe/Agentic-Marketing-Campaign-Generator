@@ -360,143 +360,113 @@ def generate_contextual_hashtags(business_context: dict) -> List[str]:
 
 @router.post("/generate-visuals")
 async def generate_visual_content(request: dict):
-    """Generate visual content (images and videos) for social media posts.
-    
-    MANUAL TRIGGER: This endpoint is called when user clicks "Generate Images/Videos" button.
-    Uses comprehensive business context, campaign guidance, and media tuning for optimal results.
     """
-    
+    Generate visual content (images/videos) for existing social media posts.
+    This endpoint handles both image and video generation for social posts.
+    """
     try:
-        logger.info("🎨 Manual visual content generation triggered with comprehensive business context")
+        logger.info(f"🎨 Visual content generation request for {len(request.get('social_posts', []))} posts")
         
-        # Extract comprehensive request data
-        social_posts = request.get("social_posts", [])
-        business_context = request.get("business_context", {})
-        campaign_objective = request.get("campaign_objective", "")
-        target_platforms = request.get("target_platforms", ["instagram", "linkedin"])
-        
-        # NEW: Extract enhanced context for better generation
-        campaign_guidance = business_context.get("campaign_guidance", {})
-        campaign_media_tuning = business_context.get("campaign_media_tuning", "")
-        product_context = business_context.get("product_context", {})
-        visual_style = campaign_guidance.get("visual_style", {})
-        creative_direction = campaign_guidance.get("creative_direction", "")
+        social_posts = request.get('social_posts', [])
+        business_context = request.get('business_context', {})
+        campaign_objective = request.get('campaign_objective', 'increase engagement')
+        target_platforms = request.get('target_platforms', ['instagram', 'linkedin'])
         
         if not social_posts:
-            raise HTTPException(
-                status_code=400,
-                detail="No social media posts provided for visual content generation"
-            )
+            raise HTTPException(status_code=400, detail="No social posts provided for visual generation")
         
-        logger.info(f"🎯 Generating visuals for {len(social_posts)} posts with enhanced context:")
-        logger.info(f"   - Company: {business_context.get('company_name', 'Unknown')}")
-        logger.info(f"   - Campaign Media Tuning: {campaign_media_tuning[:50]}..." if campaign_media_tuning else "   - No media tuning provided")
-        logger.info(f"   - Creative Direction: {creative_direction[:50]}..." if creative_direction else "   - No creative direction provided")
-        logger.info(f"   - Product Focus: {product_context.get('product_name', 'General business')}")
+        start_time = time.time()
         
-        # Use real visual content generation with comprehensive context
+        # Check if visual content generation is available
         if generate_visual_content_for_posts:
-            logger.info("🚀 Using real visual content agent for Imagen/Veo generation with full context")
+            logger.info("Using real visual content generation agent")
             
-            try:
-                # Real visual content generation with comprehensive context and timeout
-                result = await asyncio.wait_for(
-                    generate_visual_content_for_posts(
-                        social_posts=social_posts,
-                        business_context=business_context,
-                        campaign_objective=campaign_objective,
-                        target_platforms=target_platforms,
-                        # ADK ENHANCEMENT: Pass all enhanced context for better generation
-                        campaign_media_tuning=campaign_media_tuning,
-                        campaign_guidance=campaign_guidance,
-                        product_context=product_context,
-                        visual_style=visual_style,
-                        creative_direction=creative_direction
-                    ),
-                    timeout=120.0  # 2-minute timeout for manual visual generation (user-triggered)
-                )
-                
-                logger.info("✅ Successfully generated real visual content with comprehensive context")
-                return result
-                
-            except asyncio.TimeoutError:
-                logger.warning("⏱️ Visual content generation timeout - falling back to enhanced placeholders")
-                # Fall through to placeholder generation
-            except Exception as e:
-                logger.error(f"❌ Visual content generation failed: {e}")
-                # Fall through to placeholder generation
-        
-        # Enhanced placeholder generation with comprehensive business context
-        logger.info("🔄 Using enhanced placeholder generation with comprehensive business context")
-        
-        enhanced_posts = []
-        company_name = business_context.get('company_name', 'Company')
-        
-        for i, post in enumerate(social_posts):
-            enhanced_post = post.copy()
+            # Call the visual content agent
+            visual_results = await generate_visual_content_for_posts(
+                posts=social_posts,
+                business_context=business_context,
+                campaign_objective=campaign_objective,
+                target_platforms=target_platforms
+            )
             
-            if post.get("type") == "text_image":
-                # Enhanced placeholder with business context
-                enhanced_post["image_url"] = f"https://picsum.photos/1024/576?random={i+1000}&text={company_name.replace(' ', '+')}"
-                # Keep the original AI-generated prompt which includes campaign context
-                if not enhanced_post.get("image_prompt"):
-                    enhanced_post["image_prompt"] = f"Professional marketing image for {company_name}"
-                enhanced_post["image_metadata"] = {
-                    "generation_method": "placeholder_with_context",
-                    "campaign_media_tuning": campaign_media_tuning[:100] if campaign_media_tuning else None,
-                    "creative_direction": creative_direction[:100] if creative_direction else None,
-                    "visual_style": visual_style.get("mood", "professional") if visual_style else "professional"
+            # Transform results to match frontend expectations
+            posts_with_visuals = []
+            for post in social_posts:
+                visual_data = visual_results.get(post['id'], {})
+                
+                posts_with_visuals.append({
+                    "id": post['id'],
+                    "type": post['type'],
+                    "content": post['content'],
+                    "platform": post['platform'],
+                    "hashtags": post.get('hashtags', []),
+                    "image_prompt": visual_data.get('image_prompt'),
+                    "image_url": visual_data.get('image_url'),
+                    "video_prompt": visual_data.get('video_prompt'),
+                    "video_url": visual_data.get('video_url')
+                })
+            
+            processing_time = time.time() - start_time
+            
+            return {
+                "posts_with_visuals": posts_with_visuals,
+                "visual_strategy": {
+                    "business_context_used": bool(business_context),
+                    "target_platforms": target_platforms,
+                    "generation_method": "real_visual_agent"
+                },
+                "generation_metadata": {
+                    "posts_processed": len(posts_with_visuals),
+                    "processing_time": processing_time,
+                    "visual_agent_used": True
                 }
-                
-            elif post.get("type") == "text_video":
-                # Enhanced placeholder with business context
-                enhanced_post["video_url"] = f"https://picsum.photos/1024/576?random={i+2000}&text={company_name.replace(' ', '+')}"
-                enhanced_post["thumbnail_url"] = f"https://picsum.photos/1024/576?random={i+2000}&text=Video+Thumbnail"
-                # Keep the original AI-generated prompt which includes campaign context
-                if not enhanced_post.get("video_prompt"):
-                    enhanced_post["video_prompt"] = f"Marketing video for {company_name}"
-                enhanced_post["video_metadata"] = {
-                    "generation_method": "placeholder_with_context",
-                    "campaign_media_tuning": campaign_media_tuning[:100] if campaign_media_tuning else None,
-                    "creative_direction": creative_direction[:100] if creative_direction else None,
-                    "veo_style": campaign_guidance.get("veo_prompts", {}).get("base_prompt", "dynamic lifestyle video")
-                }
-            
-            enhanced_posts.append(enhanced_post)
-        
-        # Extract context richness for metadata
-        context_richness = {
-            "has_campaign_guidance": bool(campaign_guidance),
-            "has_media_tuning": bool(campaign_media_tuning),
-            "has_product_context": bool(product_context.get("product_name")),
-            "has_visual_style": bool(visual_style),
-            "has_creative_direction": bool(creative_direction)
-        }
-        
-        result = {
-            "posts_with_visuals": enhanced_posts,
-            "visual_strategy": {
-                "total_posts": len(enhanced_posts),
-                "image_posts": len([p for p in enhanced_posts if p.get("type") == "text_image"]),
-                "video_posts": len([p for p in enhanced_posts if p.get("type") == "text_video"]),
-                "brand_consistency": f"Enhanced with {company_name} business context",
-                "platform_optimization": f"Optimized for {', '.join(target_platforms)}",
-                "context_used": context_richness,
-                "campaign_media_tuning_applied": bool(campaign_media_tuning),
-                "note": "Real Imagen/Veo generation attempted with comprehensive context, using enhanced placeholders as fallback"
-            },
-            "generation_metadata": {
-                "agent_used": "RealAgentWithComprehensiveContext",
-                "processing_time": 1.0,
-                "quality_score": 8.0,  # Higher score due to comprehensive context
-                "status": "placeholder_with_comprehensive_context",
-                "context_richness": sum(context_richness.values()),
-                "manual_trigger": True,
-                "cost_controlled": True
             }
-        }
-        
-        return result
+            
+        else:
+            # Fallback visual generation (mock data for testing)
+            logger.info("Using fallback visual content generation")
+            
+            posts_with_visuals = []
+            for post in social_posts:
+                # Generate mock visual URLs based on post type
+                image_url = None
+                video_url = None
+                
+                if post['type'] == 'text_image':
+                    # Mock image generation
+                    image_url = f"https://picsum.photos/400/300?random={hash(post['id']) % 1000}"
+                elif post['type'] == 'text_video':
+                    # Mock video generation - using a placeholder
+                    video_url = f"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                
+                posts_with_visuals.append({
+                    "id": post['id'],
+                    "type": post['type'],
+                    "content": post['content'],
+                    "platform": post['platform'],
+                    "hashtags": post.get('hashtags', []),
+                    "image_prompt": f"Professional {business_context.get('industry', 'business')} image for {post['content'][:50]}..." if image_url else None,
+                    "image_url": image_url,
+                    "video_prompt": f"Dynamic {business_context.get('industry', 'business')} video for {post['content'][:50]}..." if video_url else None,
+                    "video_url": video_url
+                })
+            
+            processing_time = time.time() - start_time
+            
+            return {
+                "posts_with_visuals": posts_with_visuals,
+                "visual_strategy": {
+                    "business_context_used": bool(business_context),
+                    "target_platforms": target_platforms,
+                    "generation_method": "fallback_mock_generation"
+                },
+                "generation_metadata": {
+                    "posts_processed": len(posts_with_visuals),
+                    "processing_time": processing_time,
+                    "visual_agent_used": False,
+                    "mock_data_used": True
+                }
+            }
         
     except Exception as e:
         logger.error(f"❌ Visual content generation failed: {e}", exc_info=True)
@@ -504,6 +474,162 @@ async def generate_visual_content(request: dict):
             status_code=500,
             detail=f"Visual content generation failed: {str(e)}"
         )
+
+@router.post("/generate-bulk")
+async def generate_bulk_content(request: dict):
+    """
+    Generate bulk social media content for the ideation page.
+    This endpoint matches the frontend's generateBulkContent API call.
+    """
+    try:
+        logger.info(f"🎯 Bulk content generation request: {request.get('post_type', 'unknown')} posts")
+        
+        post_type = request.get('post_type', 'text_url')
+        regenerate_count = request.get('regenerate_count', 4)
+        business_context = request.get('business_context', {})
+        creativity_level = request.get('creativity_level', 7)
+        
+        # Validate and limit post count for cost control
+        max_posts = {
+            'text_url': 6,      # Text posts are cheaper
+            'text_image': 4,    # Image generation is expensive
+            'text_video': 4     # Video generation is expensive
+        }
+        
+        actual_count = min(regenerate_count, max_posts.get(post_type, 4))
+        if actual_count < regenerate_count:
+            logger.info(f"⚠️ Limiting {post_type} generation from {regenerate_count} to {actual_count} posts for cost control")
+        
+        start_time = time.time()
+        
+        # Use the existing batch generation function
+        if os.getenv("GEMINI_API_KEY") and business_context:
+            logger.info("Using optimized batch Gemini generation for bulk content")
+            
+            # Convert post_type string to PostType enum
+            post_type_enum = {
+                'text_url': PostType.TEXT_URL,
+                'text_image': PostType.TEXT_IMAGE,
+                'text_video': PostType.TEXT_VIDEO
+            }.get(post_type, PostType.TEXT_URL)
+            
+            generated_posts = await _generate_batch_content_with_gemini(
+                post_type_enum, 
+                actual_count, 
+                business_context
+            )
+            
+            # Transform posts to match frontend expectations
+            new_posts = []
+            for post in generated_posts:
+                new_posts.append({
+                    "id": post.id,
+                    "type": post.type.value,
+                    "content": post.content,
+                    "hashtags": post.hashtags,
+                    "url": business_context.get('product_service_url') or business_context.get('business_website') if post_type == 'text_url' else None,
+                    "image_url": None,  # Will be generated separately
+                    "video_url": None,  # Will be generated separately
+                    "platform_optimized": post.platform_optimized,
+                    "engagement_score": post.engagement_score,
+                    "selected": post.selected
+                })
+            
+            processing_time = time.time() - start_time
+            
+            return {
+                "new_posts": new_posts,
+                "regeneration_metadata": {
+                    "post_type": post_type,
+                    "requested_count": regenerate_count,
+                    "actual_count": len(new_posts),
+                    "generation_method": "optimized_batch_gemini_generation",
+                    "creativity_level": creativity_level,
+                    "business_context_used": bool(business_context),
+                    "cost_controlled": len(new_posts) < regenerate_count
+                },
+                "processing_time": processing_time
+            }
+            
+        else:
+            # Fallback generation
+            logger.info("Using fallback generation for bulk content")
+            
+            new_posts = []
+            for i in range(actual_count):
+                post_id = f"bulk_{post_type}_{int(time.time())}_{i}"
+                content = generate_enhanced_content_for_bulk(post_type, business_context, i)
+                
+                new_posts.append({
+                    "id": post_id,
+                    "type": post_type,
+                    "content": content,
+                    "hashtags": generate_contextual_hashtags(business_context),
+                    "url": business_context.get('product_service_url') or business_context.get('business_website') if post_type == 'text_url' else None,
+                    "image_url": None,
+                    "video_url": None,
+                    "platform_optimized": {},
+                    "engagement_score": 7.5 + (i * 0.1),
+                    "selected": False
+                })
+            
+            processing_time = time.time() - start_time
+            
+            return {
+                "new_posts": new_posts,
+                "regeneration_metadata": {
+                    "post_type": post_type,
+                    "requested_count": regenerate_count,
+                    "actual_count": len(new_posts),
+                    "generation_method": "fallback_generation",
+                    "creativity_level": creativity_level,
+                    "business_context_used": bool(business_context)
+                },
+                "processing_time": processing_time
+            }
+        
+    except Exception as e:
+        logger.error(f"❌ Bulk content generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bulk content generation failed: {str(e)}"
+        )
+
+def generate_enhanced_content_for_bulk(post_type: str, business_context: dict, index: int) -> str:
+    """Generate enhanced content for bulk generation based on business context."""
+    
+    company_name = business_context.get('company_name', 'Your Company')
+    objective = business_context.get('objective', 'increase sales')
+    campaign_type = business_context.get('campaign_type', 'service')
+    target_audience = business_context.get('target_audience', 'business professionals')
+    
+    # Generate contextual content based on post type
+    if post_type == 'text_url':
+        content_templates = [
+            f"🚀 Ready to {objective}? {company_name} has the solution! Discover how we're helping {target_audience} achieve their goals.",
+            f"💡 Transform your business with {company_name}'s innovative {campaign_type} approach. Results that speak for themselves.",
+            f"🎯 {company_name} helps businesses {objective} faster than ever. Join hundreds of satisfied clients.",
+            f"✨ Discover how {company_name} can revolutionize your {campaign_type} strategy. Success starts here.",
+            f"🔥 Game-changing {campaign_type} solutions from {company_name}. Experience the difference quality makes."
+        ]
+    elif post_type == 'text_image':
+        content_templates = [
+            f"🎨 See {company_name} in action! Visual excellence meets proven results.",
+            f"📸 Innovation you can see. {company_name} delivers quality that stands out.",
+            f"🌟 Your success story starts here. Professional {campaign_type} solutions that work.",
+            f"💫 Transforming the {campaign_type} industry, one client at a time.",
+            f"🎭 Excellence you can see and results you can measure."
+        ]
+    else:  # text_video
+        content_templates = [
+            f"🎬 Watch {company_name} transform {campaign_type}. Dynamic solutions in motion.",
+            f"📹 See innovation come to life. Real stories, real results.",
+            f"🎥 Your future starts now. Discover the {company_name} difference.",
+            f"🌟 Dynamic solutions, measurable results. Experience it yourself.",
+            f"🚀 Watch the transformation happen. Success in action."
+        ]
+    
+    return content_templates[index % len(content_templates)]
 
 async def _generate_batch_content_with_gemini(
     post_type: PostType, 
