@@ -83,6 +83,19 @@ const IdeationPage: React.FC = () => {
       setPreferredDesign(currentCampaign.preferredDesign);
     }
     
+    // FIXED: Check if AI analysis and campaign guidance are missing and trigger regeneration
+    const hasAiAnalysis = currentCampaign.aiAnalysis?.businessAnalysis;
+    const hasCampaignGuidance = currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance;
+    const hasUrls = currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl;
+    
+    if (!hasAiAnalysis && hasUrls && !isRegeneratingAnalysis) {
+      console.log('🔄 Missing AI analysis detected, triggering automatic regeneration...');
+      regenerateAIAnalysis();
+    } else if (hasAiAnalysis && !hasCampaignGuidance && hasUrls && !isRegeneratingAnalysis) {
+      console.log('🔄 Missing campaign guidance detected, triggering automatic regeneration...');
+      regenerateAIAnalysis();
+    }
+    
     // SESSION PERSISTENCE: Restore social media columns from localStorage or campaign data
     const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
     const savedColumns = localStorage.getItem(campaignColumnsKey);
@@ -572,8 +585,26 @@ const IdeationPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Palette className="text-purple-400" size={20} />
                   <h4 className="text-lg font-semibold text-white">Campaign Creative Guidance</h4>
+                  {isRegeneratingAnalysis && (
+                    <div className="flex items-center gap-2 text-sm text-blue-400">
+                      <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Updating...</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Show regenerate button if guidance is missing or incomplete */}
+                  {(!currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.creative_direction || 
+                    !currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.visual_style) && (
+                    <button 
+                      onClick={regenerateAIAnalysis}
+                      disabled={isRegeneratingAnalysis}
+                      className="flex items-center gap-2 bg-orange-500/20 text-orange-400 px-3 py-1 rounded-lg hover:bg-orange-500/30 transition-colors text-sm disabled:opacity-50"
+                    >
+                      <RefreshCw size={16} className={isRegeneratingAnalysis ? 'animate-spin' : ''} />
+                      {isRegeneratingAnalysis ? 'Generating...' : 'Generate Guidance'}
+                    </button>
+                  )}
                   <button 
                     onClick={() => setShowGuidanceChat(!showGuidanceChat)}
                     className="flex items-center gap-2 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-lg hover:bg-purple-500/30 transition-colors text-sm"

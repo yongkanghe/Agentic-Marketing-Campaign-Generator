@@ -207,6 +207,71 @@ const generateRealAISummary = (campaign: Campaign, businessAnalysis?: any): stri
   return 'AI Analysis: Campaign analysis will be generated once business context is provided.';
 };
 
+// Helper functions for generating themes and tags from AI analysis
+const generateCreativeThemes = (businessAnalysis: any): string[] => {
+  const industry = businessAnalysis.industry?.toLowerCase() || '';
+  const targetAudience = businessAnalysis.target_audience?.toLowerCase() || '';
+  
+  // Industry-based creative theme selection
+  if (industry.includes('tech') || industry.includes('software') || industry.includes('digital')) {
+    return ["Modern", "Futuristic", "Clean", "Professional", "Dynamic"];
+  } else if (industry.includes('fashion') || industry.includes('apparel') || industry.includes('clothing')) {
+    return ["Trendy", "Colorful", "Modern", "Hipster", "Vibrant"];
+  } else if (industry.includes('food') || industry.includes('restaurant')) {
+    return ["Colorful", "Playful", "Modern", "Elegant", "Artistic"];
+  } else if (industry.includes('finance') || industry.includes('banking')) {
+    return ["Professional", "Clean", "Sophisticated", "Corporate", "Modern"];
+  } else if (industry.includes('health') || industry.includes('medical')) {
+    return ["Clean", "Professional", "Modern", "Elegant", "Minimalist"];
+  } else {
+    return ["Professional", "Modern", "Clean", "Sophisticated", "Dynamic"];
+  }
+};
+
+const generateBusinessTags = (businessAnalysis: any): string[] => {
+  const tags: string[] = [];
+  
+  // Extract from company name
+  if (businessAnalysis.company_name) {
+    const cleanName = businessAnalysis.company_name.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+    if (cleanName.length > 2 && cleanName.length < 20) {
+      tags.push(`#${cleanName}`);
+    }
+  }
+  
+  // Extract from value propositions
+  if (businessAnalysis.value_propositions && Array.isArray(businessAnalysis.value_propositions)) {
+    businessAnalysis.value_propositions.slice(0, 3).forEach((prop: string) => {
+      const words = prop.split(/\s+/).slice(0, 2); // First 2 words
+      words.forEach((word: string) => {
+        const cleanWord = word.replace(/[^a-zA-Z0-9]/g, '');
+        if (cleanWord.length > 3 && cleanWord.length < 15) {
+          tags.push(`#${cleanWord}`);
+        }
+      });
+    });
+  }
+  
+  // Extract from industry
+  if (businessAnalysis.industry) {
+    const industryWords = businessAnalysis.industry.split(/[\s(),]+/).filter((word: string) => word.length > 3);
+    industryWords.slice(0, 2).forEach((word: string) => {
+      const cleanWord = word.replace(/[^a-zA-Z0-9]/g, '');
+      if (cleanWord.length > 3) {
+        tags.push(`#${cleanWord}`);
+      }
+    });
+  }
+  
+  // Add default business tags if none generated
+  if (tags.length === 0) {
+    tags.push("#Business", "#Quality", "#Value", "#Innovation", "#Service");
+  }
+  
+  // Remove duplicates and limit
+  return [...new Set(tags)].slice(0, 10);
+};
+
 const mockGenerateThemesAndTags = (description: string, objective: string): { themes: string[], tags: string[] } => {
   return {
     themes: ['Professional', 'Modern', 'Innovative', 'Trustworthy', 'Friendly'],
@@ -467,10 +532,41 @@ export const MarketingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSuggestedTags(analysis.suggestedTags || []);
         setAiSummary(analysis.aiSummary || '');
       } else if (campaign.aiAnalysis?.businessAnalysis) {
-        // Use stored AI analysis data to generate summary
-        setAiSummary(generateRealAISummary(campaign));
-        setSuggestedThemes(campaign.selectedThemes || []);
-        setSuggestedTags(campaign.selectedTags || []);
+        // FIXED: Properly restore AI analysis data from stored campaign
+        console.log('🔄 Restoring AI analysis from stored campaign data');
+        const businessAnalysis = campaign.aiAnalysis.businessAnalysis;
+        
+        // Restore AI summary
+        setAiSummary(campaign.aiAnalysis.summary || generateRealAISummary(campaign, businessAnalysis));
+        
+        // Extract and restore themes from campaign guidance
+        const campaignGuidance = businessAnalysis.campaign_guidance || {};
+        const contentThemes = campaignGuidance.content_themes || {};
+        const primaryThemes = contentThemes.primary_themes || [];
+        
+        // Use stored selected themes or extract from AI analysis
+        if (campaign.selectedThemes && campaign.selectedThemes.length > 0) {
+          setSuggestedThemes(campaign.selectedThemes);
+        } else if (primaryThemes.length > 0) {
+          // Generate creative style themes based on business analysis
+          const creativeThemes = generateCreativeThemes(businessAnalysis);
+          setSuggestedThemes(creativeThemes);
+        } else {
+          // Fallback to mock themes
+          const { themes } = mockGenerateThemesAndTags(campaign.businessDescription, campaign.objective);
+          setSuggestedThemes(themes);
+        }
+        
+        // Use stored selected tags or extract from AI analysis
+        if (campaign.selectedTags && campaign.selectedTags.length > 0) {
+          setSuggestedTags(campaign.selectedTags);
+        } else {
+          // Generate tags from business analysis
+          const businessTags = generateBusinessTags(businessAnalysis);
+          setSuggestedTags(businessTags);
+        }
+        
+        console.log('✅ AI analysis data restored successfully');
       } else if (campaign.businessDescription) {
         // Generate real AI summary using campaign data
         setAiSummary(generateRealAISummary(campaign));
