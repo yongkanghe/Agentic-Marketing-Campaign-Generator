@@ -383,7 +383,7 @@ async def generate_visual_content(request: dict):
             
             # Call the visual content agent
             visual_results = await generate_visual_content_for_posts(
-                posts=social_posts,
+                social_posts=social_posts,
                 business_context=business_context,
                 campaign_objective=campaign_objective,
                 target_platforms=target_platforms
