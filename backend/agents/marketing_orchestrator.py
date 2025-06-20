@@ -327,7 +327,7 @@ async def create_hashtag_optimization_agent() -> LlmAgent:
     def optimize_hashtags(
         social_posts: dict,
         business_context: dict,
-        target_platforms: list
+        target_platforms: List[str]
     ) -> dict:
         """Optimizes hashtags for social media posts."""
         
