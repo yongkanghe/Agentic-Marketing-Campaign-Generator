@@ -98,6 +98,7 @@ class CampaignRequest(BaseModel):
     # Enhanced fields
     campaign_type: CampaignType
     creativity_level: int = Field(..., ge=1, le=10)
+    post_count: int = Field(default=9, ge=3, le=15)
     
     # URL analysis
     business_website: Optional[HttpUrl] = None

@@ -51,17 +51,28 @@ async def generate_content(request: ContentGenerationRequest) -> ContentGenerati
         logger.info(f"Executing real AI workflow to generate content for campaign objective: {request.campaign_objective}")
         start_time = time.time()
 
+        # Extract or create business description from business context
+        business_description = request.business_context.business_description
+        if not business_description:
+            # Create a business description from available context
+            company_name = getattr(request.business_context, 'company_name', 'the company')
+            industry = getattr(request.business_context, 'industry', 'business')
+            value_props = getattr(request.business_context, 'value_propositions', [])
+            value_props_text = ', '.join(value_props) if value_props else 'quality products and services'
+            business_description = f"{company_name} is a {industry} company that provides {value_props_text}"
+
         # Call the orchestrator to execute the real end-to-end workflow
         # The orchestrator will handle analysis (from URL or description) and content generation
         workflow_result = await execute_campaign_workflow(
-            business_description=request.business_context.business_description or "",
+            business_description=business_description,
             objective=request.campaign_objective,
-            target_audience=request.business_context.target_audience or "",
-            campaign_type=request.campaign_type,
+            target_audience=getattr(request.business_context, 'target_audience', 'general audience'),
+            campaign_type=request.campaign_type.value if request.campaign_type else 'product',
             creativity_level=request.creativity_level,
-            business_website=request.business_context.business_website,
-            about_page_url=request.business_context.about_page_url,
-            product_service_url=request.business_context.product_service_url
+            post_count=request.post_count,
+            business_website=getattr(request.business_context, 'business_website', None),
+            about_page_url=getattr(request.business_context, 'about_page_url', None),
+            product_service_url=getattr(request.business_context, 'product_service_url', None)
         )
 
         processing_time = time.time() - start_time

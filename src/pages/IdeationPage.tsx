@@ -53,7 +53,8 @@ const IdeationPage: React.FC = () => {
       description: 'Marketing text with product URL for link unfurling',
       mediaType: 'text-only' as const,
       posts: [],
-      isGenerating: false
+      isGenerating: false,
+      isGeneratingVisuals: false
     },
     {
       id: 'text-image',
@@ -61,7 +62,8 @@ const IdeationPage: React.FC = () => {
       description: 'Shortened text with AI-generated images',
       mediaType: 'text-with-image' as const,
       posts: [],
-      isGenerating: false
+      isGenerating: false,
+      isGeneratingVisuals: false
     },
     {
       id: 'text-video',
@@ -69,9 +71,26 @@ const IdeationPage: React.FC = () => {
       description: 'Marketing text with AI-generated videos',
       mediaType: 'text-with-video' as const,
       posts: [],
-      isGenerating: false
+      isGenerating: false,
+      isGeneratingVisuals: false
     }
   ]);
+  
+  // CRITICAL FIX: Clear any stuck generation states on component mount
+  const clearStuckStates = () => {
+    console.log('🔧 Clearing any stuck generation states...');
+    setSocialMediaColumns(prev => prev.map(col => ({
+      ...col,
+      isGenerating: false,
+      isGeneratingVisuals: false
+    })));
+  };
+  
+  // Clear stuck states on component mount
+  useEffect(() => {
+    console.log('🔧 Component mounted - clearing any stuck states');
+    clearStuckStates();
+  }, []);
   
   useEffect(() => {
     if (!currentCampaign) {
@@ -117,8 +136,28 @@ const IdeationPage: React.FC = () => {
     if (savedColumns) {
       try {
         const parsedColumns = JSON.parse(savedColumns);
-        // Ensure type compatibility
-        setSocialMediaColumns(parsedColumns as typeof socialMediaColumns);
+        console.log('📦 Raw localStorage columns:', parsedColumns.map((col: any) => ({
+          id: col.id,
+          isGenerating: col.isGenerating,
+          isGeneratingVisuals: col.isGeneratingVisuals,
+          postsCount: col.posts?.length || 0
+        })));
+        
+        // CRITICAL FIX: Reset any stuck generation states when restoring from localStorage
+        const cleanedColumns = parsedColumns.map((col: any) => ({
+          ...col,
+          isGenerating: false,
+          isGeneratingVisuals: false
+        }));
+        
+        console.log('✅ Cleaned localStorage columns:', cleanedColumns.map((col: any) => ({
+          id: col.id,
+          isGenerating: col.isGenerating,
+          isGeneratingVisuals: col.isGeneratingVisuals,
+          postsCount: col.posts?.length || 0
+        })));
+        
+        setSocialMediaColumns(cleanedColumns as typeof socialMediaColumns);
         console.log('Restored social media columns from localStorage for campaign:', currentCampaign.id);
       } catch (error) {
         console.error('Failed to parse saved columns:', error);
@@ -126,10 +165,31 @@ const IdeationPage: React.FC = () => {
         generateAllPosts();
       }
     } else if (currentCampaign.socialMediaColumns && currentCampaign.socialMediaColumns.length > 0) {
-      // Restore from campaign data if available
-      setSocialMediaColumns(currentCampaign.socialMediaColumns as typeof socialMediaColumns);
+      console.log('📦 Raw campaign columns:', currentCampaign.socialMediaColumns.map((col: any) => ({
+        id: col.id,
+        isGenerating: col.isGenerating,
+        isGeneratingVisuals: col.isGeneratingVisuals,
+        postsCount: col.posts?.length || 0
+      })));
+      
+      // CRITICAL FIX: Reset any stuck generation states when restoring from campaign data
+      const cleanedColumns = currentCampaign.socialMediaColumns.map((col: any) => ({
+        ...col,
+        isGenerating: false,
+        isGeneratingVisuals: false
+      }));
+      
+      console.log('✅ Cleaned campaign columns:', cleanedColumns.map((col: any) => ({
+        id: col.id,
+        isGenerating: col.isGenerating,
+        isGeneratingVisuals: col.isGeneratingVisuals,
+        postsCount: col.posts?.length || 0
+      })));
+      
+      setSocialMediaColumns(cleanedColumns as typeof socialMediaColumns);
       console.log('Restored social media columns from campaign data');
     } else {
+      console.log('🎯 No saved columns found - generating initial posts');
       // Auto-generate initial posts when page loads
       generateAllPosts();
     }
@@ -153,9 +213,18 @@ const IdeationPage: React.FC = () => {
       if (suggestedTags.length > 0) selectTag(suggestedTags[0]);
     }
     
-    // Only auto-generate Text+URL posts on page load (basic tier)
-    // Enhanced and Premium content requires user action
+    // CRITICAL: Only auto-generate Text+URL posts on page load (basic tier)
+    // Enhanced and Premium content (images/videos) requires MANUAL user action
+    // This prevents automatic visual content generation and associated costs
+    console.log('🎯 Auto-generating only Text+URL posts on page load (cost control)');
     await generateColumnPosts('text-only');
+    
+    // CRITICAL: Ensure visual columns are NOT automatically processing
+    setSocialMediaColumns(prev => prev.map(col => ({
+      ...col,
+      isGenerating: col.id === 'text-only' ? col.isGenerating : false,
+      isGeneratingVisuals: false // Force reset visual generation state
+    })));
   };
 
   const generateColumnPosts = async (columnId: string) => {
@@ -237,6 +306,88 @@ const IdeationPage: React.FC = () => {
       console.error(`Generation error details:`, { columnId, postType, error });
       
       toast.error(`Failed to generate ${columnId.replace('-', ' + ')} posts: ${errorMessage}. Please check your connection and try again.`);
+    }
+  };
+
+  const generateVisualContent = async (columnId: string) => {
+    // Set visual generation loading state
+    setSocialMediaColumns(prev => prev.map(col => 
+      col.id === columnId ? { ...col, isGeneratingVisuals: true } : col
+    ));
+    
+    try {
+      const column = socialMediaColumns.find(col => col.id === columnId);
+      if (!column || column.posts.length === 0) {
+        throw new Error('No posts available for visual content generation');
+      }
+      
+      console.log(`🎨 Generating visual content for ${columnId} with ${column.posts.length} posts...`);
+      
+      // Prepare posts for visual generation
+      const postsForVisuals = column.posts.map(post => ({
+        id: post.id,
+        type: (columnId === 'text-image' ? 'text_image' : 'text_video') as 'text_image' | 'text_video',
+        content: post.content.text,
+        platform: post.platform,
+        hashtags: post.content.hashtags
+      }));
+      
+      // Call visual content generation API with comprehensive context
+      const data = await VideoVentureLaunchAPI.generateVisualContent({
+        social_posts: postsForVisuals,
+        business_context: {
+          // Use comprehensive business context from AI analysis
+          business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+          industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
+          objective: currentCampaign?.objective || 'increase sales',
+          target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+          brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
+        },
+        campaign_objective: currentCampaign?.objective || 'increase sales',
+        target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
+      });
+      
+      console.log(`✅ Generated visual content for ${data.posts_with_visuals.length} posts`);
+      
+      // Update posts with generated visual content
+      const updatedPosts = column.posts.map(post => {
+        const visualPost = data.posts_with_visuals.find((vp: any) => vp.id === post.id);
+        if (visualPost) {
+          return {
+            ...post,
+            content: {
+              ...post.content,
+              imageUrl: visualPost.image_url || post.content.imageUrl,
+              videoUrl: visualPost.video_url || post.content.videoUrl
+            }
+          };
+        }
+        return post;
+      });
+      
+      // Update the column with visual content
+      setSocialMediaColumns(prev => prev.map(col => 
+        col.id === columnId ? { 
+          ...col, 
+          posts: updatedPosts, 
+          isGeneratingVisuals: false 
+        } : col
+      ));
+
+      const visualType = columnId === 'text-image' ? 'images' : 'videos';
+      toast.success(`🎨 Generated ${visualType} for ${updatedPosts.length} posts successfully!`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to generate visual content for ${columnId}:`, error);
+      
+      // Reset visual generation loading state
+      setSocialMediaColumns(prev => prev.map(col => 
+        col.id === columnId ? { ...col, isGeneratingVisuals: false } : col
+      ));
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const visualType = columnId === 'text-image' ? 'images' : 'videos';
+      toast.error(`Failed to generate ${visualType}: ${errorMessage}. Please try again.`);
     }
   };
 
@@ -407,6 +558,18 @@ const IdeationPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => {
+                  // Clear localStorage for debugging
+                  localStorage.removeItem(`campaign-${currentCampaign?.id}-columns`);
+                  clearStuckStates();
+                  toast.success('Cleared stuck states and localStorage');
+                }}
+                className="vvl-button-secondary text-xs flex items-center gap-2 px-2 py-1"
+                title="Clear stuck generation states"
+              >
+                🔧 Clear States
+              </button>
               <button 
                 onClick={() => navigate('/')}
                 className="vvl-button-secondary text-sm flex items-center gap-2"
@@ -1049,6 +1212,7 @@ const IdeationPage: React.FC = () => {
                   
                   <p className="text-sm vvl-text-secondary mb-4">{column.description}</p>
                   
+                  {/* Text Content Generation Button */}
                   <button
                     onClick={() => generateColumnPosts(column.id)}
                     disabled={column.isGenerating}
@@ -1075,12 +1239,54 @@ const IdeationPage: React.FC = () => {
                     ) : (
                       <>
                         <RefreshCw size={16} />
-                        {column.id === 'text-only' ? 'Regenerate' :
-                         column.id === 'text-image' ? 'Generate Enhanced Content' :
-                         'Generate Premium Content'}
+                        {column.posts.length > 0 ? 'Regenerate Text Content' :
+                         column.id === 'text-only' ? 'Generate Text + URL Posts' :
+                         column.id === 'text-image' ? 'Generate Text + Image Posts' :
+                         'Generate Text + Video Posts'}
                       </>
                     )}
                   </button>
+
+                  {/* Visual Content Generation Button (for image/video columns) */}
+                  {(column.id === 'text-image' || column.id === 'text-video') && column.posts.length > 0 && (
+                    <button
+                      onClick={() => generateVisualContent(column.id)}
+                      disabled={column.isGeneratingVisuals}
+                      className={`w-full mt-3 py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                        column.isGeneratingVisuals
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : column.id === 'text-image'
+                          ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                    >
+                      {column.isGeneratingVisuals ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
+                            </div>
+                            <span className="text-sm">
+                              {column.id === 'text-image' ? 'Generating Images...' : 'Generating Videos...'}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {column.id === 'text-image' ? <Image size={16} /> : <Video size={16} />}
+                          {(() => {
+                            const hasVisualContent = column.posts.some(post => 
+                              (column.id === 'text-image' && post.content.imageUrl) ||
+                              (column.id === 'text-video' && post.content.videoUrl)
+                            );
+                            return hasVisualContent ? 
+                              (column.id === 'text-image' ? 'Regenerate Images' : 'Regenerate Videos') :
+                              (column.id === 'text-image' ? 'Generate Images (Cost)' : 'Generate Videos (Cost)');
+                          })()}
+                        </>
+                      )}
+                    </button>
+                  )}
                   
                   {/* Loading State with AI Indicators */}
                   {column.isGenerating && (
@@ -1154,6 +1360,21 @@ const IdeationPage: React.FC = () => {
                                   />
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {/* Visual Content Placeholder (when not generated yet) */}
+                          {(column.id === 'text-image' || column.id === 'text-video') && !post.content.imageUrl && !post.content.videoUrl && (
+                            <div className="mb-4 p-6 bg-gray-800/50 border border-gray-600 rounded-lg text-center">
+                              <div className="text-3xl mb-2">
+                                {column.id === 'text-image' ? '🖼️' : '🎬'}
+                              </div>
+                              <p className="text-sm text-gray-400 mb-1">
+                                {column.id === 'text-image' ? 'Image not generated yet' : 'Video not generated yet'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Click "{column.id === 'text-image' ? 'Generate Images' : 'Generate Videos'}" button above
+                              </p>
                             </div>
                           )}
 

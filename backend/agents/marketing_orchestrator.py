@@ -10,6 +10,7 @@ marketing campaign workflow, following Google ADK samples best practices.
 import os
 import logging
 import json
+import time
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -265,8 +266,11 @@ async def create_social_content_agent() -> LlmAgent:
         You are a social media content generation expert. Your task is to create engaging, 
         platform-optimized social media posts based on the provided business context.
         
-        When the generate_social_posts tool is called, use the provided parameters to create 
-        a comprehensive set of social media posts in the following JSON format:
+        IMMEDIATELY call the generate_social_posts tool with the provided parameters to create 
+        a comprehensive set of social media posts. Use the post_count parameter to determine 
+        exactly how many posts to generate in total, divided equally across the three content types.
+        
+        Return your response in the following JSON format:
         
         {
             "text_url_posts": [
@@ -313,9 +317,19 @@ async def create_social_content_agent() -> LlmAgent:
             ]
         }
         
-        Generate exactly the number of posts requested, ensuring variety in content types and 
-        high engagement potential. Make the content authentic to the business context and 
-        aligned with the campaign objective.
+        Generate the requested number of posts divided equally across the three content types:
+        - text_url_posts: posts with text content and external links
+        - text_image_posts: posts with text content and image prompts
+        - text_video_posts: posts with text content and video prompts
+        
+        CRITICAL: Use the exact post_count parameter from the tool call. Examples:
+        - If post_count=9: generate 3 posts of each type (3+3+3=9)
+        - If post_count=6: generate 2 posts of each type (2+2+2=6)
+        - If post_count=12: generate 4 posts of each type (4+4+4=12)
+        - If post_count doesn't divide evenly by 3, distribute extras across types
+        
+        Ensure variety in content and high engagement potential.
+        Make the content authentic to the business context and aligned with the campaign objective.
         """,
         tools=[generate_social_posts],
         output_key="social_posts"
@@ -423,6 +437,7 @@ async def execute_campaign_workflow(
     target_audience: str,
     campaign_type: str,
     creativity_level: int,
+    post_count: int = 9,
     business_website: Optional[str] = None,
     about_page_url: Optional[str] = None,
     product_service_url: Optional[str] = None,
@@ -457,7 +472,7 @@ async def execute_campaign_workflow(
         "about_page_url": about_page_url,
         "product_service_url": product_service_url,
         "uploaded_files": uploaded_files,
-        "post_count": 10,
+        "post_count": post_count,
         "timestamp": datetime.now().isoformat(),
     }
 
@@ -513,6 +528,14 @@ async def execute_campaign_workflow(
         Target Audience: {generation_context.get('target_audience', 'General audience')}
         Campaign Type: {generation_context.get('campaign_type', 'general')}
         Creativity Level: {generation_context.get('creativity_level', 5)}
+        Post Count: {post_count}
+        
+        Please generate exactly {post_count} social media posts total, divided equally across the three content types:
+        - text_url_posts: {post_count // 3} posts
+        - text_image_posts: {post_count // 3} posts  
+        - text_video_posts: {post_count // 3} posts
+        
+        If the post count doesn't divide evenly by 3, distribute the extra posts among the types.
         """
         
         content = types.Content(
@@ -550,9 +573,18 @@ async def execute_campaign_workflow(
             business_analysis=business_analysis_result
         )
         
+        # Generate campaign ID
+        import uuid
+        campaign_id = f"campaign_{uuid.uuid4().hex[:8]}_{int(time.time())}"
+        
         final_result = {
+            "campaign_id": campaign_id,
+            "summary": f"AI-generated campaign for {business_analysis_result.get('company_name', 'business')}",
             "business_analysis": business_analysis_result,
-            "generated_content": generated_content,
+            "social_posts": generated_content,  # Use social_posts key for consistency
+            "generated_content": generated_content,  # Keep for backward compatibility
+            "created_at": workflow_context["timestamp"],
+            "status": "ready",
             "metadata": {
                 "timestamp": workflow_context["timestamp"],
                 "real_ai_used": True,
@@ -674,61 +706,97 @@ def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, A
     """
     Formats the structured content from the LLM into the application's data models.
     
-    ADK Enhancement: This function now correctly handles JSON string parsing for platform-optimized
-    content, a common requirement when dealing with structured LLM outputs.
+    ADK Enhancement: This function now correctly handles ADK agent responses and JSON string parsing.
     """
     logger.debug(f"Formatting generated content with creativity level {context.get('creativity_level')}")
+    logger.debug(f"Content data structure: {list(content_data.keys()) if isinstance(content_data, dict) else type(content_data)}")
     
     formatted_posts = []
     
-    # Ensure content_data['social_posts'] is a list
+    # Handle ADK agent response format - check for generated_content list
+    if "generated_content" in content_data and isinstance(content_data["generated_content"], list):
+        # Parse the JSON strings from ADK agents
+        for content_str in content_data["generated_content"]:
+            if isinstance(content_str, str):
+                try:
+                    # Parse JSON content from agent
+                    import json
+                    import re
+                    
+                    # Extract JSON from markdown code blocks if present
+                    json_match = re.search(r'```json\s*(.*?)\s*```', content_str, re.DOTALL)
+                    if json_match:
+                        content_str = json_match.group(1)
+                    
+                    parsed_content = json.loads(content_str)
+                    
+                    # Process each post type from the parsed content
+                    for post_type in ['text_url_posts', 'text_image_posts', 'text_video_posts']:
+                        if post_type in parsed_content:
+                            posts = parsed_content[post_type]
+                            if isinstance(posts, list):
+                                for post in posts:
+                                    formatted_post = _format_single_post(post, post_type, business_analysis)
+                                    formatted_posts.append(formatted_post)
+                    
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse JSON content from agent: {e}")
+                    continue
+    
+    # Fallback: check for direct social_posts format
     social_posts_data = content_data.get("social_posts", [])
-    if not isinstance(social_posts_data, list):
-        logger.error(f"Expected a list for 'social_posts', but got {type(social_posts_data)}")
-        return []
-
-    for i, post_data in enumerate(social_posts_data):
-        if not isinstance(post_data, dict):
-            logger.warning(f"Skipping post at index {i} as it is not a dictionary.")
-            continue
-            
-        post_id = f"post_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}"
-        
-        # Safely parse platform_optimized content
-        platform_optimized_raw = post_data.get("platform_optimized", "{}")
-        platform_optimized_data = {}
-        if isinstance(platform_optimized_raw, str):
-            try:
-                # ADK FIX: LLM often returns a JSON string, which must be parsed
-                platform_optimized_data = json.loads(platform_optimized_raw)
-            except json.JSONDecodeError:
-                logger.warning(f"Failed to decode platform_optimized JSON for post {post_id}: {platform_optimized_raw}")
-                # Fallback to an empty dict to prevent validation errors
-                platform_optimized_data = {}
-        elif isinstance(platform_optimized_raw, dict):
-            # Already a dictionary, use it directly
-            platform_optimized_data = platform_optimized_raw
-        
-        post = {
-            "id": post_id,
-            "type": post_data.get("type", "text_url"),
-            "content": post_data.get("content", "No content generated."),
-            "url": post_data.get("url"),
-            "image_prompt": post_data.get("image_prompt"),
-            "video_prompt": post_data.get("video_prompt"),
-            "hashtags": post_data.get("hashtags", []),
-            "platform_optimized": platform_optimized_data,  # Use parsed data
-            "engagement_score": post_data.get("engagement_score"),
-            "selected": False  # Default to not selected
-        }
-        
-        # ADK ENHANCEMENT: Add business context to each post for regeneration
-        post["business_context"] = business_analysis
-        
-        formatted_posts.append(post)
-        
+    if isinstance(social_posts_data, list) and len(formatted_posts) == 0:
+        for i, post_data in enumerate(social_posts_data):
+            if isinstance(post_data, dict):
+                formatted_post = _format_single_post(post_data, "text_url", business_analysis)
+                formatted_posts.append(formatted_post)
+    
     logger.info(f"Successfully formatted {len(formatted_posts)} social media posts.")
     return formatted_posts
+
+def _format_single_post(post_data: Dict[str, Any], post_type: str, business_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """Format a single post from agent response."""
+    post_id = f"post_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(str(post_data))}"
+    
+    # Determine post type from source
+    if post_type == 'text_url_posts' or post_type == 'text_url':
+        type_value = "text_url"
+    elif post_type == 'text_image_posts' or post_type == 'text_image':
+        type_value = "text_image"
+    elif post_type == 'text_video_posts' or post_type == 'text_video':
+        type_value = "text_video"
+    else:
+        type_value = "text_url"
+    
+    # Safely parse platform_optimized content
+    platform_optimized_raw = post_data.get("platform_optimized", {})
+    platform_optimized_data = {}
+    if isinstance(platform_optimized_raw, str):
+        try:
+            platform_optimized_data = json.loads(platform_optimized_raw)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to decode platform_optimized JSON for post {post_id}")
+            platform_optimized_data = {}
+    elif isinstance(platform_optimized_raw, dict):
+        platform_optimized_data = platform_optimized_raw
+    
+    return {
+        "id": post_data.get("id", post_id),
+        "type": type_value,
+        "content": post_data.get("content", "No content generated."),
+        "url": post_data.get("url"),
+        "image_prompt": post_data.get("image_prompt"),
+        "image_url": None,  # Will be set when visual content is generated
+        "video_prompt": post_data.get("video_prompt"),
+        "video_url": None,  # Will be set when visual content is generated
+        "hashtags": post_data.get("hashtags", []),
+        "platform_optimized": platform_optimized_data,
+        "engagement_score": post_data.get("engagement_score", 0.8),
+        "selected": post_data.get("selected", False),
+        "business_context": business_analysis
+    }
+
+
 
 def _generate_enhanced_content_fallback(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
     """

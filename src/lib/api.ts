@@ -511,18 +511,47 @@ export class VideoVentureLaunchAPI {
     }>;
     visual_strategy: any;
     generation_metadata: any;
-    created_at: string;
   }> {
     try {
+      console.log('🎨 Generating visual content with request:', {
+        posts_count: request.social_posts.length,
+        business_name: request.business_context.business_name,
+        objective: request.campaign_objective
+      });
+      
       const response = await apiClient.post('/api/v1/content/generate-visuals', request);
       
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to generate visual content');
+      // Backend returns the result directly, not wrapped in ApiResponse
+      if (!response.data) {
+        throw new Error('No response data received from backend');
+      }
+
+      // Validate required fields exist
+      if (!response.data.posts_with_visuals || !Array.isArray(response.data.posts_with_visuals)) {
+        throw new Error('Invalid response format: missing posts_with_visuals array');
       }
       
-      return response.data.data;
+      console.log('✅ Visual content generated successfully:', {
+        posts_count: response.data.posts_with_visuals.length,
+        generation_method: response.data.generation_metadata?.agent_used,
+        status: response.data.generation_metadata?.status
+      });
+      
+      return response.data;
     } catch (error) {
-      console.error('Generate visual content error:', error);
+      console.error('❌ Generate visual content error:', error);
+      
+      // Enhanced error logging for debugging
+      if (axios.isAxiosError(error)) {
+        console.error('Visual API Error Details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          method: error.config?.method
+        });
+      }
+      
       throw this.handleApiError(error);
     }
   }

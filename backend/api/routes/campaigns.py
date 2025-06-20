@@ -47,6 +47,7 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
             target_audience=request.target_audience,
             campaign_type=request.campaign_type.value,
             creativity_level=request.creativity_level,
+            post_count=request.post_count,
             business_website=str(request.business_website) if request.business_website else None,
             about_page_url=str(request.about_page_url) if request.about_page_url else None,
             product_service_url=str(request.product_service_url) if request.product_service_url else None,
