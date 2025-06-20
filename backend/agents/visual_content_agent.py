@@ -23,6 +23,18 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
+def safe_int_env(env_var: str, default: str) -> int:
+    """Safely parse environment variable to int, handling malformed values."""
+    try:
+        value = os.getenv(env_var, default)
+        # Handle case where environment variable contains extra content
+        if '=' in value:
+            value = value.split('=')[0]
+        return int(value)
+    except (ValueError, TypeError):
+        logger.warning(f"Invalid environment variable {env_var}, using default {default}")
+        return int(default)
+
 class ImageGenerationAgent:
     """Agent for generating images using Google Imagen."""
     
@@ -31,18 +43,21 @@ class ImageGenerationAgent:
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
         self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
-        self.max_images = int(os.getenv('MAX_TEXT_IMAGE_POSTS', '4'))
+        self.max_images = safe_int_env('MAX_TEXT_IMAGE_POSTS', '4')
+        
+        logger.info(f"Initializing Image Generation Agent with max_images={self.max_images}, model={self.image_model}")
         
         if self.gemini_api_key:
             try:
                 self.client = genai.Client(api_key=self.gemini_api_key)
-                logger.info(f"Image Generation Agent initialized with Gemini client using {self.image_model}")
+                logger.info(f"✅ Image Generation Agent initialized successfully with Gemini client using {self.image_model}")
             except Exception as e:
-                logger.error(f"Failed to initialize Gemini client: {e}")
-                raise Exception(f"Failed to initialize Imagen client: {e}")
+                logger.error(f"❌ Failed to initialize Gemini client for image generation: {e}")
+                logger.warning("🔄 Image generation will fall back to placeholder mode")
+                self.client = None
         else:
-            logger.error("GEMINI_API_KEY not found - cannot initialize image generation")
-            raise Exception("GEMINI_API_KEY environment variable is required for image generation")
+            logger.warning("⚠️ GEMINI_API_KEY not found - image generation will use placeholder mode")
+            self.client = None
     
     async def generate_images(self, prompts: List[str], business_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -315,8 +330,14 @@ class VideoGenerationAgent:
         """Initialize video generation agent."""
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
         self.video_model = os.getenv('VIDEO_MODEL', 'veo-2')
-        self.max_videos = int(os.getenv('MAX_TEXT_VIDEO_POSTS', '4'))
-        logger.info(f"Video Generation Agent initialized (Veo integration pending) using {self.video_model}, max videos: {self.max_videos}")
+        self.max_videos = safe_int_env('MAX_TEXT_VIDEO_POSTS', '4')
+        
+        logger.info(f"Initializing Video Generation Agent with max_videos={self.max_videos}, model={self.video_model}")
+        
+        if self.gemini_api_key:
+            logger.info(f"✅ Video Generation Agent initialized with API key (Veo integration pending) using {self.video_model}, max videos: {self.max_videos}")
+        else:
+            logger.warning("⚠️ GEMINI_API_KEY not found - video generation will use placeholder mode")
     
     async def generate_videos(self, prompts: List[str], business_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -387,9 +408,17 @@ class VisualContentOrchestrator:
     
     def __init__(self):
         """Initialize visual content orchestrator."""
-        self.image_agent = ImageGenerationAgent()
-        self.video_agent = VideoGenerationAgent()
-        logger.info("Visual Content Orchestrator initialized")
+        try:
+            logger.info("🚀 Initializing Visual Content Orchestrator...")
+            self.image_agent = ImageGenerationAgent()
+            self.video_agent = VideoGenerationAgent()
+            logger.info("✅ Visual Content Orchestrator initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Visual Content Orchestrator: {e}")
+            logger.warning("🔄 Visual content generation will use fallback mode")
+            # Don't raise exception - allow graceful fallback
+            self.image_agent = None
+            self.video_agent = None
     
     async def generate_visual_content(
         self, 
@@ -432,15 +461,33 @@ class VisualContentOrchestrator:
                 prompt = self._create_video_prompt(post, business_context, campaign_objective)
                 video_prompts.append(prompt)
             
-            # Generate images and videos
+            # Generate images and videos with exception handling
             generated_images = []
             generated_videos = []
             
-            if image_prompts:
-                generated_images = await self.image_agent.generate_images(image_prompts, business_context)
+            if image_prompts and self.image_agent:
+                try:
+                    logger.info(f"🎨 Generating {len(image_prompts)} images...")
+                    generated_images = await self.image_agent.generate_images(image_prompts, business_context)
+                    logger.info(f"✅ Successfully generated {len(generated_images)} images")
+                except Exception as e:
+                    logger.error(f"❌ Image generation failed: {e}")
+                    logger.warning("🔄 Using fallback image placeholders")
+                    generated_images = []
+            elif image_prompts and not self.image_agent:
+                logger.warning("⚠️ Image agent not available, skipping image generation")
             
-            if video_prompts:
-                generated_videos = await self.video_agent.generate_videos(video_prompts, business_context)
+            if video_prompts and self.video_agent:
+                try:
+                    logger.info(f"🎬 Generating {len(video_prompts)} videos...")
+                    generated_videos = await self.video_agent.generate_videos(video_prompts, business_context)
+                    logger.info(f"✅ Successfully generated {len(generated_videos)} videos")
+                except Exception as e:
+                    logger.error(f"❌ Video generation failed: {e}")
+                    logger.warning("🔄 Using fallback video placeholders")
+                    generated_videos = []
+            elif video_prompts and not self.video_agent:
+                logger.warning("⚠️ Video agent not available, skipping video generation")
             
             # Update posts with generated visual content
             updated_posts = self._update_posts_with_visuals(
@@ -670,6 +717,57 @@ class VisualContentOrchestrator:
             }
         }
 
+def _generate_basic_placeholders(social_posts: List[Dict[str, Any]], business_context: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate basic placeholder visual content when all generation methods fail."""
+    logger.info("🔄 Generating basic placeholder visual content")
+    
+    company_name = business_context.get('company_name', 'Company')
+    updated_posts = []
+    
+    for i, post in enumerate(social_posts):
+        updated_post = post.copy()
+        
+        if post.get('type') == 'text_image':
+            updated_post['image_url'] = f"https://picsum.photos/1024/576?random={i+1000}&text={company_name.replace(' ', '+')}"
+            updated_post['image_prompt'] = f"Professional marketing image for {company_name}"
+            updated_post['image_metadata'] = {
+                "generation_method": "basic_placeholder",
+                "status": "fallback",
+                "note": "Visual agent unavailable"
+            }
+        
+        elif post.get('type') == 'text_video':
+            updated_post['video_url'] = f"https://picsum.photos/1024/576?random={i+2000}&text={company_name.replace(' ', '+')}"
+            updated_post['video_prompt'] = f"Marketing video for {company_name}"
+            updated_post['thumbnail_url'] = f"https://picsum.photos/1024/576?random={i+2000}&text=Video+Thumbnail"
+            updated_post['video_metadata'] = {
+                "generation_method": "basic_placeholder",
+                "status": "fallback",
+                "note": "Video agent unavailable"
+            }
+        
+        updated_posts.append(updated_post)
+    
+    return {
+        "posts_with_visuals": updated_posts,
+        "visual_strategy": {
+            "total_posts": len(social_posts),
+            "image_posts": len([p for p in social_posts if p.get('type') == 'text_image']),
+            "video_posts": len([p for p in social_posts if p.get('type') == 'text_video']),
+            "generated_images": 0,
+            "generated_videos": 0,
+            "brand_consistency": "Basic placeholder with company name",
+            "platform_optimization": "Standard aspect ratios",
+            "note": "Using basic placeholders due to agent unavailability"
+        },
+        "generation_metadata": {
+            "agent_used": "BasicPlaceholderGenerator",
+            "processing_time": 0.1,
+            "quality_score": 3.0,
+            "status": "basic_fallback"
+        }
+    }
+
 # Export function for use in API routes
 async def generate_visual_content_for_posts(
     social_posts: List[Dict[str, Any]], 
@@ -723,30 +821,34 @@ async def generate_visual_content_for_posts(
                    f"creative_direction={len(creative_direction)} chars, "
                    f"media_tuning={len(campaign_media_tuning)} chars")
         
-        # Initialize orchestrator with enhanced context
-        orchestrator = VisualContentOrchestrator()
-        
-        # Generate visual content with full business awareness
-        result = await orchestrator.generate_visual_content(
-            social_posts=social_posts,
-            business_context=enhanced_context,
-            campaign_objective=campaign_objective,
-            target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
-        )
-        
-        logger.info("✅ Visual content generation completed with business context awareness")
-        return result
+        # Initialize orchestrator with enhanced context and exception handling
+        try:
+            orchestrator = VisualContentOrchestrator()
+            
+            if orchestrator.image_agent is None and orchestrator.video_agent is None:
+                logger.warning("⚠️ No visual agents available, using basic placeholder generation")
+                return _generate_basic_placeholders(social_posts, enhanced_context)
+            
+            # Generate visual content with full business awareness
+            result = await orchestrator.generate_visual_content(
+                social_posts=social_posts,
+                business_context=enhanced_context,
+                campaign_objective=campaign_objective,
+                target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
+            )
+            
+            logger.info("✅ Visual content generation completed with business context awareness")
+            return result
+            
+        except Exception as orchestrator_error:
+            logger.error(f"❌ Visual orchestrator initialization/execution failed: {orchestrator_error}")
+            logger.warning("🔄 Falling back to basic placeholder generation")
+            return _generate_basic_placeholders(social_posts, enhanced_context)
         
     except Exception as e:
         logger.error(f"❌ Enhanced visual content generation failed: {e}", exc_info=True)
-        # Fallback to basic generation
-        orchestrator = VisualContentOrchestrator()
-        return await orchestrator.generate_visual_content(
-            social_posts=social_posts,
-            business_context=business_context,
-            campaign_objective=campaign_objective,
-            target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
-        )
+        logger.warning("🔄 Using emergency fallback generation")
+        return _generate_basic_placeholders(social_posts, business_context)
 
 # Export functions for use in other modules
 __all__ = [
