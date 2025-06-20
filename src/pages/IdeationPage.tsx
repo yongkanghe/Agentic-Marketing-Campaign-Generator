@@ -86,14 +86,28 @@ const IdeationPage: React.FC = () => {
     // FIXED: Check if AI analysis and campaign guidance are missing and trigger regeneration
     const hasAiAnalysis = currentCampaign.aiAnalysis?.businessAnalysis;
     const hasCampaignGuidance = currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance;
+    const hasCreativeDirection = hasCampaignGuidance?.creative_direction;
     const hasUrls = currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl;
+    
+    // PERFORMANCE: Add debouncing to prevent multiple simultaneous analysis calls
+    const analysisKey = `${currentCampaign.id}-${hasAiAnalysis}-${!!hasCampaignGuidance}-${!!hasCreativeDirection}`;
     
     if (!hasAiAnalysis && hasUrls && !isRegeneratingAnalysis) {
       console.log('🔄 Missing AI analysis detected, triggering automatic regeneration...');
-      regenerateAIAnalysis();
-    } else if (hasAiAnalysis && !hasCampaignGuidance && hasUrls && !isRegeneratingAnalysis) {
+      // Add small delay to prevent race conditions
+      setTimeout(() => {
+        if (!isRegeneratingAnalysis) {
+          regenerateAIAnalysis();
+        }
+      }, 500);
+    } else if (hasAiAnalysis && (!hasCampaignGuidance || !hasCreativeDirection) && hasUrls && !isRegeneratingAnalysis) {
       console.log('🔄 Missing campaign guidance detected, triggering automatic regeneration...');
-      regenerateAIAnalysis();
+      // Add small delay to prevent race conditions
+      setTimeout(() => {
+        if (!isRegeneratingAnalysis) {
+          regenerateAIAnalysis();
+        }
+      }, 500);
     }
     
     // SESSION PERSISTENCE: Restore social media columns from localStorage or campaign data
@@ -817,16 +831,82 @@ const IdeationPage: React.FC = () => {
               </div>
             )}
 
-            {/* Campaign Validation Status */}
-            <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-sm font-medium text-green-400">Campaign Ready for Content Generation</span>
-              </div>
-              <p className="text-xs vvl-text-secondary mt-1 ml-5">
-                All required information has been provided. AI is ready to generate targeted social media content following the creative guidance above.
-              </p>
-            </div>
+            {/* Campaign Validation Status - EVENT DRIVEN */}
+            {(() => {
+              // FIXED: Event-driven campaign readiness based on actual AI analysis completion
+              const hasAiAnalysis = currentCampaign?.aiAnalysis?.businessAnalysis;
+              const hasCampaignGuidance = currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance;
+              const hasCreativeDirection = hasCampaignGuidance?.creative_direction;
+              const hasVisualStyle = hasCampaignGuidance?.visual_style;
+              const hasContentThemes = hasCampaignGuidance?.content_themes;
+              const hasUrls = currentCampaign?.businessUrl || currentCampaign?.aboutPageUrl || currentCampaign?.productServiceUrl;
+              
+              const isFullyReady = hasAiAnalysis && hasCreativeDirection && hasVisualStyle && hasContentThemes;
+              const isPartiallyReady = hasAiAnalysis && hasCampaignGuidance;
+              const needsAnalysis = !hasAiAnalysis && hasUrls;
+              
+              if (isRegeneratingAnalysis) {
+                return (
+                  <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-medium text-blue-400">Generating Campaign Guidance...</span>
+                    </div>
+                    <p className="text-xs vvl-text-secondary mt-1 ml-6">
+                      AI is analyzing your business context and generating personalized campaign guidance.
+                    </p>
+                  </div>
+                );
+              } else if (isFullyReady) {
+                return (
+                  <div className="bg-green-500/10 border border-green-400/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-sm font-medium text-green-400">Campaign Ready for Content Generation</span>
+                    </div>
+                    <p className="text-xs vvl-text-secondary mt-1 ml-5">
+                      AI analysis complete with creative guidance, visual style, and content themes. Ready to generate targeted social media content.
+                    </p>
+                  </div>
+                );
+              } else if (isPartiallyReady) {
+                return (
+                  <div className="bg-yellow-500/10 border border-yellow-400/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-yellow-400">Campaign Guidance Incomplete</span>
+                    </div>
+                    <p className="text-xs vvl-text-secondary mt-1 ml-5">
+                      Basic AI analysis available, but campaign guidance needs completion. Click "Generate Guidance" above to complete setup.
+                    </p>
+                  </div>
+                );
+              } else if (needsAnalysis) {
+                return (
+                  <div className="bg-orange-500/10 border border-orange-400/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-orange-400">AI Analysis Required</span>
+                    </div>
+                    <p className="text-xs vvl-text-secondary mt-1 ml-5">
+                      Business URLs detected but analysis not started. Click "Regenerate Analysis" above to begin AI analysis.
+                    </p>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="bg-gray-500/10 border border-gray-400/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-400">Campaign Setup Incomplete</span>
+                    </div>
+                    <p className="text-xs vvl-text-secondary mt-1 ml-5">
+                      Please provide business URLs in the campaign setup to enable AI analysis and guidance generation.
+                    </p>
+                  </div>
+                );
+              }
+            })()}
           </div>
 
           {/* Business Logic & Cost Control Information */}
