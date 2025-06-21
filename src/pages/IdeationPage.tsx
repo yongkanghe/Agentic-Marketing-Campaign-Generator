@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Heart, MessageCircle, Share, ExternalLink, Image, Video, Hash, Calendar, Home, Wand2, Info, AlertTriangle, Palette, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoVentureLaunchAPI from '../lib/api';
+import { safeStorage } from '@/utils/safeStorage';
+import { useAbortableApi } from '@/hooks/useAbortableApi';
 
 // CRITICAL FIX: Add TypeScript interfaces for better type safety
 interface SocialMediaColumn {
@@ -38,7 +40,6 @@ interface SocialMediaColumn {
     platform_optimized: any;
   }>;
   isGenerating: boolean;
-  isGeneratingVisuals: boolean;
 }
 
 const IdeationPage: React.FC = () => {
@@ -71,14 +72,13 @@ const IdeationPage: React.FC = () => {
   const [showGuidanceChat, setShowGuidanceChat] = useState(false);
   const [showGuidanceEdit, setShowGuidanceEdit] = useState(false);
   
+  // Use the new abortable API hook
+  const { executeAbortableCall, hasActiveRequest, abortCurrentRequest } = useAbortableApi();
+  
   // CRITICAL FIX 1.1: Use useRef to track generation states and prevent race conditions
   const generationStateRef = useRef<Record<string, boolean>>({});
-  const visualGenerationStateRef = useRef<Record<string, boolean>>({});
   
-  // CRITICAL FIX 1.3: AbortController for cancelling requests on unmount
-  const abortControllerRef = useRef<AbortController | null>(null);
-  
-  // Mock social media columns data with proper TypeScript interface
+  // Mock social media columns data with proper TypeScript interface - REMOVED isGeneratingVisuals
   const [socialMediaColumns, setSocialMediaColumns] = useState<SocialMediaColumn[]>([
     {
       id: 'text-only',
@@ -86,8 +86,7 @@ const IdeationPage: React.FC = () => {
       description: 'Marketing text with product URL for link unfurling',
       mediaType: 'text-only',
       posts: [],
-      isGenerating: false,
-      isGeneratingVisuals: false
+      isGenerating: false
     },
     {
       id: 'text-image',
@@ -95,8 +94,7 @@ const IdeationPage: React.FC = () => {
       description: 'Shortened text with AI-generated images',
       mediaType: 'text-with-image',
       posts: [],
-      isGenerating: false,
-      isGeneratingVisuals: false
+      isGenerating: false
     },
     {
       id: 'text-video',
@@ -104,8 +102,7 @@ const IdeationPage: React.FC = () => {
       description: 'Marketing text with AI-generated videos',
       mediaType: 'text-with-video',
       posts: [],
-      isGenerating: false,
-      isGeneratingVisuals: false
+      isGenerating: false
     }
   ]);
   
@@ -113,133 +110,102 @@ const IdeationPage: React.FC = () => {
   const clearStuckStates = useCallback(() => {
     console.log('🔧 Clearing any stuck generation states...');
     generationStateRef.current = {};
-    visualGenerationStateRef.current = {};
     setSocialMediaColumns(prev => prev.map(col => ({
       ...col,
-      isGenerating: false,
-      isGeneratingVisuals: false
+      isGenerating: false
     })));
   }, []);
   
-  // CRITICAL FIX 1.3: Cleanup function to abort ongoing requests
+  // CRITICAL FIX 1.3: Cleanup function using the new hook
   useEffect(() => {
     console.log('🔧 Component mounted - clearing any stuck states');
     clearStuckStates();
-    
-    // Cleanup function to abort ongoing requests
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        console.log('🚫 Aborted ongoing API requests due to component unmount');
-      }
-    };
   }, [clearStuckStates]);
   
-  // CRITICAL FIX 1.4: Safe localStorage operations with size limits and error handling
+  // CRITICAL FIX 1.4: Safe localStorage operations using new utility
   const saveColumnsToStorage = useCallback((columns: SocialMediaColumn[]) => {
-    if (!currentCampaign?.id) return;
+    if (!currentCampaign?.id) {
+      console.warn('⚠️ No current campaign ID - skipping localStorage save');
+      return;
+    }
     
-    try {
-      // Create minimal serializable snapshot to avoid size limits
-      const minimalColumns = columns.map(col => ({
-        id: col.id,
-        title: col.title,
-        description: col.description,
-        mediaType: col.mediaType,
-        posts: col.posts.map(post => ({
-          id: post.id,
-          type: post.type,
-          content: {
-            text: post.content.text,
-            hashtags: post.content.hashtags,
-            // Only store URLs, not full image/video data
-            imageUrl: post.content.imageUrl,
-            videoUrl: post.content.videoUrl,
-            productUrl: post.content.productUrl
-          },
-          selected: post.selected,
-          engagement_score: post.engagement_score
-        })),
-        isGenerating: false, // Always reset loading states in storage
-        isGeneratingVisuals: false
-      }));
-      
-      const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
-      const dataString = JSON.stringify(minimalColumns);
-      
-      // Check size limit (localStorage typically has 5MB limit)
-      if (dataString.length > 4 * 1024 * 1024) { // 4MB safety margin
-        console.warn('⚠️ Campaign data too large for localStorage, skipping save');
-        return;
-      }
-      
-      localStorage.setItem(campaignColumnsKey, dataString);
+    console.log(`💾 Saving columns for campaign: ${currentCampaign.id} (${currentCampaign.name})`);
+    
+    // Create minimal serializable snapshot to avoid size limits
+    const minimalColumns = columns.map(col => ({
+      id: col.id,
+      title: col.title,
+      description: col.description,
+      mediaType: col.mediaType,
+      posts: col.posts.map(post => ({
+        id: post.id,
+        type: post.type,
+        content: {
+          text: post.content.text,
+          hashtags: post.content.hashtags,
+          // Only store URLs, not full image/video data
+          imageUrl: post.content.imageUrl,
+          videoUrl: post.content.videoUrl,
+          productUrl: post.content.productUrl
+        },
+        selected: post.selected,
+        engagement_score: post.engagement_score
+      })),
+      isGenerating: false // Always reset loading states in storage
+    }));
+    
+    const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+    const success = safeStorage.set(campaignColumnsKey, minimalColumns);
+    
+    if (success) {
       console.log(`💾 Saved ${minimalColumns.length} columns to localStorage`);
-      
-    } catch (error) {
-      console.error('❌ Failed to save columns to localStorage:', error);
-      // Don't show user error for localStorage failures
+    } else {
+      console.warn('⚠️ Failed to save columns to localStorage - data too large or storage unavailable');
     }
   }, [currentCampaign?.id]);
   
   const loadColumnsFromStorage = useCallback((): SocialMediaColumn[] | null => {
-    if (!currentCampaign?.id) return null;
-    
-    try {
-      const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
-      const savedData = localStorage.getItem(campaignColumnsKey);
-      
-      if (!savedData) return null;
-      
-      const parsedColumns = JSON.parse(savedData);
-      
-      // Validate the structure
-      if (!Array.isArray(parsedColumns)) {
-        console.warn('⚠️ Invalid localStorage data structure, ignoring');
-        return null;
-      }
-      
-      // Transform back to full structure with safety checks
-      const fullColumns: SocialMediaColumn[] = parsedColumns.map((col: any) => ({
-        id: col.id || '',
-        title: col.title || '',
-        description: col.description || '',
-        mediaType: col.mediaType || 'text-only',
-        posts: (col.posts || []).map((post: any) => ({
-          id: post.id || '',
-          type: post.type || 'text-only',
-          platform: 'linkedin' as const,
-          content: {
-            text: post.content?.text || '',
-            hashtags: Array.isArray(post.content?.hashtags) ? post.content.hashtags : [],
-            imageUrl: post.content?.imageUrl,
-            videoUrl: post.content?.videoUrl,
-            productUrl: post.content?.productUrl
-          },
-          generationPrompt: `Generated content for ${col.id}`,
-          selected: Boolean(post.selected),
-          engagement_score: Number(post.engagement_score) || 7.0,
-          platform_optimized: {}
-        })),
-        isGenerating: false, // Always reset loading states
-        isGeneratingVisuals: false
-      }));
-      
-      console.log(`📦 Loaded ${fullColumns.length} columns from localStorage`);
-      return fullColumns;
-      
-    } catch (error) {
-      console.error('❌ Failed to load columns from localStorage:', error);
-      // Clear corrupted data
-      try {
-        const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
-        localStorage.removeItem(campaignColumnsKey);
-        console.log('🗑️ Cleared corrupted localStorage data');
-      } catch (clearError) {
-        console.error('❌ Failed to clear corrupted localStorage:', clearError);
-      }
+    if (!currentCampaign?.id) {
+      console.warn('⚠️ No current campaign ID - cannot load from localStorage');
       return null;
     }
+    
+    console.log(`📦 Loading columns for campaign: ${currentCampaign.id} (${currentCampaign.name})`);
+    
+    const campaignColumnsKey = `campaign-${currentCampaign.id}-columns`;
+    const result = safeStorage.getWithResult<any[]>(campaignColumnsKey, []);
+    
+    if (!result.success || !result.data || result.data.length === 0) {
+      return null;
+    }
+    
+    // Transform back to full structure with safety checks
+    const fullColumns: SocialMediaColumn[] = result.data.map((col: any) => ({
+      id: col.id || '',
+      title: col.title || '',
+      description: col.description || '',
+      mediaType: col.mediaType || 'text-only',
+      posts: (col.posts || []).map((post: any) => ({
+        id: post.id || '',
+        type: post.type || 'text-only',
+        platform: 'linkedin' as const,
+        content: {
+          text: post.content?.text || '',
+          hashtags: Array.isArray(post.content?.hashtags) ? post.content.hashtags : [],
+          imageUrl: post.content?.imageUrl,
+          videoUrl: post.content?.videoUrl,
+          productUrl: post.content?.productUrl
+        },
+        generationPrompt: `Generated content for ${col.id}`,
+        selected: Boolean(post.selected),
+        engagement_score: Number(post.engagement_score) || 7.0,
+        platform_optimized: {}
+      })),
+      isGenerating: false // Always reset loading states
+    }));
+    
+    console.log(`📦 Loaded ${fullColumns.length} columns from localStorage`);
+    return fullColumns;
   }, [currentCampaign?.id]);
 
   const generateAllPosts = useCallback(async () => {
@@ -258,12 +224,11 @@ const IdeationPage: React.FC = () => {
     // CRITICAL: Ensure visual columns are NOT automatically processing
     setSocialMediaColumns(prev => prev.map(col => ({
       ...col,
-      isGenerating: col.id === 'text-only' ? col.isGenerating : false,
-      isGeneratingVisuals: false // Force reset visual generation state
+      isGenerating: col.id === 'text-only' ? col.isGenerating : false
     })));
   }, [selectedThemes, selectedTags, suggestedThemes, suggestedTags, selectTheme, selectTag]);
 
-  // CRITICAL FIX 1.1 & 1.2: Race condition and stale closure fixes
+  // MAJOR FIX: Combined text + visual generation in one function
   const generateColumnPosts = useCallback(async (columnId: string) => {
     // CRITICAL FIX: Use ref-based state checking to prevent race conditions
     if (generationStateRef.current[columnId]) {
@@ -273,10 +238,6 @@ const IdeationPage: React.FC = () => {
     
     // CRITICAL FIX: Set ref state immediately to prevent race conditions
     generationStateRef.current[columnId] = true;
-    
-    // Set up AbortController for this request
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
     
     try {
       // CRITICAL FIX 1.2: Capture mediaType before async operations to avoid stale closure
@@ -301,48 +262,50 @@ const IdeationPage: React.FC = () => {
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
       
-      console.log(`🎯 Generating ${postType} posts for column ${columnId}...`);
+      console.log(`🎯 Generating ${postType} posts WITH visuals for column ${columnId}...`);
       
-      // CRITICAL FIX 1.3: Add abort signal to API call
-      const data = await VideoVentureLaunchAPI.generateBulkContent({
-        post_type: postType,
-        regenerate_count: 5,
-        business_context: {
-          // Use REAL AI analysis data when available - OPTIMIZED data extraction
-          company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-          objective: currentCampaign?.objective || 'increase sales',
-          campaign_type: currentCampaign?.campaignType || 'service',
-          target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-          business_description: currentCampaign?.businessDescription || '',
-          business_website: currentCampaign?.businessUrl || '',
-          product_service_url: currentCampaign?.productServiceUrl || '',
-          campaign_media_tuning: preferredDesign || '',
-          // PERFORMANCE: Pass campaign guidance directly to avoid re-processing
-          campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
-          // PERFORMANCE: Pass product context for enhanced targeting
-          product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {}
-        },
-        creativity_level: currentCampaign?.creativityLevel || 7
-      });
+      // STEP 1: Generate text content using abortable API
+      const textData = await executeAbortableCall(
+        (signal) => VideoVentureLaunchAPI.generateBulkContent({
+          post_type: postType,
+          regenerate_count: 5,
+          business_context: {
+            // Use REAL AI analysis data when available - OPTIMIZED data extraction
+            company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+            objective: currentCampaign?.objective || 'increase sales',
+            campaign_type: currentCampaign?.campaignType || 'service',
+            target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+            business_description: currentCampaign?.businessDescription || '',
+            business_website: currentCampaign?.businessUrl || '',
+            product_service_url: currentCampaign?.productServiceUrl || '',
+            campaign_media_tuning: preferredDesign || '',
+            // PERFORMANCE: Pass campaign guidance directly to avoid re-processing
+            campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
+            // PERFORMANCE: Pass product context for enhanced targeting
+            product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {}
+          },
+          creativity_level: currentCampaign?.creativityLevel || 7
+        })
+      );
       
-      // Check if request was aborted
-      if (controller.signal.aborted) {
-        console.log(`🚫 Request aborted for ${columnId}`);
+      if (!textData) {
+        console.log(`🚫 Text generation aborted for ${columnId}`);
         return;
       }
       
-      console.log(`✅ Generated ${data.new_posts.length} ${postType} posts successfully`);
+      console.log(`✅ Generated ${textData.new_posts.length} ${postType} text posts successfully`);
       
       // CRITICAL FIX 1.2: Use captured mediaType instead of searching in state
-      const transformedPosts = data.new_posts.map((post: any, idx: number) => ({
+      let transformedPosts = textData.new_posts.map((post: any, idx: number) => ({
         id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
         type: mediaType, // Use captured mediaType to avoid stale closure
         platform: 'linkedin' as const,
         content: {
           text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
           hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-          imageUrl: (columnId === 'text-image' && post.image_url) ? post.image_url : undefined,
-          videoUrl: (columnId === 'text-video' && post.video_url) ? post.video_url : undefined,
+          // FIXED: Map backend field names to frontend field names
+          imageUrl: post.image_url, // Backend returns image_url, frontend expects imageUrl
+          videoUrl: post.video_url, // Backend returns video_url, frontend expects videoUrl
           productUrl: (columnId === 'text-only' && post.url) ? post.url : 
                      (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
         },
@@ -351,6 +314,60 @@ const IdeationPage: React.FC = () => {
         engagement_score: post.engagement_score || (7.0 + idx * 0.1),
         platform_optimized: post.platform_optimized || {}
       }));
+      
+      // STEP 2: For visual content types, generate visuals if not already included
+      if ((columnId === 'text-image' || columnId === 'text-video') && 
+          !transformedPosts.some(post => post.content.imageUrl || post.content.videoUrl)) {
+        
+        console.log(`🎨 Generating visual content for ${columnId} posts...`);
+        
+        // Prepare posts for visual generation
+        const postsForVisuals = transformedPosts.map(post => ({
+          id: post.id,
+          type: (columnId === 'text-image' ? 'text_image' : 'text_video') as 'text_image' | 'text_video',
+          content: post.content.text,
+          platform: post.platform,
+          hashtags: post.content.hashtags
+        }));
+        
+                 // Generate visual content using abortable API
+         const visualData = await executeAbortableCall(
+           (signal) => VideoVentureLaunchAPI.generateVisualContent({
+             social_posts: postsForVisuals,
+             business_context: {
+               // Use comprehensive business context from AI analysis
+               business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+               industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
+               objective: currentCampaign?.objective || 'increase sales',
+               target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+               brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
+             },
+             campaign_objective: currentCampaign?.objective || 'increase sales',
+             target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
+           })
+         );
+        
+        if (visualData && visualData.posts_with_visuals) {
+          console.log(`✅ Generated visual content for ${visualData.posts_with_visuals.length} posts`);
+          
+          // Update posts with generated visual content
+          transformedPosts = transformedPosts.map(post => {
+            const visualPost = visualData.posts_with_visuals.find((vp: any) => vp.id === post.id);
+            if (visualPost) {
+              return {
+                ...post,
+                content: {
+                  ...post.content,
+                  // FIXED: Map backend field names to frontend field names
+                  imageUrl: visualPost.image_url || post.content.imageUrl,
+                  videoUrl: visualPost.video_url || post.content.videoUrl
+                }
+              };
+            }
+            return post;
+          });
+        }
+      }
       
       // Update state with successful results using functional update
       setSocialMediaColumns(prev => prev.map(col => 
@@ -361,15 +378,11 @@ const IdeationPage: React.FC = () => {
         } : col
       ));
 
-      toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`);
+      const visualType = columnId === 'text-image' ? 'with images' : 
+                        columnId === 'text-video' ? 'with videos' : '';
+      toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts ${visualType} successfully!`);
       
     } catch (err) {
-      // Check if error is due to abort
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log(`🚫 Request aborted for ${columnId}`);
-        return;
-      }
-      
       console.error(`❌ Failed to generate ${columnId} posts:`, err);
       
       // Reset loading state and clear any partial posts using functional update
@@ -394,120 +407,7 @@ const IdeationPage: React.FC = () => {
     }
   }, [currentCampaign, preferredDesign, suggestedHashtags, socialMediaColumns]);
 
-  // CRITICAL FIX 1.1 & 1.2: Visual content generation with race condition fixes
-  const generateVisualContent = useCallback(async (columnId: string) => {
-    // CRITICAL FIX: Use ref-based state checking to prevent race conditions
-    if (visualGenerationStateRef.current[columnId]) {
-      console.log(`🚫 Skipping ${columnId} visual generation - already in progress (ref-based check)`);
-      return;
-    }
-    
-    // Check if column has posts to process
-    const currentColumn = socialMediaColumns.find(col => col.id === columnId);
-    if (!currentColumn || currentColumn.posts.length === 0) {
-      console.log(`🚫 Skipping ${columnId} visual generation - no posts available`);
-      return;
-    }
-    
-    // CRITICAL FIX: Set ref state immediately to prevent race conditions
-    visualGenerationStateRef.current[columnId] = true;
-    
-    // Set up AbortController for this request
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    
-    try {
-      // Set visual generation loading state with functional update
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, isGeneratingVisuals: true } : col
-      ));
-      
-      console.log(`🎨 Generating visual content for ${columnId} with ${currentColumn.posts.length} posts...`);
-      
-      // Prepare posts for visual generation
-      const postsForVisuals = currentColumn.posts.map(post => ({
-        id: post.id,
-        type: (columnId === 'text-image' ? 'text_image' : 'text_video') as 'text_image' | 'text_video',
-        content: post.content.text,
-        platform: post.platform,
-        hashtags: post.content.hashtags
-      }));
-      
-      // CRITICAL FIX 1.3: Add abort signal to API call (when API supports it)
-      const data = await VideoVentureLaunchAPI.generateVisualContent({
-        social_posts: postsForVisuals,
-        business_context: {
-          // Use comprehensive business context from AI analysis
-          business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-          industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
-          objective: currentCampaign?.objective || 'increase sales',
-          target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-          brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
-        },
-        campaign_objective: currentCampaign?.objective || 'increase sales',
-        target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
-      });
-      
-      // Check if request was aborted
-      if (controller.signal.aborted) {
-        console.log(`🚫 Visual request aborted for ${columnId}`);
-        return;
-      }
-      
-      console.log(`✅ Generated visual content for ${data.posts_with_visuals.length} posts`);
-      
-      // Update posts with generated visual content using functional update
-      setSocialMediaColumns(prev => prev.map(col => {
-        if (col.id === columnId) {
-          const updatedPosts = col.posts.map(post => {
-            const visualPost = data.posts_with_visuals.find((vp: any) => vp.id === post.id);
-            if (visualPost) {
-              return {
-                ...post,
-                content: {
-                  ...post.content,
-                  imageUrl: visualPost.image_url || post.content.imageUrl,
-                  videoUrl: visualPost.video_url || post.content.videoUrl
-                }
-              };
-            }
-            return post;
-          });
-          
-          return {
-            ...col,
-            posts: updatedPosts,
-            isGeneratingVisuals: false
-          };
-        }
-        return col;
-      }));
 
-      const visualType = columnId === 'text-image' ? 'images' : 'videos';
-      toast.success(`🎨 Generated ${visualType} for ${currentColumn.posts.length} posts successfully!`);
-      
-    } catch (err) {
-      // Check if error is due to abort
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log(`🚫 Visual request aborted for ${columnId}`);
-        return;
-      }
-      
-      console.error(`❌ Failed to generate visual content for ${columnId}:`, err);
-      
-      // Reset visual generation loading state using functional update
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { ...col, isGeneratingVisuals: false } : col
-      ));
-      
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      const visualType = columnId === 'text-image' ? 'images' : 'videos';
-      toast.error(`Failed to generate ${visualType}: ${errorMessage}. Please try again.`);
-    } finally {
-      // CRITICAL FIX: Always clear the ref state
-      visualGenerationStateRef.current[columnId] = false;
-    }
-  }, [currentCampaign, socialMediaColumns]);
 
   const togglePostSelection = (postId: string) => {
     setSelectedPosts(prev => 
@@ -536,6 +436,17 @@ const IdeationPage: React.FC = () => {
   const regenerateAIAnalysis = useCallback(async () => {
     setIsRegeneratingAnalysis(true);
     try {
+      // CRITICAL DEBUG: Log current campaign data to identify source of wrong URLs
+      console.log('🔍 DEBUG: Current campaign data:', {
+        id: currentCampaign?.id,
+        name: currentCampaign?.name,
+        businessUrl: currentCampaign?.businessUrl,
+        aboutPageUrl: currentCampaign?.aboutPageUrl,
+        productServiceUrl: currentCampaign?.productServiceUrl,
+        objective: currentCampaign?.objective,
+        campaignType: currentCampaign?.campaignType
+      });
+      
       // Real API call to analyze URLs and get themes/tags using proper API client
       if (currentCampaign && (currentCampaign.businessUrl || currentCampaign.aboutPageUrl || currentCampaign.productServiceUrl)) {
         const urls = [
@@ -545,6 +456,7 @@ const IdeationPage: React.FC = () => {
         ].filter(url => url && url.trim());
 
         console.log('🔄 Regenerating AI analysis for URLs:', urls);
+        console.log('🔍 DEBUG: Sending URLs to backend:', { urls, analysis_type: 'business_context' });
 
         const analysisResult = await VideoVentureLaunchAPI.analyzeUrls({
           urls: urls,
@@ -664,9 +576,21 @@ const IdeationPage: React.FC = () => {
   // CRITICAL FIX 1.6: Fix missing dependencies and remove unused code
   useEffect(() => {
     if (!currentCampaign) {
+      console.warn('⚠️ No current campaign - redirecting to dashboard');
       navigate('/');
       return;
     }
+    
+    // CRITICAL DEBUG: Log campaign validation
+    console.log('🔍 Campaign validation:', {
+      id: currentCampaign.id,
+      name: currentCampaign.name,
+      hasBusinessUrl: !!currentCampaign.businessUrl,
+      hasAboutUrl: !!currentCampaign.aboutPageUrl,
+      hasProductUrl: !!currentCampaign.productServiceUrl,
+      hasAiAnalysis: !!currentCampaign.aiAnalysis,
+      timestamp: new Date().toISOString()
+    });
     
     if (currentCampaign.preferredDesign) {
       setPreferredDesign(currentCampaign.preferredDesign);
@@ -752,9 +676,20 @@ const IdeationPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={() => {
-                  // AGGRESSIVE RESET: Clear all stuck states
-                  console.log('🔧 AGGRESSIVE RESET: Clearing all stuck states');
-                  localStorage.removeItem(`campaign-${currentCampaign?.id}-columns`);
+                  // AGGRESSIVE RESET: Clear all stuck states AND localStorage cache
+                  console.log('🔧 AGGRESSIVE RESET: Clearing all stuck states and localStorage cache');
+                  
+                  // Clear ALL campaign-related localStorage data
+                  Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('campaign-')) {
+                      console.log(`🗑️ Removing localStorage key: ${key}`);
+                      localStorage.removeItem(key);
+                    }
+                  });
+                  
+                  // Clear marketing context cache
+                  localStorage.removeItem('marketing-context');
+                  localStorage.removeItem('current-campaign');
                   
                   // Reset all columns to initial state
                   setSocialMediaColumns([
@@ -764,8 +699,7 @@ const IdeationPage: React.FC = () => {
                       description: 'Marketing text with product URL for link unfurling',
                       mediaType: 'text-only' as const,
                       posts: [],
-                      isGenerating: false,
-                      isGeneratingVisuals: false
+                      isGenerating: false
                     },
                     {
                       id: 'text-image',
@@ -773,8 +707,7 @@ const IdeationPage: React.FC = () => {
                       description: 'Shortened text with AI-generated images',
                       mediaType: 'text-with-image' as const,
                       posts: [],
-                      isGenerating: false,
-                      isGeneratingVisuals: false
+                      isGenerating: false
                     },
                     {
                       id: 'text-video',
@@ -782,8 +715,7 @@ const IdeationPage: React.FC = () => {
                       description: 'Marketing text with AI-generated videos',
                       mediaType: 'text-with-video' as const,
                       posts: [],
-                      isGenerating: false,
-                      isGeneratingVisuals: false
+                      isGenerating: false
                     }
                   ]);
                   
@@ -1511,46 +1443,7 @@ const IdeationPage: React.FC = () => {
                     )}
                   </button>
 
-                  {/* Visual Content Generation Button (for image/video columns) */}
-                  {(column.id === 'text-image' || column.id === 'text-video') && column.posts.length > 0 && (
-                    <button
-                      onClick={() => generateVisualContent(column.id)}
-                      disabled={column.isGeneratingVisuals}
-                      className={`w-full mt-3 py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                        column.isGeneratingVisuals
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                          : column.id === 'text-image'
-                          ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                          : 'bg-red-600 hover:bg-red-700 text-white'
-                      }`}
-                    >
-                      {column.isGeneratingVisuals ? (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
-                            </div>
-                            <span className="text-sm">
-                              {column.id === 'text-image' ? 'Generating Images...' : 'Generating Videos...'}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {column.id === 'text-image' ? <Image size={16} /> : <Video size={16} />}
-                          {(() => {
-                            const hasVisualContent = column.posts.some(post => 
-                              (column.id === 'text-image' && post.content.imageUrl) ||
-                              (column.id === 'text-video' && post.content.videoUrl)
-                            );
-                            return hasVisualContent ? 
-                              (column.id === 'text-image' ? 'Regenerate Images' : 'Regenerate Videos') :
-                              (column.id === 'text-image' ? 'Generate Images (Cost)' : 'Generate Videos (Cost)');
-                          })()}
-                        </>
-                      )}
-                    </button>
-                  )}
+
                   
                   {/* Loading State with AI Indicators */}
                   {column.isGenerating && (
@@ -1571,7 +1464,7 @@ const IdeationPage: React.FC = () => {
                         {column.id !== 'text-only' && (
                           <div className="flex items-center gap-3 text-sm text-orange-400">
                             <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse animation-delay-900"></div>
-                            <span>Preparing visual content prompts...</span>
+                            <span>Generating {column.id === 'text-image' ? 'images' : 'videos'} with Imagen/Veo AI...</span>
                           </div>
                         )}
                       </div>
@@ -1634,10 +1527,10 @@ const IdeationPage: React.FC = () => {
                                 {column.id === 'text-image' ? '🖼️' : '🎬'}
                               </div>
                               <p className="text-sm text-gray-400 mb-1">
-                                {column.id === 'text-image' ? 'Image not generated yet' : 'Video not generated yet'}
+                                {column.id === 'text-image' ? 'Image generation in progress...' : 'Video generation in progress...'}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Click "{column.id === 'text-image' ? 'Generate Images' : 'Generate Videos'}" button above
+                                Visual content will appear here when generation completes
                               </p>
                             </div>
                           )}
