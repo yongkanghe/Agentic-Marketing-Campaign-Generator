@@ -36,7 +36,11 @@ help: ## Show this help message
 setup-logging: ## 🔧 Setup logging infrastructure (create log directory and files)
 	@echo "🔧 Setting up logging infrastructure..."
 	@mkdir -p $(LOG_DIR)
+	@mkdir -p data/images/cache
 	@echo "📁 Created logs directory: $(LOG_DIR)"
+	@echo "📁 Created image cache directory: data/images/cache"
+	@echo "🗑️ Cleaning up old cached images (keeping current images)..."
+	@python3 -c "from backend.agents.visual_content_agent import CampaignImageCache; cache = CampaignImageCache(); cache.cleanup_old_images()" 2>/dev/null || echo "   Cache cleanup skipped (no cache found)"
 	@echo "# AI Marketing Campaign Post Generator - Backend Debug Log" > $(BACKEND_LOG_FILE)
 	@echo "# Started: $$(date)" >> $(BACKEND_LOG_FILE)
 	@echo "# Log Level: DEBUG" >> $(BACKEND_LOG_FILE)
@@ -55,6 +59,17 @@ clean-logs: ## 🧹 Clean all log files
 	@echo "🧹 Cleaning log files..."
 	@rm -rf $(LOG_DIR)
 	@echo "✅ All log files cleaned"
+
+clean-cache: ## 🗑️ Clean image cache for fresh testing
+	@echo "🗑️ Cleaning image cache..."
+	@rm -rf data/images/cache/*
+	@echo "✅ Image cache cleaned"
+
+clean-all: ## 🧹 Clean logs and cache
+	@echo "🧹 Cleaning all temporary files..."
+	@make clean-logs
+	@make clean-cache
+	@echo "✅ All temporary files cleaned"
 
 view-backend-logs: ## 📖 View backend debug logs (live tail)
 	@echo "📖 Viewing backend debug logs (press Ctrl+C to exit)..."
@@ -120,9 +135,19 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@echo "   Backend:  $(BACKEND_LOG_FILE)"
 	@echo "   Frontend: $(FRONTEND_LOG_FILE)"
 	@echo ""
+	@echo "⚡ Run 'make test-quick' for fast essential tests (recommended)"
 	@echo "🧪 Run 'make test-full-stack' to test the entire application"
 	@echo "📖 Run 'make view-all-logs' to monitor debug logs"
 	@echo "🛑 Run 'make stop-all' to stop all services"
+
+test-quick: ## ⚡ Quick essential functionality tests (10s timeout per test)
+	@echo "⚡ Running Quick Test Suite for AI Marketing Campaign Post Generator"
+	@echo "====================================================================="
+	@echo ""
+	@echo "🔧 Running essential tests with 10s timeouts..."
+	@cd backend && python3 run_quick_tests.py
+	@echo ""
+	@echo "✅ Quick tests complete! Check quick_test_results.json for details"
 
 test-full-stack: ## 🧪 Comprehensive full-stack testing (Frontend + Backend + Database)
 	@echo "🧪 Running Full-Stack Integration Tests"

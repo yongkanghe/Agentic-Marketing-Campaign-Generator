@@ -22,20 +22,22 @@ logger = logging.getLogger(__name__)
 # Import ADK agents for real content generation
 try:
     from agents.marketing_orchestrator import execute_campaign_workflow
-    logger.info("Marketing orchestrator agent available for API endpoints")
+    logger.info("✅ Marketing orchestrator agent available for API endpoints")
 except ImportError as e:
-    logger.warning(f"Marketing orchestrator agent not available: {e}")
+    logger.warning(f"❌ Marketing orchestrator agent not available: {e}")
     execute_campaign_workflow = None
 
 # Import visual content generation
 try:
     from agents.visual_content_agent import generate_visual_content_for_posts
-    logger.info("Visual content agent available for API endpoints")
+    logger.info("✅ Visual content agent available for API endpoints")
 except ImportError as e:
-    logger.warning(f"Visual content agent not available: {e}")
+    logger.warning(f"❌ Visual content agent not available: {e}")
     generate_visual_content_for_posts = None
 
 router = APIRouter()
+
+# Cache will be initialized when needed
 
 @router.post("/generate", response_model=ContentGenerationResponse)
 async def generate_content(request: ContentGenerationRequest) -> ContentGenerationResponse:
@@ -381,45 +383,82 @@ async def generate_visual_content(request: dict):
         if generate_visual_content_for_posts:
             logger.info("Using real visual content generation agent")
             
-            # Call the visual content agent
+            # ENHANCED LOGGING: Log input posts structure
+            logger.info(f"📝 Input posts structure:")
+            for i, post in enumerate(social_posts):
+                logger.info(f"   Post {i+1}: ID={post.get('id', 'N/A')}, Type={post.get('type', 'N/A')}, Platform={post.get('platform', 'N/A')}")
+            
+            # Extract or generate campaign_id from request
+            campaign_id = request.get('campaign_id', 'default')
+            if campaign_id == 'default':
+                # Generate campaign_id from business context for consistency
+                company_name = business_context.get('company_name', 'company')
+                import hashlib
+                campaign_id = hashlib.md5(f"{company_name}_{campaign_objective}".encode()).hexdigest()[:8]
+            
             visual_results = await generate_visual_content_for_posts(
                 social_posts=social_posts,
                 business_context=business_context,
                 campaign_objective=campaign_objective,
-                target_platforms=target_platforms
+                target_platforms=target_platforms,
+                campaign_id=campaign_id
             )
             
-            # Transform results to match frontend expectations
-            posts_with_visuals = []
-            for post in social_posts:
-                visual_data = visual_results.get(post['id'], {})
-                
-                posts_with_visuals.append({
-                    "id": post['id'],
-                    "type": post['type'],
-                    "content": post['content'],
-                    "platform": post['platform'],
-                    "hashtags": post.get('hashtags', []),
-                    "image_prompt": visual_data.get('image_prompt'),
-                    "image_url": visual_data.get('image_url'),
-                    "video_prompt": visual_data.get('video_prompt'),
-                    "video_url": visual_data.get('video_url')
-                })
+            # CRITICAL REGRESSION DETECTION: Log visual results structure
+            logger.info(f"🔍 VISUAL RESULTS STRUCTURE VALIDATION:")
+            logger.info(f"   Type: {type(visual_results)}")
+            logger.info(f"   Keys: {list(visual_results.keys()) if isinstance(visual_results, dict) else 'Not a dict'}")
             
-            processing_time = time.time() - start_time
+            if 'posts_with_visuals' in visual_results:
+                posts_with_visuals_data = visual_results['posts_with_visuals']
+                logger.info(f"   posts_with_visuals type: {type(posts_with_visuals_data)}")
+                logger.info(f"   posts_with_visuals length: {len(posts_with_visuals_data) if isinstance(posts_with_visuals_data, list) else 'Not a list'}")
+                
+                # DETAILED IMAGE URL VALIDATION
+                for i, post in enumerate(posts_with_visuals_data):
+                    if isinstance(post, dict):
+                        image_url = post.get('image_url')
+                        video_url = post.get('video_url')
+                        logger.info(f"   Post {i+1} Visual URLs:")
+                        logger.info(f"      🖼️ image_url: {'✅ Present' if image_url else '❌ Missing/Null'} ({len(image_url) if image_url else 0} chars)")
+                        logger.info(f"      🎬 video_url: {'✅ Present' if video_url else '❌ Missing/Null'} ({len(video_url) if video_url else 0} chars)")
+                        
+                        # REGRESSION DETECTION: Alert if expected URLs are missing
+                        if post.get('type') in ['text_image', 'image_only'] and not image_url:
+                            logger.error(f"🚨 REGRESSION DETECTED: Post {post.get('id')} type {post.get('type')} missing image_url!")
+                        if post.get('type') in ['text_video', 'video_only'] and not video_url:
+                            logger.error(f"🚨 REGRESSION DETECTED: Post {post.get('id')} type {post.get('type')} missing video_url!")
+            else:
+                logger.error(f"🚨 CRITICAL ERROR: posts_with_visuals missing from visual_results!")
+            
+            # FIXED: Use the posts_with_visuals directly from the agent response
+            # The visual agent returns a structured response with posts_with_visuals as a list
+            posts_with_visuals = visual_results.get('posts_with_visuals', [])
+            
+            # FINAL API RESPONSE VALIDATION
+            logger.info(f"📤 FINAL API RESPONSE VALIDATION:")
+            logger.info(f"   Returning {len(posts_with_visuals)} posts with visuals")
+            
+            for i, post in enumerate(posts_with_visuals):
+                if isinstance(post, dict):
+                    image_url = post.get('image_url')
+                    video_url = post.get('video_url')
+                    logger.info(f"   API Response Post {i+1}:")
+                    logger.info(f"      ID: {post.get('id', 'N/A')}")
+                    logger.info(f"      Type: {post.get('type', 'N/A')}")
+                    logger.info(f"      🖼️ image_url in response: {'✅ YES' if image_url else '❌ NO'}")
+                    logger.info(f"      🎬 video_url in response: {'✅ YES' if video_url else '❌ NO'}")
+                    
+                    # STDOUT VALIDATION for test visibility
+                    if image_url:
+                        print(f"✅ IMAGE_URL_VALIDATION: Post {post.get('id')} has image_url ({len(image_url)} chars)", flush=True)
+                    else:
+                        print(f"❌ IMAGE_URL_VALIDATION: Post {post.get('id')} MISSING image_url!", flush=True)
             
             return {
                 "posts_with_visuals": posts_with_visuals,
-                "visual_strategy": {
-                    "business_context_used": bool(business_context),
-                    "target_platforms": target_platforms,
-                    "generation_method": "real_visual_agent"
-                },
-                "generation_metadata": {
-                    "posts_processed": len(posts_with_visuals),
-                    "processing_time": processing_time,
-                    "visual_agent_used": True
-                }
+                "generation_metadata": visual_results.get('generation_metadata', {}),
+                "processing_time": time.time() - start_time
             }
             
         else:
@@ -455,11 +494,6 @@ async def generate_visual_content(request: dict):
             
             return {
                 "posts_with_visuals": posts_with_visuals,
-                "visual_strategy": {
-                    "business_context_used": bool(business_context),
-                    "target_platforms": target_platforms,
-                    "generation_method": "fallback_mock_generation"
-                },
                 "generation_metadata": {
                     "posts_processed": len(posts_with_visuals),
                     "processing_time": processing_time,
@@ -1000,3 +1034,86 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
         posts.append(post)
     
     return posts 
+
+@router.get("/cache/stats")
+async def get_cache_stats(campaign_id: str = None):
+    """Get image cache statistics for all campaigns or specific campaign."""
+    try:
+        from backend.agents.visual_content_agent import CampaignImageCache
+        cache = CampaignImageCache()
+        stats = cache.get_cache_stats(campaign_id)
+        
+        logger.info(f"📊 Cache stats requested for campaign {campaign_id or 'all'}: {stats}")
+        return {
+            "cache_stats": stats,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get cache stats: {e}")
+        return {
+            "error": str(e),
+            "status": "error"
+        }
+
+@router.post("/cache/clear")
+async def clear_image_cache(request: dict = None):
+    """Clear image cache for all campaigns or specific campaign."""
+    try:
+        from backend.agents.visual_content_agent import CampaignImageCache
+        cache = CampaignImageCache()
+        
+        if request and request.get('campaign_id'):
+            # Clear specific campaign cache
+            campaign_id = request['campaign_id']
+            cleared_count = cache.clear_campaign_cache(campaign_id)
+            message = f"Cleared {cleared_count} cached images for campaign {campaign_id}"
+        else:
+            # Clear all cache
+            cleared_count = cache.clear_all_cache()
+            message = f"Cleared {cleared_count} cached images from all campaigns"
+        
+        logger.info(f"🗑️ Cache cleared: {message}")
+        print(f"✅ CACHE_MANAGEMENT: {message}")
+        return {
+            "cleared_images": cleared_count,
+            "message": message,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear cache: {e}")
+        return {
+            "error": str(e),
+            "status": "error"
+        }
+
+@router.post("/cache/cleanup")
+async def cleanup_old_images(request: dict = None):
+    """Cleanup old (non-current) images while keeping current images."""
+    try:
+        from backend.agents.visual_content_agent import CampaignImageCache
+        cache = CampaignImageCache()
+        
+        campaign_id = None
+        if request and request.get('campaign_id'):
+            campaign_id = request['campaign_id']
+        
+        cleaned_count = cache.cleanup_old_images(campaign_id)
+        
+        if campaign_id:
+            message = f"Cleaned up {cleaned_count} old images for campaign {campaign_id}, kept current images"
+        else:
+            message = f"Cleaned up {cleaned_count} old images from all campaigns, kept current images"
+        
+        logger.info(f"🗑️ Cache cleanup: {message}")
+        print(f"✅ CACHE_CLEANUP: {message}")
+        return {
+            "cleaned_images": cleaned_count,
+            "message": message,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Failed to cleanup old images: {e}")
+        return {
+            "error": str(e),
+            "status": "error"
+        } 

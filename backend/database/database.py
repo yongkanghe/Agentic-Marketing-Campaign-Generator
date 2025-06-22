@@ -113,6 +113,18 @@ def check_database_status() -> dict:
     
     return status
 
+def get_database_status() -> dict:
+    """Get database status - alias for check_database_status for test compatibility."""
+    status = check_database_status()
+    return {
+        'status': 'connected' if status['exists'] and not status['error'] else 'error',
+        'database_path': status['path'],
+        'tables_count': len(status['tables']),
+        'tables': status['tables'],
+        'size_bytes': status['size'],
+        'error': status['error']
+    }
+
 def create_test_data() -> bool:
     """Create some test data for development."""
     try:
