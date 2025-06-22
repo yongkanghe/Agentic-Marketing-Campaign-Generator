@@ -121,14 +121,14 @@ def create_test_data() -> bool:
         
         # Insert test user
         cursor.execute("""
-            INSERT OR REPLACE INTO users (id, username, email, password_hash, first_name, last_name, created_at, updated_at) 
-            VALUES ('test-user-1', 'testuser', 'test@example.com', 'dummy_hash', 'Test', 'User', datetime('now'), datetime('now'))
+            INSERT OR REPLACE INTO users (id, username, email, password_hash, full_name, created_at, updated_at) 
+            VALUES ('test-user-1', 'testuser', 'test@example.com', 'dummy_hash', 'Test User', datetime('now'), datetime('now'))
         """)
         
         # Insert demo user for demo campaigns
         cursor.execute("""
-            INSERT OR REPLACE INTO users (id, username, email, password_hash, first_name, last_name, created_at, updated_at) 
-            VALUES ('demo_user', 'demouser', 'demo@example.com', 'dummy_hash', 'Demo', 'User', datetime('now'), datetime('now'))
+            INSERT OR REPLACE INTO users (id, username, email, password_hash, full_name, created_at, updated_at) 
+            VALUES ('demo_user', 'demouser', 'demo@example.com', 'dummy_hash', 'Demo User', datetime('now'), datetime('now'))
         """)
         
         # Insert test campaign
