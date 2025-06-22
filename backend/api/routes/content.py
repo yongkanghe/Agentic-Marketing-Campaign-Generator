@@ -7,9 +7,11 @@ Author: JP + 2025-06-16
 import logging
 from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 import os
 import time
 import asyncio
+from pathlib import Path
 
 from ..models import (
     ContentGenerationRequest, ContentGenerationResponse,
@@ -750,11 +752,11 @@ async def _generate_batch_content_with_gemini(
         if post_type == PostType.TEXT_URL:
             format_instructions = f"""
             Generate {actual_count} Text + URL posts (40-120 characters each):
-            - CRITICAL: Include ONE clear product/service URL (not multiple duplicate URLs)
-            - Short, punchy, social media optimized
+            - CRITICAL: DO NOT embed URLs in content text - provide URL separately in JSON "url" field
+            - Short, punchy, social media optimized content about the actual business/product
             - Twitter/Instagram friendly length
             - Strong action verbs (Discover, Transform, Boost, etc.)
-            - Include URL placement naturally at the end
+            - Content must be relevant to {company_name}'s actual business/product
             - Platform: LinkedIn, Twitter, Instagram optimized
             - Call-to-Action Style: {content_themes.get('call_to_action_style', 'inspiring and action-oriented')}
             """
@@ -855,19 +857,20 @@ async def _generate_batch_content_with_gemini(
 
         CRITICAL Requirements for ALL posts:
         - Keep text SHORT and PUNCHY for social media
-        - For TEXT_URL: MUST include ONE product/service URL (no duplicates)
+        - For ALL POST TYPES: MUST include the product/service URL in the JSON "url" field
+        - For TEXT_URL: DO NOT embed URL in content text - provide separately in "url" field
         - For TEXT_IMAGE: MUST follow Imagen prompt guidance above for relevant, business-specific images
         - For TEXT_VIDEO: MUST follow Veo prompt guidance above for relevant, business-specific videos
         - Use emojis strategically for engagement
         - Include 3-4 relevant hashtags (separate field)
-        - Make content specific to {company_name} and their {objective}
+        - Make content specific to {company_name} and their actual business/product (not generic business content)
         - Follow campaign themes: {', '.join(primary_themes)}
 
-        CRITICAL URL REQUIREMENTS for TEXT_URL posts:
-        - ALWAYS use the PRODUCT/SERVICE URL: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
+        CRITICAL URL REQUIREMENTS for ALL POST TYPES:
+        - ALWAYS include the PRODUCT/SERVICE URL in the JSON "url" field: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
         - If promoting a specific product, use the product page URL, NOT the main website
-        - CTAs must be creative and engaging: "Check this out", "See more", "Discover now", "Get yours", "Learn more", "Shop now", "Explore this", "Don't miss out"
-        - NEVER use generic "Call-to-Action" or "CTA" text
+        - Every post needs a "See More" link to drive traffic to the business
+        - NEVER embed URLs in the content text - always use separate "url" field
 
         Format your response as JSON:
         {{
@@ -875,8 +878,8 @@ async def _generate_batch_content_with_gemini(
                 {{
                     "content": "Short punchy text here (follow character limits)",
                     "hashtags": ["#tag1", "#tag2", "#tag3"],
-                    {"image_prompt" if post_type == PostType.TEXT_IMAGE else "video_prompt" if post_type == PostType.TEXT_VIDEO else "call_to_action"}: "{"Detailed Imagen-optimized prompt for " + company_name + " business context" if post_type == PostType.TEXT_IMAGE else "Detailed Veo-optimized concept for " + company_name + " business context" if post_type == PostType.TEXT_VIDEO else "Strong CTA with URL"}",
-                    {"url" if post_type == PostType.TEXT_URL else "engagement_strategy"}: "{"Single website URL here" if post_type == PostType.TEXT_URL else "Brief engagement approach"}"
+                    {"image_prompt" if post_type == PostType.TEXT_IMAGE else "video_prompt" if post_type == PostType.TEXT_VIDEO else "call_to_action"}: "{"Detailed Imagen-optimized prompt for " + company_name + " business context" if post_type == PostType.TEXT_IMAGE else "Detailed Veo-optimized concept for " + company_name + " business context" if post_type == PostType.TEXT_VIDEO else "Strong CTA without URL"}",
+                    "url": "Product/service URL here (REQUIRED for ALL post types)"
                 }},
                 // ... repeat for {actual_count} posts
             ]
@@ -933,16 +936,17 @@ async def _generate_batch_content_with_gemini(
                         selected=False
                     )
                     
+                    # MARKETING FIX: ALL post types should include product URL for effective marketing
+                    # Get the product/service URL for ALL post types
+                    post_url = (post_data.get('url') or 
+                               business_context.get('product_service_url') or 
+                               business_context.get('business_website'))
+                    if post_url and not post_url.startswith('http'):
+                        post_url = f"https://{post_url}"
+                    
                     # Add type-specific fields with proper URL/CTA handling
                     if post_type == PostType.TEXT_URL:
-                        # PRIORITY: Use product/service URL first, then business website as fallback
-                        post_url = (post_data.get('url') or 
-                                   business_context.get('product_service_url') or 
-                                   business_context.get('business_website'))
-                        if post_url and not post_url.startswith('http'):
-                            post_url = f"https://{post_url}"
                         post.url = post_url
-                        
                         # DO NOT add URL to content - it will be displayed separately in the UI
                         # The frontend will handle URL display in a dedicated section
                             
@@ -951,6 +955,8 @@ async def _generate_batch_content_with_gemini(
                         # NO AUTOMATIC GENERATION - Images are generated manually due to cost
                         # The frontend will show a "Generate Images" button
                         post.image_url = None  # Will be populated when user manually triggers generation
+                        # MARKETING FIX: Include URL for image posts too
+                        post.url = post_url
                         
                     elif post_type == PostType.TEXT_VIDEO:
                         post.video_prompt = post_data.get('video_prompt', f'Dynamic marketing video showcasing {company_name} approach to {objective}')
@@ -958,6 +964,8 @@ async def _generate_batch_content_with_gemini(
                         # The frontend will show a "Generate Videos" button
                         post.video_url = None  # Will be populated when user manually triggers generation
                         post.thumbnail_url = None
+                        # MARKETING FIX: Include URL for video posts too
+                        post.url = post_url
                     
                     generated_posts.append(post)
                 
@@ -1010,13 +1018,15 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
             selected=False
         )
         
+        # MARKETING FIX: ALL post types should include product URL for effective marketing
+        # Get the product/service URL for ALL post types
+        post_url = (business_context.get('product_service_url') or 
+                   business_context.get('business_website'))
+        if post_url and not post_url.startswith('http'):
+            post_url = f"https://{post_url}"
+        
         # Add type-specific fields for fallback posts
         if post_type == PostType.TEXT_URL:
-            # PRIORITY: Use product/service URL first, then business website as fallback
-            post_url = (business_context.get('product_service_url') or 
-                       business_context.get('business_website'))
-            if post_url and not post_url.startswith('http'):
-                post_url = f"https://{post_url}"
             post.url = post_url
             # DO NOT add URL to content - frontend will display it separately
                 
@@ -1024,12 +1034,16 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
             post.image_prompt = f'Professional marketing image for {company_name} showing {objective}'
             # NO AUTOMATIC GENERATION - Images are generated manually due to cost
             post.image_url = None
+            # MARKETING FIX: Include URL for image posts too
+            post.url = post_url
             
         elif post_type == PostType.TEXT_VIDEO:
             post.video_prompt = f'Dynamic marketing video showcasing {company_name} approach to {objective}'
             # NO AUTOMATIC GENERATION - Videos are generated manually due to cost
             post.video_url = None
             post.thumbnail_url = None
+            # MARKETING FIX: Include URL for video posts too
+            post.url = post_url
         
         posts.append(post)
     
@@ -1039,7 +1053,7 @@ def _generate_fallback_posts(post_type: PostType, count: int, business_context: 
 async def get_cache_stats(campaign_id: str = None):
     """Get image cache statistics for all campaigns or specific campaign."""
     try:
-        from backend.agents.visual_content_agent import CampaignImageCache
+        from agents.visual_content_agent import CampaignImageCache
         cache = CampaignImageCache()
         stats = cache.get_cache_stats(campaign_id)
         
@@ -1059,7 +1073,7 @@ async def get_cache_stats(campaign_id: str = None):
 async def clear_image_cache(request: dict = None):
     """Clear image cache for all campaigns or specific campaign."""
     try:
-        from backend.agents.visual_content_agent import CampaignImageCache
+        from agents.visual_content_agent import CampaignImageCache
         cache = CampaignImageCache()
         
         if request and request.get('campaign_id'):
@@ -1090,7 +1104,7 @@ async def clear_image_cache(request: dict = None):
 async def cleanup_old_images(request: dict = None):
     """Cleanup old (non-current) images while keeping current images."""
     try:
-        from backend.agents.visual_content_agent import CampaignImageCache
+        from agents.visual_content_agent import CampaignImageCache
         cache = CampaignImageCache()
         
         campaign_id = None
@@ -1116,4 +1130,38 @@ async def cleanup_old_images(request: dict = None):
         return {
             "error": str(e),
             "status": "error"
-        } 
+        }
+
+@router.get("/images/{campaign_id}/{filename}")
+async def serve_generated_image(campaign_id: str, filename: str):
+    """Serve generated image files"""
+    try:
+        # Construct the image file path
+        image_path = Path("data/images/generated") / campaign_id / filename
+        
+        # Validate the file exists and is an image
+        if not image_path.exists():
+            logger.error(f"Image file not found: {image_path}")
+            raise HTTPException(status_code=404, detail="Image not found")
+            
+        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            logger.error(f"Invalid image file type: {filename}")
+            raise HTTPException(status_code=400, detail="Invalid image file type")
+            
+        # Validate campaign_id and filename to prevent directory traversal
+        if '..' in campaign_id or '..' in filename or '/' in campaign_id or '\\' in campaign_id:
+            logger.error(f"Invalid path components: campaign_id={campaign_id}, filename={filename}")
+            raise HTTPException(status_code=400, detail="Invalid path")
+            
+        logger.info(f"📸 Serving image: {image_path}")
+        return FileResponse(
+            path=str(image_path),
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to serve image {campaign_id}/{filename}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to serve image")

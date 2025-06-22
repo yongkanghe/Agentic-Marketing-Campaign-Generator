@@ -239,12 +239,12 @@ const IdeationPage: React.FC = () => {
     // Set generation state immediately
     generationStateRef.current[columnId] = true;
     
-    // Update UI to show loading state using functional update
+    // Update UI to show loading state and clear old posts for fresh generation
     setSocialMediaColumns(prev => prev.map(col => 
       col.id === columnId ? { 
         ...col, 
-        isGenerating: true
-        // KEEP existing posts during regeneration to preserve images/videos
+        isGenerating: true,
+        posts: [] // Clear old posts to show fresh loading state
       } : col
     ));
     
@@ -287,8 +287,8 @@ const IdeationPage: React.FC = () => {
           // FIXED: Map backend field names to frontend field names
           imageUrl: post.image_url, // Backend returns image_url, frontend expects imageUrl
           videoUrl: post.video_url, // Backend returns video_url, frontend expects videoUrl
-          productUrl: (columnId === 'text-only' && post.url) ? post.url : 
-                     (columnId === 'text-only' ? (currentCampaign?.productServiceUrl || currentCampaign?.businessUrl) : undefined)
+          // MARKETING FIX: ALL post types should include product URL for effective marketing
+          productUrl: post.url || currentCampaign?.productServiceUrl || currentCampaign?.businessUrl
         },
         generationPrompt: `Generate ${columnId} post for ${currentCampaign?.campaignType} campaign about ${currentCampaign?.objective}`,
         selected: false,

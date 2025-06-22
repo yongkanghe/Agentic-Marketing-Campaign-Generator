@@ -415,7 +415,7 @@ class ImageGenerationAgent:
                 generated_image = response.generated_images[0]
                 
                 # Save image and get URL
-                image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index)
+                image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index, campaign_id)
                 
                 # CACHE THE GENERATED IMAGE for future consistent UX
                 self.cache.cache_image(marketing_prompt, self.image_model, campaign_id, image_url, is_current=True)
@@ -445,24 +445,30 @@ class ImageGenerationAgent:
             # Fall back to enhanced placeholder
             return self._generate_enhanced_placeholder(prompt, index)
     
-    async def _save_generated_image_data(self, image_data_bytes: bytes, index: int) -> str:
-        """Save generated image data and return URL."""
+    async def _save_generated_image_data(self, image_data_bytes: bytes, index: int, campaign_id: str = "default") -> str:
+        """Save generated image data as actual file and return URL."""
         try:
-            # Create temporary file for the image
-            temp_dir = tempfile.gettempdir()
-            image_filename = f"generated_image_{uuid.uuid4().hex[:8]}_{index}.png"
-            image_path = os.path.join(temp_dir, image_filename)
+            # Create images directory structure: data/images/generated/<campaign_id>/
+            images_dir = Path("data/images/generated") / campaign_id
+            images_dir.mkdir(parents=True, exist_ok=True)
             
-            # Save image data
+            # Generate unique filename with timestamp
+            timestamp = int(time.time())
+            image_filename = f"img_{timestamp}_{uuid.uuid4().hex[:8]}_{index}.png"
+            image_path = images_dir / image_filename
+            
+            # Save actual PNG file
             with open(image_path, 'wb') as img_file:
                 img_file.write(image_data_bytes)
             
-            # Convert image to base64 for immediate display
-            img_base64 = base64.b64encode(image_data_bytes).decode('utf-8')
-            return f"data:image/png;base64,{img_base64}"
+            # Return absolute URL for frontend to access
+            file_url = f"http://localhost:8000/api/v1/content/images/{campaign_id}/{image_filename}"
+            logger.info(f"💾 Saved image file: {image_path} -> URL: {file_url}")
+            
+            return file_url
             
         except Exception as e:
-            logger.error(f"Failed to save generated image: {e}")
+            logger.error(f"Failed to save generated image file: {e}")
             return f"https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Generated+Image+{index+1}"
     
     def _enhance_prompt_with_context(self, base_prompt: str, business_context: Dict[str, Any]) -> str:

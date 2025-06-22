@@ -34,6 +34,7 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 | **Campaign Strategy** | Generate comprehensive campaign summaries | Summary Agent |
 | **Creative Ideation** | AI-powered campaign concepts and themes | Idea Agent |
 | **Content Generation** | Social media posts with hashtags and optimization | Content Agent |
+| **Visual Content** | AI-generated images using Google Imagen 3.0 | Visual Content Agent |
 | **Multi-Format Export** | JSON, CSV, XLSX export capabilities | API Layer |
 
 ---

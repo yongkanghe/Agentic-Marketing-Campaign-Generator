@@ -6,6 +6,61 @@
 
 ---
 
+## 2025-06-22: Visual Content Generation Root Cause Fix - CRITICAL SUCCESS
+
+### **Issue:** Images generated but not displaying in frontend
+**Context:** Visual content generation was working (1.6MB+ images via Google Imagen 3.0) but frontend showed placeholder icons instead of actual images.
+
+**Root Cause Analysis:**
+1. **Backend SUCCESS**: Images were being generated successfully via Google Imagen 3.0 API
+2. **Storage FAILURE**: Images were being stored as massive base64 data URLs (`data:image/png;base64,iVBORw0KGgo...`) in JSON cache files
+3. **Frontend FAILURE**: Browsers couldn't properly display 1.6MB+ base64 data URLs embedded in JSON responses
+4. **Cache BLOAT**: Cache files became 1.6MB+ each instead of small JSON metadata files
+
+**Technical Details:**
+- **Method**: `_save_generated_image_data()` was creating data URLs instead of saving actual PNG files
+- **Cache Impact**: JSON cache files contained entire base64 image data instead of file references
+- **Frontend Impact**: React components received base64 data URLs but couldn't render them properly
+
+**Solution Implementation:**
+
+1. **File Storage Architecture**:
+   ```
+   data/images/generated/<campaign_id>/img_<timestamp>_<uuid>_<index>.png
+   ```
+
+2. **URL Generation**:
+   - **Before**: `data:image/png;base64,iVBORw0KGgo...` (1.6MB+ string)
+   - **After**: `http://localhost:8000/api/v1/content/images/campaign_id/filename.png`
+
+3. **API Endpoint**: Added `/api/v1/content/images/{campaign_id}/{filename}` for serving PNG files
+
+4. **Cache Optimization**: Cache now stores file URLs instead of base64 data
+
+**Performance Impact:**
+- **Cache Size**: Reduced from 1.6MB+ per image to ~200 bytes per image metadata
+- **API Response**: Reduced from 6MB+ to ~2KB for 4 images
+- **Frontend Loading**: Improved from timeout/failure to instant display
+- **Storage Efficiency**: Proper file system usage instead of JSON bloat
+
+**Key Lessons:**
+1. **Separate Concerns**: Image generation ≠ Image storage ≠ Image serving
+2. **File vs Data URLs**: Large images should be stored as files, not embedded data URLs
+3. **Frontend Debugging**: "Generation successful" doesn't mean "Display successful"
+4. **Cache Design**: Cache metadata, not raw binary data
+5. **URL Architecture**: Absolute URLs required for cross-origin frontend access
+
+**Production Readiness:**
+- ✅ Real PNG files stored in organized directory structure
+- ✅ Proper HTTP endpoints for image serving with security validation
+- ✅ Campaign-specific organization for scalability
+- ✅ Cache management API endpoints
+- ✅ Error handling and fallback mechanisms
+
+**Critical Success Factor**: Always test the complete user experience, not just API responses.
+
+---
+
 ## 2025-06-18: Real AI Analysis Configuration Resolution - Critical Discovery
 
 ### **Issue:** Analysis appearing "mocked" or "static" instead of real AI-powered
