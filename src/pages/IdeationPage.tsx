@@ -230,73 +230,54 @@ const IdeationPage: React.FC = () => {
 
   // MAJOR FIX: Combined text + visual generation in one function
   const generateColumnPosts = useCallback(async (columnId: string) => {
-    // CRITICAL FIX: Use ref-based state checking to prevent race conditions
+    // CRITICAL FIX: Prevent duplicate generation attempts
     if (generationStateRef.current[columnId]) {
-      console.log(`🚫 Skipping ${columnId} generation - already in progress (ref-based check)`);
+      console.log(`⚠️ Generation already in progress for ${columnId}, skipping duplicate request`);
       return;
     }
     
-    // CRITICAL FIX: Set ref state immediately to prevent race conditions
+    // Set generation state immediately
     generationStateRef.current[columnId] = true;
     
+    // Update UI to show loading state using functional update
+    setSocialMediaColumns(prev => prev.map(col => 
+      col.id === columnId ? { 
+        ...col, 
+        isGenerating: true
+        // KEEP existing posts during regeneration to preserve images/videos
+      } : col
+    ));
+    
     try {
-      // CRITICAL FIX 1.2: Capture mediaType before async operations to avoid stale closure
-      const currentColumn = socialMediaColumns.find(col => col.id === columnId);
-      if (!currentColumn) {
-        console.log(`🚫 Column ${columnId} not found`);
-        return;
-      }
+      console.log(`🎯 Generating ${columnId} posts...`);
       
-      const mediaType = currentColumn.mediaType;
-      
-      // Set loading state with functional update
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { 
-          ...col, 
-          isGenerating: true, 
-          posts: [] // Clear old posts to show fresh loading state
-        } : col
-      ));
-      
-      // Map columnId to API post type
+      // STEP 1: Generate text content first
       const postType = columnId === 'text-only' ? 'text_url' : 
                       columnId === 'text-image' ? 'text_image' : 'text_video';
+      const mediaType = columnId === 'text-only' ? 'text-only' as const : 
+                       columnId === 'text-image' ? 'text-with-image' as const : 
+                       'text-with-video' as const;
       
-      console.log(`🎯 Generating ${postType} posts WITH visuals for column ${columnId}...`);
+      const textContentData = await VideoVentureLaunchAPI.generateBulkContent({
+        post_type: postType,
+        regenerate_count: 4,
+        business_context: {
+          company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+          objective: currentCampaign?.objective || 'increase sales',
+          campaign_type: currentCampaign?.campaignType || 'product',
+          target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+          business_description: currentCampaign?.businessDescription || currentCampaign?.aiAnalysis?.businessAnalysis?.business_description || 'Professional business',
+          business_website: currentCampaign?.businessUrl,
+          product_service_url: currentCampaign?.productServiceUrl,
+          campaign_media_tuning: preferredDesign,
+          campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance,
+          product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context
+        },
+        creativity_level: currentCampaign?.creativityLevel || 7
+      });
       
-      // STEP 1: Generate text content using abortable API
-      const textData = await executeAbortableCall(
-        (signal) => VideoVentureLaunchAPI.generateBulkContent({
-          post_type: postType,
-          regenerate_count: 5,
-          business_context: {
-            // Use REAL AI analysis data when available - OPTIMIZED data extraction
-            company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-            objective: currentCampaign?.objective || 'increase sales',
-            campaign_type: currentCampaign?.campaignType || 'service',
-            target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-            business_description: currentCampaign?.businessDescription || '',
-            business_website: currentCampaign?.businessUrl || '',
-            product_service_url: currentCampaign?.productServiceUrl || '',
-            campaign_media_tuning: preferredDesign || '',
-            // PERFORMANCE: Pass campaign guidance directly to avoid re-processing
-            campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
-            // PERFORMANCE: Pass product context for enhanced targeting
-            product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {}
-          },
-          creativity_level: currentCampaign?.creativityLevel || 7
-        })
-      );
-      
-      if (!textData) {
-        console.log(`🚫 Text generation aborted for ${columnId}`);
-        return;
-      }
-      
-      console.log(`✅ Generated ${textData.new_posts.length} ${postType} text posts successfully`);
-      
-      // CRITICAL FIX 1.2: Use captured mediaType instead of searching in state
-      let transformedPosts = textData.new_posts.map((post: any, idx: number) => ({
+      // Transform posts to frontend format
+      let transformedPosts = textContentData.new_posts.map((post: any, idx: number) => ({
         id: post.id || `${columnId}-post-${Date.now()}-${idx}`,
         type: mediaType, // Use captured mediaType to avoid stale closure
         platform: 'linkedin' as const,
@@ -321,6 +302,15 @@ const IdeationPage: React.FC = () => {
         
         console.log(`🎨 Generating visual content for ${columnId} posts...`);
         
+        // Update UI to show visual generation phase
+        setSocialMediaColumns(prev => prev.map(col => 
+          col.id === columnId ? { 
+            ...col, 
+            posts: transformedPosts, // Update with text content first
+            isGenerating: true // Keep generating state for visuals
+          } : col
+        ));
+        
         // Prepare posts for visual generation
         const postsForVisuals = transformedPosts.map(post => ({
           id: post.id,
@@ -330,31 +320,46 @@ const IdeationPage: React.FC = () => {
           hashtags: post.content.hashtags
         }));
         
-                 // Generate visual content using abortable API
-         const visualData = await executeAbortableCall(
-           (signal) => VideoVentureLaunchAPI.generateVisualContent({
-             social_posts: postsForVisuals,
-             business_context: {
-               // Use comprehensive business context from AI analysis
-               business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-               industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
-               objective: currentCampaign?.objective || 'increase sales',
-               target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-               brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
-             },
-             campaign_objective: currentCampaign?.objective || 'increase sales',
-             target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
-           })
-         );
+        // Generate visual content using abortable API
+        const visualData = await executeAbortableCall(
+          (signal) => VideoVentureLaunchAPI.generateVisualContent({
+            social_posts: postsForVisuals,
+            business_context: {
+              // Use comprehensive business context from AI analysis
+              business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+              industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
+              objective: currentCampaign?.objective || 'increase sales',
+              target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+              brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
+            },
+            campaign_objective: currentCampaign?.objective || 'increase sales',
+            target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
+          })
+        );
         
         if (visualData && visualData.posts_with_visuals) {
           console.log(`✅ Generated visual content for ${visualData.posts_with_visuals.length} posts`);
           
-          // Update posts with generated visual content
+          // CRITICAL FIX: Update posts with generated visual content using proper field mapping
+          console.log(`🎨 VISUAL MAPPING DEBUG:`, {
+            totalPosts: transformedPosts.length,
+            visualPostsReceived: visualData.posts_with_visuals.length,
+            visualPostIds: visualData.posts_with_visuals.map((vp: any) => vp.id),
+            transformedPostIds: transformedPosts.map(p => p.id)
+          });
+          
           transformedPosts = transformedPosts.map(post => {
             const visualPost = visualData.posts_with_visuals.find((vp: any) => vp.id === post.id);
             if (visualPost) {
-              return {
+              console.log(`🔗 Mapping visual content for post ${post.id}:`, {
+                hasBackendImageUrl: !!visualPost.image_url,
+                backendImageLength: visualPost.image_url?.length || 0,
+                hasExistingImageUrl: !!post.content.imageUrl,
+                existingImageLength: post.content.imageUrl?.length || 0,
+                backendImageUrlPreview: visualPost.image_url?.substring(0, 100) || 'N/A'
+              });
+              
+              const updatedPost = {
                 ...post,
                 content: {
                   ...post.content,
@@ -363,24 +368,73 @@ const IdeationPage: React.FC = () => {
                   videoUrl: visualPost.video_url || post.content.videoUrl
                 }
               };
+              
+              // VERIFY THE MAPPING WORKED
+              console.log(`✅ POST UPDATE VERIFICATION for ${post.id}:`, {
+                originalHadImage: !!post.content.imageUrl,
+                updatedHasImage: !!updatedPost.content.imageUrl,
+                imageUrlLength: updatedPost.content.imageUrl?.length || 0
+              });
+              
+              return updatedPost;
+            } else {
+              console.warn(`⚠️ No visual data found for post ${post.id}`);
             }
             return post;
           });
+          
+          // DETAILED IMAGE URL LOGGING FOR DEBUGGING
+          transformedPosts.forEach((post, index) => {
+            if (post.content.imageUrl) {
+              console.log(`🖼️ Post ${post.id} has imageUrl: ${post.content.imageUrl.substring(0, 50)}... (${post.content.imageUrl.length} chars)`);
+              // STDOUT for test visibility
+              console.log(`✅ FRONTEND_IMAGE_VALIDATION: Post ${post.id} has imageUrl (${post.content.imageUrl.length} chars)`);
+            } else {
+              console.log(`❌ Post ${post.id} missing imageUrl`);
+            }
+            if (post.content.videoUrl) {
+              console.log(`🎬 Post ${post.id} has videoUrl: ${post.content.videoUrl.substring(0, 50)}... (${post.content.videoUrl.length} chars)`);
+            }
+          });
+          
+          console.log(`🎨 Updated ${transformedPosts.length} posts with visual content`, {
+            postsWithImages: transformedPosts.filter(p => p.content.imageUrl).length,
+            postsWithVideos: transformedPosts.filter(p => p.content.videoUrl).length
+          });
+        } else {
+          console.warn(`⚠️ No visual data returned for ${columnId} posts`);
         }
       }
       
-      // Update state with successful results using functional update
+      // STEP 3: Final state update with all content (text + visuals)
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { 
           ...col, 
           posts: transformedPosts, 
-          isGenerating: false 
+          isGenerating: false // Clear generation state
         } : col
       ));
+      
+      // DEBUGGING: Log final state for verification
+      console.log(`🔍 FINAL STATE UPDATE for ${columnId}:`, {
+        postsCount: transformedPosts.length,
+        postsWithImages: transformedPosts.filter(p => p.content.imageUrl).length,
+        postsWithVideos: transformedPosts.filter(p => p.content.videoUrl).length,
+        sampleImageUrl: transformedPosts.find(p => p.content.imageUrl)?.content.imageUrl?.substring(0, 50)
+      });
 
       const visualType = columnId === 'text-image' ? 'with images' : 
                         columnId === 'text-video' ? 'with videos' : '';
-      toast.success(`Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts ${visualType} successfully!`);
+      const visualCount = columnId === 'text-image' ? 
+                         transformedPosts.filter(p => p.content.imageUrl).length :
+                         columnId === 'text-video' ?
+                         transformedPosts.filter(p => p.content.videoUrl).length : 0;
+      
+      const successMessage = visualType ? 
+        `Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts ${visualType} (${visualCount} visuals)!` :
+        `Generated ${transformedPosts.length} ${postType.replace('_', ' + ')} posts successfully!`;
+      
+      toast.success(successMessage);
       
     } catch (err) {
       console.error(`❌ Failed to generate ${columnId} posts:`, err);
@@ -405,7 +459,7 @@ const IdeationPage: React.FC = () => {
       // CRITICAL FIX: Always clear the ref state
       generationStateRef.current[columnId] = false;
     }
-  }, [currentCampaign, preferredDesign, suggestedHashtags, socialMediaColumns]);
+  }, [currentCampaign, preferredDesign, suggestedHashtags, socialMediaColumns, executeAbortableCall]);
 
 
 
@@ -1499,11 +1553,21 @@ const IdeationPage: React.FC = () => {
                                     src={post.content.imageUrl} 
                                     alt="Generated marketing image"
                                     className="w-full h-48 object-cover"
+                                    onLoad={() => {
+                                      console.log(`✅ IMAGE_LOADED: Post ${post.id} image loaded successfully`);
+                                    }}
                                     onError={(e) => {
+                                      console.error(`❌ IMAGE_ERROR: Post ${post.id} image failed to load:`, e);
+                                      console.log(`🔍 Image URL length: ${post.content.imageUrl?.length}`);
+                                      console.log(`🔍 Image URL format: ${post.content.imageUrl?.substring(0, 50)}...`);
                                       // Fallback to placeholder if image fails to load
                                       e.currentTarget.src = 'https://picsum.photos/400/240?blur=2';
                                     }}
                                   />
+                                  {/* Debug overlay */}
+                                  <div className="absolute top-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
+                                    {post.content.imageUrl ? `${Math.round(post.content.imageUrl.length / 1024)}KB` : 'No Image'}
+                                  </div>
                                 </div>
                               )}
                               
@@ -1527,10 +1591,16 @@ const IdeationPage: React.FC = () => {
                                 {column.id === 'text-image' ? '🖼️' : '🎬'}
                               </div>
                               <p className="text-sm text-gray-400 mb-1">
-                                {column.id === 'text-image' ? 'Image generation in progress...' : 'Video generation in progress...'}
+                                {column.isGenerating ? 
+                                  (column.id === 'text-image' ? 'Image generation in progress...' : 'Video generation in progress...') :
+                                  (column.id === 'text-image' ? 'Image generation complete' : 'Video generation complete')
+                                }
                               </p>
                               <p className="text-xs text-gray-500">
-                                Visual content will appear here when generation completes
+                                {column.isGenerating ? 
+                                  'Visual content will appear here when generation completes' :
+                                  'Use "Regenerate All" button above to refresh visuals'
+                                }
                               </p>
                             </div>
                           )}

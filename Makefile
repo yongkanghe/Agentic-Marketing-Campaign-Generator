@@ -36,7 +36,11 @@ help: ## Show this help message
 setup-logging: ## 🔧 Setup logging infrastructure (create log directory and files)
 	@echo "🔧 Setting up logging infrastructure..."
 	@mkdir -p $(LOG_DIR)
+	@mkdir -p data/images/cache
 	@echo "📁 Created logs directory: $(LOG_DIR)"
+	@echo "📁 Created image cache directory: data/images/cache"
+	@echo "🗑️ Cleaning up old cached images (keeping current images)..."
+	@python3 -c "from backend.agents.visual_content_agent import CampaignImageCache; cache = CampaignImageCache(); cache.cleanup_old_images()" 2>/dev/null || echo "   Cache cleanup skipped (no cache found)"
 	@echo "# AI Marketing Campaign Post Generator - Backend Debug Log" > $(BACKEND_LOG_FILE)
 	@echo "# Started: $$(date)" >> $(BACKEND_LOG_FILE)
 	@echo "# Log Level: DEBUG" >> $(BACKEND_LOG_FILE)
@@ -55,6 +59,17 @@ clean-logs: ## 🧹 Clean all log files
 	@echo "🧹 Cleaning log files..."
 	@rm -rf $(LOG_DIR)
 	@echo "✅ All log files cleaned"
+
+clean-cache: ## 🗑️ Clean image cache for fresh testing
+	@echo "🗑️ Cleaning image cache..."
+	@rm -rf data/images/cache/*
+	@echo "✅ Image cache cleaned"
+
+clean-all: ## 🧹 Clean logs and cache
+	@echo "🧹 Cleaning all temporary files..."
+	@make clean-logs
+	@make clean-cache
+	@echo "✅ All temporary files cleaned"
 
 view-backend-logs: ## 📖 View backend debug logs (live tail)
 	@echo "📖 Viewing backend debug logs (press Ctrl+C to exit)..."

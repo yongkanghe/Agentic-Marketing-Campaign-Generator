@@ -5,6 +5,8 @@ alwaysApply: true
 ---
 use makefiles for application operations, running, testing and similar.
 
+run the full stack with launch-all for consinstent runtime behaviour during run validation
+
 do not create or use mocks, or stubs, unleass this is aprt of the test suite.
 
 Use Graceful error exception handling highlighing the missing functionality where appropriate

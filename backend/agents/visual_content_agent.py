@@ -12,6 +12,11 @@ import asyncio
 import tempfile
 import uuid
 import logging
+import base64
+import hashlib
+import json
+import time
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -22,6 +27,267 @@ from google import genai
 from google.genai import types
 
 logger = logging.getLogger(__name__)
+
+# Enhanced cache configuration for campaign-specific storage
+CACHE_BASE_DIR = Path("data/images/cache")
+CACHE_BASE_DIR.mkdir(parents=True, exist_ok=True)
+
+class CampaignImageCache:
+    """
+    Campaign-aware image caching system for consistent user experience
+    
+    Architecture:
+    - data/images/cache/<campaign_id>/<curr_imagehash>.json - Current/latest images
+    - data/images/cache/<campaign_id>/<imagehash>.json - Previous images (cleaned on restart)
+    - Supports MVP → Production migration to GCS bucket structure
+    """
+    
+    def __init__(self, cache_base_dir: Path = CACHE_BASE_DIR):
+        self.cache_base_dir = cache_base_dir
+        self.cache_base_dir.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger(__name__)
+        
+    def _get_campaign_cache_dir(self, campaign_id: str) -> Path:
+        """Get campaign-specific cache directory"""
+        campaign_dir = self.cache_base_dir / campaign_id
+        campaign_dir.mkdir(parents=True, exist_ok=True)
+        return campaign_dir
+    
+    def _generate_cache_key(self, prompt: str, model: str, campaign_id: str) -> str:
+        """Generate a cache key from prompt, model, and campaign"""
+        content = f"{campaign_id}_{prompt}_{model}"
+        return hashlib.md5(content.encode()).hexdigest()
+    
+    def _generate_current_cache_key(self, prompt: str, model: str, campaign_id: str) -> str:
+        """Generate current cache key with curr_ prefix for latest images"""
+        base_key = self._generate_cache_key(prompt, model, campaign_id)
+        return f"curr_{base_key}"
+    
+    def get_cached_image(self, prompt: str, model: str, campaign_id: str) -> Optional[str]:
+        """Get cached image if available (prioritize current images)"""
+        try:
+            campaign_dir = self._get_campaign_cache_dir(campaign_id)
+            
+            # First check for current image
+            current_key = self._generate_current_cache_key(prompt, model, campaign_id)
+            current_file = campaign_dir / f"{current_key}.json"
+            
+            if current_file.exists():
+                with open(current_file, 'r') as f:
+                    cache_data = json.load(f)
+                    
+                # Current images are always valid (no expiry)
+                self.logger.info(f"✅ Using current cached image for campaign {campaign_id}: {prompt[:50]}...")
+                print(f"✅ CACHE_HIT_CURRENT: Campaign {campaign_id} using current image ({len(cache_data['image_data'])} chars)")
+                return cache_data['image_data']
+            
+            # Fallback to regular cache with expiry check
+            cache_key = self._generate_cache_key(prompt, model, campaign_id)
+            cache_file = campaign_dir / f"{cache_key}.json"
+            
+            if cache_file.exists():
+                with open(cache_file, 'r') as f:
+                    cache_data = json.load(f)
+                    
+                # Check if cache is still valid (24 hours for non-current images)
+                if time.time() - cache_data.get('timestamp', 0) < 86400:
+                    self.logger.info(f"✅ Using cached image for campaign {campaign_id}: {prompt[:50]}...")
+                    print(f"✅ CACHE_HIT: Campaign {campaign_id} using cached image ({len(cache_data['image_data'])} chars)")
+                    return cache_data['image_data']
+                else:
+                    # Cache expired, remove it
+                    cache_file.unlink()
+                    self.logger.info(f"🗑️ Cache expired for campaign {campaign_id}: {prompt[:50]}...")
+                    
+        except Exception as e:
+            self.logger.warning(f"Cache read error for campaign {campaign_id}: {e}")
+            
+        return None
+    
+    def cache_image(self, prompt: str, model: str, campaign_id: str, image_data: str, is_current: bool = True) -> bool:
+        """Cache generated image with campaign awareness"""
+        try:
+            campaign_dir = self._get_campaign_cache_dir(campaign_id)
+            
+            if is_current:
+                # Save as current image (latest generation)
+                cache_key = self._generate_current_cache_key(prompt, model, campaign_id)
+                cache_file = campaign_dir / f"{cache_key}.json"
+                
+                # Remove any existing current image for this prompt
+                existing_current = campaign_dir.glob(f"curr_*.json")
+                for existing_file in existing_current:
+                    try:
+                        with open(existing_file, 'r') as f:
+                            existing_data = json.load(f)
+                        if existing_data.get('prompt') == prompt:
+                            existing_file.unlink()
+                            self.logger.info(f"🔄 Replaced existing current image for prompt: {prompt[:50]}...")
+                    except:
+                        continue
+            else:
+                # Save as regular cache
+                cache_key = self._generate_cache_key(prompt, model, campaign_id)
+                cache_file = campaign_dir / f"{cache_key}.json"
+            
+            cache_data = {
+                'prompt': prompt,
+                'model': model,
+                'campaign_id': campaign_id,
+                'image_data': image_data,
+                'timestamp': time.time(),
+                'size_kb': len(image_data) // 1024,
+                'is_current': is_current
+            }
+            
+            with open(cache_file, 'w') as f:
+                json.dump(cache_data, f)
+                
+            cache_type = "current" if is_current else "regular"
+            self.logger.info(f"💾 Cached {cache_type} image for campaign {campaign_id}: {prompt[:50]}... ({len(image_data)} chars)")
+            print(f"✅ CACHE_SAVE_{cache_type.upper()}: Campaign {campaign_id} saved image ({len(image_data)} chars)")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Cache write error for campaign {campaign_id}: {e}")
+            return False
+    
+    def cleanup_old_images(self, campaign_id: Optional[str] = None) -> int:
+        """
+        Clean up old (non-current) images on app restart
+        Keeps curr_ prefixed images, removes others
+        """
+        try:
+            count = 0
+            
+            if campaign_id:
+                # Clean specific campaign
+                campaign_dirs = [self._get_campaign_cache_dir(campaign_id)]
+            else:
+                # Clean all campaigns
+                campaign_dirs = [d for d in self.cache_base_dir.iterdir() if d.is_dir()]
+            
+            for campaign_dir in campaign_dirs:
+                # Remove non-current cache files (keep curr_ prefixed files)
+                for cache_file in campaign_dir.glob("*.json"):
+                    if not cache_file.name.startswith("curr_"):
+                        cache_file.unlink()
+                        count += 1
+                        
+            self.logger.info(f"🗑️ Cleanup: Removed {count} old cached images")
+            print(f"✅ CACHE_CLEANUP: Removed {count} old images, kept current images")
+            return count
+            
+        except Exception as e:
+            self.logger.error(f"Cache cleanup error: {e}")
+            return 0
+    
+    def clear_campaign_cache(self, campaign_id: str) -> int:
+        """Clear all cached images for a specific campaign"""
+        try:
+            campaign_dir = self._get_campaign_cache_dir(campaign_id)
+            count = 0
+            
+            for cache_file in campaign_dir.glob("*.json"):
+                cache_file.unlink()
+                count += 1
+                
+            # Remove empty campaign directory
+            if count > 0:
+                try:
+                    campaign_dir.rmdir()
+                except:
+                    pass  # Directory might not be empty due to other files
+                    
+            self.logger.info(f"🗑️ Cleared {count} cached images for campaign {campaign_id}")
+            print(f"✅ CACHE_CLEAR_CAMPAIGN: Removed {count} images for campaign {campaign_id}")
+            return count
+            
+        except Exception as e:
+            self.logger.error(f"Campaign cache clear error: {e}")
+            return 0
+    
+    def clear_all_cache(self) -> int:
+        """Clear all cached images"""
+        try:
+            count = 0
+            for campaign_dir in self.cache_base_dir.iterdir():
+                if campaign_dir.is_dir():
+                    for cache_file in campaign_dir.glob("*.json"):
+                        cache_file.unlink()
+                        count += 1
+                    try:
+                        campaign_dir.rmdir()
+                    except:
+                        pass
+                        
+            self.logger.info(f"🗑️ Cleared all {count} cached images")
+            print(f"✅ CACHE_CLEAR_ALL: Removed {count} cached images")
+            return count
+            
+        except Exception as e:
+            self.logger.error(f"Cache clear error: {e}")
+            return 0
+    
+    def get_cache_stats(self, campaign_id: Optional[str] = None) -> Dict[str, Any]:
+        """Get cache statistics"""
+        try:
+            if campaign_id:
+                # Stats for specific campaign
+                campaign_dir = self._get_campaign_cache_dir(campaign_id)
+                cache_files = list(campaign_dir.glob("*.json"))
+                current_files = [f for f in cache_files if f.name.startswith("curr_")]
+                regular_files = [f for f in cache_files if not f.name.startswith("curr_")]
+                
+                total_size = 0
+                for cache_file in cache_files:
+                    try:
+                        with open(cache_file, 'r') as f:
+                            cache_data = json.load(f)
+                            total_size += cache_data.get('size_kb', 0)
+                    except:
+                        continue
+                        
+                return {
+                    'campaign_id': campaign_id,
+                    'current_images': len(current_files),
+                    'regular_images': len(regular_files),
+                    'total_images': len(cache_files),
+                    'total_size_kb': total_size,
+                    'total_size_mb': round(total_size / 1024, 2),
+                    'cache_dir': str(campaign_dir)
+                }
+            else:
+                # Stats for all campaigns
+                campaigns = {}
+                total_campaigns = 0
+                total_images = 0
+                total_size = 0
+                
+                for campaign_dir in self.cache_base_dir.iterdir():
+                    if campaign_dir.is_dir():
+                        campaign_id = campaign_dir.name
+                        campaign_stats = self.get_cache_stats(campaign_id)
+                        campaigns[campaign_id] = campaign_stats
+                        total_campaigns += 1
+                        total_images += campaign_stats['total_images']
+                        total_size += campaign_stats['total_size_kb']
+                
+                return {
+                    'total_campaigns': total_campaigns,
+                    'total_images': total_images,
+                    'total_size_kb': total_size,
+                    'total_size_mb': round(total_size / 1024, 2),
+                    'campaigns': campaigns,
+                    'cache_base_dir': str(self.cache_base_dir)
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Cache stats error: {e}")
+            return {'error': str(e)}
+
+# Backward compatibility alias
+ImageCache = CampaignImageCache
 
 def safe_int_env(env_var: str, default: str) -> int:
     """Safely parse environment variable to int, handling malformed values."""
@@ -44,6 +310,7 @@ class ImageGenerationAgent:
         self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
         self.max_images = safe_int_env('MAX_TEXT_IMAGE_POSTS', '4')
+        self.cache = CampaignImageCache()  # Initialize campaign-aware image cache
         
         logger.info(f"Initializing Image Generation Agent with max_images={self.max_images}, model={self.image_model}")
         
@@ -59,7 +326,7 @@ class ImageGenerationAgent:
             logger.warning("⚠️ GEMINI_API_KEY not found - image generation will use placeholder mode")
             self.client = None
     
-    async def generate_images(self, prompts: List[str], business_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def generate_images(self, prompts: List[str], business_context: Dict[str, Any], campaign_id: str = "default") -> List[Dict[str, Any]]:
         """
         Generate images based on prompts and business context.
         
@@ -84,10 +351,10 @@ class ImageGenerationAgent:
                     
                     if self.client:
                         # Generate real image using Imagen
-                        image_data = await self._generate_real_image(enhanced_prompt, i)
+                        image_data = await self._generate_real_image(enhanced_prompt, i, campaign_id)
                     else:
                         # Generate mock image data
-                        image_data = self._generate_mock_image(enhanced_prompt, i)
+                        image_data = self._generate_mock_image(enhanced_prompt, i, campaign_id)
                     
                     generated_images.append(image_data)
                     
@@ -102,13 +369,33 @@ class ImageGenerationAgent:
             logger.error(f"Image generation failed: {e}", exc_info=True)
             return [self._generate_fallback_image(f"Image {i+1}", i) for i in range(min(len(prompts), self.max_images))]
     
-    async def _generate_real_image(self, prompt: str, index: int) -> Dict[str, Any]:
+    async def _generate_real_image(self, prompt: str, index: int, campaign_id: str) -> Dict[str, Any]:
         """Generate real image using Google Imagen with proper marketing prompt engineering."""
         try:
             logger.info(f"Generating real image {index+1} with {self.image_model}")
             
             # Enhance prompt for marketing use case based on Imagen best practices
             marketing_prompt = self._create_marketing_prompt(prompt, index)
+            
+            # CHECK CACHE FIRST for consistent user experience
+            cached_image = self.cache.get_cached_image(marketing_prompt, self.image_model, campaign_id)
+            if cached_image:
+                return {
+                    "id": f"imagen_cached_{index+1}",
+                    "prompt": marketing_prompt,
+                    "original_prompt": prompt,
+                    "image_url": cached_image,
+                    "generation_method": f"{self.image_model}_cached",
+                    "status": "success",
+                    "metadata": {
+                        "model": self.image_model,
+                        "cached": True,
+                        "generation_time": 0.1,
+                        "aspect_ratio": "16:9",
+                        "quality": "high",
+                        "marketing_optimized": True
+                    }
+                }
             
             # Generate image using Imagen 3.0 with correct API method
             # Based on Google's documentation: use generate_images method
@@ -130,6 +417,9 @@ class ImageGenerationAgent:
                 # Save image and get URL
                 image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index)
                 
+                # CACHE THE GENERATED IMAGE for future consistent UX
+                self.cache.cache_image(marketing_prompt, self.image_model, campaign_id, image_url, is_current=True)
+                
                 return {
                     "id": f"imagen_generated_{index+1}",
                     "prompt": marketing_prompt,
@@ -143,7 +433,8 @@ class ImageGenerationAgent:
                         "generation_time": 4.5,
                         "aspect_ratio": "16:9",
                         "quality": "high",
-                        "marketing_optimized": True
+                        "marketing_optimized": True,
+                        "cached": False
                     }
                 }
             else:
@@ -167,7 +458,6 @@ class ImageGenerationAgent:
                 img_file.write(image_data_bytes)
             
             # Convert image to base64 for immediate display
-            import base64
             img_base64 = base64.b64encode(image_data_bytes).decode('utf-8')
             return f"data:image/png;base64,{img_base64}"
             
@@ -291,7 +581,7 @@ class ImageGenerationAgent:
             }
         }
     
-    def _generate_mock_image(self, prompt: str, index: int) -> Dict[str, Any]:
+    def _generate_mock_image(self, prompt: str, index: int, campaign_id: str) -> Dict[str, Any]:
         """Generate mock image data when real generation is unavailable."""
         return {
             "id": f"mock_generated_{index+1}",
@@ -425,7 +715,8 @@ class VisualContentOrchestrator:
         social_posts: List[Dict[str, Any]], 
         business_context: Dict[str, Any],
         campaign_objective: str,
-        target_platforms: List[str] = None
+        target_platforms: List[str] = None,
+        campaign_id: str = "default"
     ) -> Dict[str, Any]:
         """
         Generate comprehensive visual content for social media posts.
@@ -468,7 +759,7 @@ class VisualContentOrchestrator:
             if image_prompts and self.image_agent:
                 try:
                     logger.info(f"🎨 Generating {len(image_prompts)} images...")
-                    generated_images = await self.image_agent.generate_images(image_prompts, business_context)
+                    generated_images = await self.image_agent.generate_images(image_prompts, business_context, campaign_id)
                     logger.info(f"✅ Successfully generated {len(generated_images)} images")
                 except Exception as e:
                     logger.error(f"❌ Image generation failed: {e}")
@@ -779,7 +1070,8 @@ async def generate_visual_content_for_posts(
     campaign_guidance: Dict[str, Any] = None,
     product_context: Dict[str, Any] = None,
     visual_style: Dict[str, Any] = None,
-    creative_direction: str = ""
+    creative_direction: str = "",
+    campaign_id: str = "default"
 ) -> Dict[str, Any]:
     """
     Generate visual content for social media posts with enhanced business context.
@@ -834,7 +1126,8 @@ async def generate_visual_content_for_posts(
                 social_posts=social_posts,
                 business_context=enhanced_context,
                 campaign_objective=campaign_objective,
-                target_platforms=target_platforms or ["instagram", "linkedin", "facebook"]
+                target_platforms=target_platforms or ["instagram", "linkedin", "facebook"],
+                campaign_id=campaign_id
             )
             
             logger.info("✅ Visual content generation completed with business context awareness")
