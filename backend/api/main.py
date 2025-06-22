@@ -32,6 +32,7 @@ from google.adk.telemetry import tracer
 from .routes.campaigns import router as campaigns_router
 from .routes.content import router as content_router
 from .routes.analysis import router as analysis_router
+from .routes.test_endpoints import router as test_router
 from .models import CampaignRequest, CampaignResponse, ErrorResponse
 from agents.marketing_orchestrator import create_marketing_orchestrator_agent
 
@@ -132,6 +133,11 @@ app.include_router(
     analysis_router,
     prefix="/api/v1/analysis",
     tags=["Business Analysis"]
+)
+app.include_router(
+    test_router,
+    prefix="/api/v1",
+    tags=["Testing"]
 )
 
 @app.get("/", response_model=dict)

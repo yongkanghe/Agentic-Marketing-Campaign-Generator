@@ -120,9 +120,19 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@echo "   Backend:  $(BACKEND_LOG_FILE)"
 	@echo "   Frontend: $(FRONTEND_LOG_FILE)"
 	@echo ""
+	@echo "⚡ Run 'make test-quick' for fast essential tests (recommended)"
 	@echo "🧪 Run 'make test-full-stack' to test the entire application"
 	@echo "📖 Run 'make view-all-logs' to monitor debug logs"
 	@echo "🛑 Run 'make stop-all' to stop all services"
+
+test-quick: ## ⚡ Quick essential functionality tests (10s timeout per test)
+	@echo "⚡ Running Quick Test Suite for AI Marketing Campaign Post Generator"
+	@echo "====================================================================="
+	@echo ""
+	@echo "🔧 Running essential tests with 10s timeouts..."
+	@cd backend && python3 run_quick_tests.py
+	@echo ""
+	@echo "✅ Quick tests complete! Check quick_test_results.json for details"
 
 test-full-stack: ## 🧪 Comprehensive full-stack testing (Frontend + Backend + Database)
 	@echo "🧪 Running Full-Stack Integration Tests"
