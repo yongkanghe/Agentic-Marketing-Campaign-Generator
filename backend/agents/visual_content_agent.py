@@ -950,14 +950,43 @@ class VisualContentOrchestrator:
         return marketing_prompt
     
     def _create_video_prompt(self, post: Dict[str, Any], business_context: Dict[str, Any], objective: str) -> str:
-        """Create video generation prompt based on post content and business context."""
+        """Create video generation prompt based on post content and comprehensive business context."""
         
         post_content = post.get('content', '')
-        company_name = business_context.get('company_name', 'Company')
+        company_name = business_context.get('company_name') or business_context.get('business_name', 'Company')
+        industry = business_context.get('industry', 'business')
+        target_audience = business_context.get('target_audience', 'professionals')
+        business_description = business_context.get('business_description', '')
         
-        prompt = f"Professional marketing video showcasing {company_name}'s approach to {objective}, dynamic and engaging visual storytelling"
+        # Enhanced business context integration for videos
+        visual_context = ""
         
-        return prompt
+        # Industry-specific video context
+        if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
+            visual_context = f"Lifestyle video showcasing outdoor furniture and patio living, comfortable outdoor spaces, modern home design"
+        elif 'technology' in industry.lower():
+            visual_context = f"Modern professionals using technology solutions, clean office environments, digital innovation"
+        elif 'fitness' in industry.lower():
+            visual_context = f"Active lifestyle content, fitness activities, health and wellness focus"
+        elif 'food' in industry.lower():
+            visual_context = f"Culinary excellence, restaurant ambiance, food preparation and presentation"
+        else:
+            # Generic business fallback with specific business focus
+            visual_context = f"Professional business environment for {industry} industry, showing real {company_name} business activities"
+        
+        # Add target audience context for video
+        if 'young' in target_audience.lower():
+            visual_context += ", dynamic and energetic style appealing to young adults"
+        elif 'family' in target_audience.lower():
+            visual_context += ", family-friendly atmosphere and activities"
+        elif 'professional' in target_audience.lower():
+            visual_context += ", professional business setting and corporate environment"
+        
+        # Create comprehensive marketing video prompt
+        marketing_prompt = f"{visual_context}, representing {company_name}, 15-30 second duration, vertical format for social media, high quality cinematography, engaging visual storytelling, {objective} focused narrative"
+        
+        logger.info(f"Generated enhanced video prompt: {marketing_prompt[:150]}...")
+        return marketing_prompt
     
     def _update_posts_with_visuals(
         self, 
@@ -1018,7 +1047,7 @@ def _generate_basic_placeholders(social_posts: List[Dict[str, Any]], business_co
     """Generate basic placeholder visual content when all generation methods fail."""
     logger.info("🔄 Generating basic placeholder visual content")
     
-    company_name = business_context.get('company_name', 'Company')
+    company_name = business_context.get('company_name') or business_context.get('business_name', 'Company')
     updated_posts = []
     
     for i, post in enumerate(social_posts):

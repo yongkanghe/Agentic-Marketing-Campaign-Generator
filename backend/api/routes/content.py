@@ -865,6 +865,8 @@ async def _generate_batch_content_with_gemini(
         - Include 3-4 relevant hashtags (separate field)
         - Make content specific to {company_name} and their actual business/product (not generic business content)
         - Follow campaign themes: {', '.join(primary_themes)}
+        - CRITICAL: This is CUSTOMER-FACING content - NO internal comments, thoughts, or debug text like "(Implied Brand Name)" or similar
+        - Write ONLY polished marketing content that customers will see publicly
 
         CRITICAL URL REQUIREMENTS for ALL POST TYPES:
         - ALWAYS include the PRODUCT/SERVICE URL in the JSON "url" field: {business_context.get('product_service_url', business_context.get('business_website', 'https://example.com'))}
