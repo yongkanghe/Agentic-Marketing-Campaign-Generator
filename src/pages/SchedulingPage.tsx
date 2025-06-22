@@ -101,19 +101,43 @@ const SchedulingPage: React.FC = () => {
     }
   ]);
   
-  const platforms = [
-    { id: 'linkedin', name: 'LinkedIn', connected: true },
-    { id: 'twitter', name: 'Twitter/X', connected: true },
-    { id: 'instagram', name: 'Instagram', connected: false },
-    { id: 'facebook', name: 'Facebook', connected: false },
-    { id: 'tiktok', name: 'TikTok', connected: false }
-  ];
+  // Platform connection state
+  const [platforms, setPlatforms] = useState([
+    { id: 'linkedin', name: 'LinkedIn', connected: false, username: null },
+    { id: 'twitter', name: 'Twitter/X', connected: false, username: null },
+    { id: 'instagram', name: 'Instagram', connected: false, username: null },
+    { id: 'facebook', name: 'Facebook', connected: false, username: null },
+    { id: 'tiktok', name: 'TikTok', connected: false, username: null }
+  ]);
 
   useEffect(() => {
     if (!currentCampaign) {
       navigate('/');
+    } else {
+      // Load platform connection status
+      loadPlatformStatus();
     }
   }, [currentCampaign, navigate]);
+
+  const loadPlatformStatus = async () => {
+    try {
+      const response = await fetch('/api/v1/auth/social/status');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update platform connection status
+        setPlatforms(prevPlatforms => 
+          prevPlatforms.map(platform => ({
+            ...platform,
+            connected: data.platforms[platform.id]?.connected || false,
+            username: data.platforms[platform.id]?.username || null
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to load platform status:', error);
+    }
+  };
 
   const togglePlatform = (platformId: string) => {
     setSelectedPlatforms(prev => 
@@ -150,9 +174,68 @@ const SchedulingPage: React.FC = () => {
     toast.info('Scheduling paused. You can resume anytime.');
   };
 
-  const handleConnectPlatform = (platformId: string) => {
-    toast.info(`Redirecting to ${platformId} authentication...`);
-    // TODO: Implement OAuth flow for social media platforms
+  const handleConnectPlatform = async (platformId: string) => {
+    try {
+      // Initiate OAuth flow
+      const response = await fetch('/api/v1/auth/social/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform: platformId,
+          callback_url: `${window.location.origin}/api/v1/auth/social/callback/${platformId}`
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Open OAuth popup
+        const popup = window.open(
+          data.oauth_url,
+          'social_auth',
+          'width=600,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        // Listen for successful authentication
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            // Reload platform status after authentication
+            setTimeout(() => {
+              loadPlatformStatus();
+              toast.success(`Successfully connected to ${platformId}!`);
+            }, 1000);
+          }
+        }, 1000);
+
+      } else {
+        const errorData = await response.json();
+        toast.error(`Failed to connect to ${platformId}: ${errorData.detail}`);
+      }
+    } catch (error) {
+      console.error('OAuth initiation error:', error);
+      toast.error(`Failed to connect to ${platformId}. Please try again.`);
+    }
+  };
+
+  const handleDisconnectPlatform = async (platformId: string) => {
+    try {
+      const response = await fetch(`/api/v1/auth/social/disconnect/${platformId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadPlatformStatus();
+        toast.success(`Disconnected from ${platformId}`);
+      } else {
+        toast.error(`Failed to disconnect from ${platformId}`);
+      }
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      toast.error(`Failed to disconnect from ${platformId}`);
+    }
   };
 
   const exportCampaignTemplate = () => {
@@ -244,18 +327,39 @@ const SchedulingPage: React.FC = () => {
                       <div key={platform.id} className="relative">
                         <button
                           onClick={() => platform.connected ? togglePlatform(platform.id) : handleConnectPlatform(platform.id)}
+                          disabled={!platform.connected && selectedPlatforms.includes(platform.id)}
                           className={`w-full p-3 rounded-lg border transition-all duration-200 flex items-center gap-3 ${
-                            selectedPlatforms.includes(platform.id)
+                            selectedPlatforms.includes(platform.id) && platform.connected
                               ? 'bg-blue-500/20 border-blue-400 text-blue-400'
                               : platform.connected
                               ? 'bg-white/5 border-white/20 vvl-text-secondary hover:bg-white/10'
-                              : 'bg-white/5 border-white/10 vvl-text-secondary opacity-50'
+                              : 'bg-white/5 border-white/10 vvl-text-secondary opacity-50 hover:opacity-75'
                           }`}
                         >
                           <PlatformIcon platform={platform.id} />
-                          <span className="text-sm font-medium">{platform.name}</span>
-                          {!platform.connected && (
-                            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded ml-auto">
+                          <div className="flex flex-col items-start flex-grow">
+                            <span className="text-sm font-medium">{platform.name}</span>
+                            {platform.connected && platform.username && (
+                              <span className="text-xs vvl-text-secondary">@{platform.username}</span>
+                            )}
+                          </div>
+                          {platform.connected ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                                Connected
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDisconnectPlatform(platform.id);
+                                }}
+                                className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500/30"
+                              >
+                                Disconnect
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded">
                               Connect
                             </span>
                           )}

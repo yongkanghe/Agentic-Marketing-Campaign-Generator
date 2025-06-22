@@ -34,6 +34,8 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 | **Campaign Strategy** | Generate comprehensive campaign summaries | Summary Agent |
 | **Creative Ideation** | AI-powered campaign concepts and themes | Idea Agent |
 | **Content Generation** | Social media posts with hashtags and optimization | Content Agent |
+| **Social Media Publishing** | OAuth authentication & direct posting to platforms | Social Media Agent |
+| **Campaign Scheduling** | Schedule and manage multi-platform posting | Scheduling Agent |
 | **Multi-Format Export** | JSON, CSV, XLSX export capabilities | API Layer |
 
 ---
@@ -226,12 +228,12 @@ CampaignOrchestratorAgent (Root Sequential Agent) ✅
 │   ├── ImageGenerationAgent (LLM Agent) ✅
 │   ├── VideoGenerationAgent (LLM Agent - Veo API) ✅
 │   └── VisualContentOrchestrator (LLM Agent) ✅
-├── SocialMediaAgent (Sequential Agent) ❌ MISSING
-│   ├── PlatformOptimizationAgent ❌
+├── SocialMediaAgent (Sequential Agent) ✅ IMPLEMENTED
+│   ├── PlatformOptimizationAgent ✅
 │   └── EngagementPredictionAgent ❌
-├── SchedulingAgent (Sequential Agent) ❌ MISSING
-│   ├── SchedulingOptimizationAgent ❌
-│   └── PlatformIntegrationAgent ❌
+├── SchedulingAgent (Sequential Agent) ✅ IMPLEMENTED
+│   ├── SchedulingOptimizationAgent ✅
+│   └── PlatformIntegrationAgent ✅
 └── MonitoringAgent (LLM Agent) ❌ MISSING
 ```
 
@@ -257,12 +259,19 @@ POST /api/v1/content/generate-visuals # Visual content generation ✅ NEW!
 # Analysis Services
 POST /api/v1/analysis/url           # URL analysis & scraping
 POST /api/v1/analysis/files         # File analysis (multimodal)
+
+# Social Media Integration ✨ NEW!
+POST /api/v1/auth/social/initiate   # Start OAuth flow
+GET  /api/v1/auth/social/callback   # OAuth callback handler
+GET  /api/v1/auth/social/status     # Platform connection status
+POST /api/v1/posts/schedule         # Schedule social media posts
+GET  /api/v1/posts/scheduled/{id}   # Get scheduled posts
 ```
 
-**Database Schema (Implemented - v1.0.1):**
+**Database Schema (Implemented - v1.1.0):**
 ```sql
--- Production-ready SQLite with 29+ performance indexes
--- Schema v1.0.1 - 14/14 integration tests passing (100% success rate)
+-- Production-ready SQLite with 40+ performance indexes
+-- Schema v1.1.0 - Social Media Integration Complete
 
 Users: id, email, username, full_name, profile_data, timestamps
 Campaigns: id, user_id, name, description, objectives, ai_analysis, timestamps
@@ -270,6 +279,11 @@ Generated_Content: id, campaign_id, content_type, platform, ai_metadata, timesta
 Uploaded_Files: id, campaign_id, file_path, analysis_results, timestamps
 Campaign_Templates: id, name, category, template_data, default_settings
 User_Sessions: id, user_id, session_token, expires_at, timestamps
+
+-- Social Media Integration ✨ NEW!
+Social_Media_Connections: id, user_id, platform, access_token (encrypted), timestamps
+Scheduled_Posts: id, campaign_id, platform, post_content, scheduled_time, status
+Campaign_Chat_History: id, campaign_id, conversation_history, timestamps
 
 -- Analytics Views (3 implemented)
 Campaign_Summary: Aggregated campaign metrics with user information
@@ -460,6 +474,7 @@ make test-coverage-db     # Database coverage reporting
 - ✅ Business Analysis Agent with URL/file/context sub-agents
 - ✅ Content Generation Agent with social/hashtag optimization
 - ✅ **Visual Content Agent** - Image & Video generation ✨ NEW!
+- ✅ **Social Media OAuth Integration** - Complete authentication system ✨ NEW!
 - ✅ Context passing between agents
 - ✅ Error handling and recovery with mock fallbacks
 - ✅ Environment variable standardization (ADR-004)
@@ -468,6 +483,7 @@ make test-coverage-db     # Database coverage reporting
 - ✅ FastAPI with comprehensive testing (60+ tests)
 - ✅ Campaign API (15/16 tests passing - 93.75% success rate)
 - ✅ **Visual Content Generation API** - New endpoint ✨ NEW!
+- ✅ **Social Media OAuth API** - Complete authentication & publishing ✨ NEW!
 - ✅ Database integration testing framework
 - ✅ Content generation and analysis endpoints
 - ✅ File upload and multipart form data support
