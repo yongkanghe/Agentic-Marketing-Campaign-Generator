@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-06-22T21:46:06.664832",
-  "duration": "11.30s",
+  "timestamp": "2025-06-22T23:03:15.834473",
+  "duration": "1.97s",
   "overall_success_rate": "95.8%",
   "summary": {
     "total_tests": 24,
@@ -55,120 +55,120 @@
       "test": "Server Running",
       "status": "PASS",
       "details": "",
-      "duration": 0.006185054779052734,
-      "timestamp": "2025-06-22T21:45:55.367488"
+      "duration": 0.006411075592041016,
+      "timestamp": "2025-06-22T23:03:13.867768"
     },
     {
       "category": "backend",
       "test": "Health Endpoint",
       "status": "PASS",
       "details": "",
-      "duration": 0.002282857894897461,
-      "timestamp": "2025-06-22T21:45:55.369791"
+      "duration": 0.001992940902709961,
+      "timestamp": "2025-06-22T23:03:13.869778"
     },
     {
       "category": "api",
       "test": "URL Analysis (Real URLs)",
       "status": "PASS",
       "details": "Extracted relevant business context",
-      "duration": 0.001583099365234375,
-      "timestamp": "2025-06-22T21:45:55.371442"
+      "duration": 0.0021932125091552734,
+      "timestamp": "2025-06-22T23:03:13.872034"
     },
     {
       "category": "api",
       "test": "Campaign Creation (Joker T-shirt)",
       "status": "PASS",
       "details": "Campaign ID: joker-tshirt-campaign-2024-001",
-      "duration": 0.0014603137969970703,
-      "timestamp": "2025-06-22T21:45:55.372923"
+      "duration": 0.0019431114196777344,
+      "timestamp": "2025-06-22T23:03:13.874005"
     },
     {
       "category": "api",
       "test": "Content Generation (Joker Theme)",
       "status": "PASS",
       "details": "Generated 3 relevant posts",
-      "duration": 0.0020377635955810547,
-      "timestamp": "2025-06-22T21:45:55.375015"
+      "duration": 0.0018420219421386719,
+      "timestamp": "2025-06-22T23:03:13.875905"
     },
     {
       "category": "database",
       "test": "Connectivity",
       "status": "PASS",
       "details": "Status: connected",
-      "duration": 0.0049059391021728516,
-      "timestamp": "2025-06-22T21:45:55.379969"
+      "duration": 0.00494694709777832,
+      "timestamp": "2025-06-22T23:03:13.880897"
     },
     {
       "category": "frontend",
       "test": "Server Running",
       "status": "PASS",
       "details": "",
-      "duration": 0.003907918930053711,
-      "timestamp": "2025-06-22T21:45:55.383915"
+      "duration": 0.004052162170410156,
+      "timestamp": "2025-06-22T23:03:13.884964"
     },
     {
       "category": "campaign",
       "test": "Joker_Tshirt URL Analysis",
       "status": "PASS",
       "details": "Extracted relevant context",
-      "duration": 0.0028901100158691406,
-      "timestamp": "2025-06-22T21:45:55.386930"
+      "duration": 0.0017049312591552734,
+      "timestamp": "2025-06-22T23:03:13.886741"
     },
     {
       "category": "campaign",
       "test": "Joker_Tshirt Campaign Creation",
       "status": "PASS",
       "details": "Campaign ID: joker-tshirt-campaign-2024-001",
-      "duration": 0.0022840499877929688,
-      "timestamp": "2025-06-22T21:45:55.389254"
+      "duration": 0.0021309852600097656,
+      "timestamp": "2025-06-22T23:03:13.888896"
     },
     {
       "category": "campaign",
       "test": "Joker_Tshirt Content Generation",
       "status": "PASS",
       "details": "Generated 3 relevant posts",
-      "duration": 0.0021560192108154297,
-      "timestamp": "2025-06-22T21:45:55.391478"
+      "duration": 0.0016009807586669922,
+      "timestamp": "2025-06-22T23:03:13.890556"
     },
     {
       "category": "campaign",
       "test": "Evre_Settee URL Analysis",
       "status": "PASS",
       "details": "Extracted relevant context",
-      "duration": 0.002203702926635742,
-      "timestamp": "2025-06-22T21:45:55.393741"
+      "duration": 0.001477956771850586,
+      "timestamp": "2025-06-22T23:03:13.892090"
     },
     {
       "category": "campaign",
       "test": "Evre_Settee Campaign Creation",
       "status": "PASS",
       "details": "Campaign ID: evre-outdoor-settee-campaign-2024-001",
-      "duration": 0.0019462108612060547,
-      "timestamp": "2025-06-22T21:45:55.395711"
+      "duration": 0.0015358924865722656,
+      "timestamp": "2025-06-22T23:03:13.893649"
     },
     {
       "category": "campaign",
       "test": "Evre_Settee Content Generation",
       "status": "PASS",
       "details": "Generated 3 relevant posts",
-      "duration": 0.0018780231475830078,
-      "timestamp": "2025-06-22T21:45:55.397660"
+      "duration": 0.001608133316040039,
+      "timestamp": "2025-06-22T23:03:13.895317"
     },
     {
       "category": "workflow",
       "test": "Visual Content Generation",
       "status": "PASS",
       "details": "Generated visuals for 2 posts",
-      "duration": 9.061316728591919,
-      "timestamp": "2025-06-22T21:46:04.463560"
+      "duration": 0.018649816513061523,
+      "timestamp": "2025-06-22T23:03:13.914029"
     },
     {
       "category": "workflow",
       "test": "Campaign Coherence",
       "status": "PASS",
       "details": "Business analysis coherent (score: 3/3)",
-      "duration": 2.09808349609375e-05,
-      "timestamp": "2025-06-22T21:46:04.463607"
+      "duration": 2.4080276489257812e-05,
+      "timestamp": "2025-06-22T23:03:13.914071"
     },
     {
       "category": "validation",
@@ -176,71 +176,71 @@
       "status": "PASS",
       "details": "3 posts generated (URLs may be implied)",
       "duration": 5.9604644775390625e-06,
-      "timestamp": "2025-06-22T21:46:04.463626"
+      "timestamp": "2025-06-22T23:03:13.914093"
     },
     {
       "category": "validation",
       "test": "Joker_Tshirt Image Generation",
       "status": "PASS",
       "details": "Image prompts generated for 3 posts",
-      "duration": 0.002707958221435547,
-      "timestamp": "2025-06-22T21:46:04.466358"
+      "duration": 0.002821207046508789,
+      "timestamp": "2025-06-22T23:03:13.916930"
     },
     {
       "category": "validation",
       "test": "Joker_Tshirt Video Generation",
       "status": "PASS",
       "details": "Video content context generated",
-      "duration": 0.0022361278533935547,
-      "timestamp": "2025-06-22T21:46:04.468635"
+      "duration": 0.0015130043029785156,
+      "timestamp": "2025-06-22T23:03:13.918470"
     },
     {
       "category": "validation",
       "test": "Joker_Tshirt Complete Package",
       "status": "PASS",
       "details": "4/5 campaign components validated",
-      "duration": 7.319450378417969e-05,
-      "timestamp": "2025-06-22T21:46:04.468721"
+      "duration": 5.078315734863281e-05,
+      "timestamp": "2025-06-22T23:03:13.918531"
     },
     {
       "category": "validation",
       "test": "Evre_Settee Social Media + URLs",
       "status": "PASS",
       "details": "3 posts, 1 with product URLs",
-      "duration": 1.0251998901367188e-05,
-      "timestamp": "2025-06-22T21:46:04.468742"
+      "duration": 5.9604644775390625e-06,
+      "timestamp": "2025-06-22T23:03:13.918547"
     },
     {
       "category": "validation",
       "test": "Evre_Settee Image Generation",
       "status": "PASS",
       "details": "Image prompts generated for 3 posts",
-      "duration": 0.0021860599517822266,
-      "timestamp": "2025-06-22T21:46:04.470949"
+      "duration": 0.0016260147094726562,
+      "timestamp": "2025-06-22T23:03:13.920193"
     },
     {
       "category": "validation",
       "test": "Evre_Settee Video Generation",
       "status": "PASS",
       "details": "Video content context generated",
-      "duration": 0.0019457340240478516,
-      "timestamp": "2025-06-22T21:46:04.472930"
+      "duration": 0.0022089481353759766,
+      "timestamp": "2025-06-22T23:03:13.922433"
     },
     {
       "category": "validation",
       "test": "Evre_Settee Complete Package",
       "status": "PASS",
       "details": "5/5 campaign components validated",
-      "duration": 2.574920654296875e-05,
-      "timestamp": "2025-06-22T21:46:04.472968"
+      "duration": 2.7179718017578125e-05,
+      "timestamp": "2025-06-22T23:03:13.922481"
     },
     {
       "category": "pytest",
       "test": "Unit Tests",
       "status": "FAIL",
       "details": "0 failed, 0 errors",
-      "duration": 2.191453218460083,
-      "timestamp": "2025-06-22T21:46:06.664743"
+      "duration": 1.9118080139160156,
+      "timestamp": "2025-06-22T23:03:15.834383"
     }
   ]
 }

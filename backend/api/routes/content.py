@@ -7,7 +7,7 @@ Author: JP + 2025-06-16
 import logging
 from typing import List
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import os
 import time
 import asyncio
@@ -1136,34 +1136,146 @@ async def cleanup_old_images(request: dict = None):
 
 @router.get("/images/{campaign_id}/{filename}")
 async def serve_generated_image(campaign_id: str, filename: str):
-    """Serve generated image files"""
+    """
+    Serve generated images with proper headers and security validation.
+    This endpoint serves actual generated image files for frontend display.
+    """
     try:
-        # Construct the image file path
-        image_path = Path("data/images/generated") / campaign_id / filename
+        # Security validation: ensure safe filename
+        if not filename.replace('.', '').replace('_', '').replace('-', '').isalnum():
+            raise HTTPException(status_code=400, detail="Invalid filename")
+            
+        if '..' in filename or '/' in filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+            
+        # Construct file path
+        image_path = Path(f"data/images/generated/{campaign_id}/{filename}")
         
-        # Validate the file exists and is an image
         if not image_path.exists():
-            logger.error(f"Image file not found: {image_path}")
+            logger.error(f"Image not found: {image_path}")
             raise HTTPException(status_code=404, detail="Image not found")
             
-        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            logger.error(f"Invalid image file type: {filename}")
-            raise HTTPException(status_code=400, detail="Invalid image file type")
+        # Determine content type
+        if filename.lower().endswith('.png'):
+            media_type = "image/png"
+        elif filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg'):
+            media_type = "image/jpeg"
+        else:
+            media_type = "application/octet-stream"
             
-        # Validate campaign_id and filename to prevent directory traversal
-        if '..' in campaign_id or '..' in filename or '/' in campaign_id or '\\' in campaign_id:
-            logger.error(f"Invalid path components: campaign_id={campaign_id}, filename={filename}")
-            raise HTTPException(status_code=400, detail="Invalid path")
-            
-        logger.info(f"📸 Serving image: {image_path}")
+        logger.info(f"✅ Serving image: {filename} ({image_path.stat().st_size / 1024:.1f}KB)")
+        
         return FileResponse(
             path=str(image_path),
-            media_type="image/png",
-            headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
+            media_type=media_type,
+            headers={
+                "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
+                "Content-Disposition": f"inline; filename={filename}"
+            }
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to serve image {campaign_id}/{filename}: {e}")
+        logger.error(f"Error serving image {filename}: {e}")
         raise HTTPException(status_code=500, detail="Failed to serve image")
+
+@router.get("/videos/{campaign_id}/{filename}")
+async def serve_generated_video(campaign_id: str, filename: str):
+    """
+    Serve generated videos with proper headers and security validation.
+    This endpoint serves actual generated video files for frontend playback.
+    """
+    try:
+        # Security validation: ensure safe filename
+        if not filename.replace('.', '').replace('_', '').replace('-', '').isalnum():
+            raise HTTPException(status_code=400, detail="Invalid filename")
+            
+        if '..' in filename or '/' in filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+            
+        # Construct file path
+        video_path = Path(f"data/videos/generated/{campaign_id}/{filename}")
+        
+        # Check if the actual MP4 file exists
+        if not video_path.exists():
+            logger.error(f"🎬 Video file not found: {video_path}")
+            raise HTTPException(status_code=404, detail=f"Video file not found: {filename}")
+            
+        # Verify it's an actual video file (not empty)
+        if video_path.stat().st_size == 0:
+            logger.error(f"🎬 Video file is empty: {video_path}")
+            raise HTTPException(status_code=404, detail=f"Video file is empty: {filename}")
+            
+        # Determine content type
+        if filename.lower().endswith('.mp4'):
+            media_type = "video/mp4"
+        elif filename.lower().endswith('.webm'):
+            media_type = "video/webm"
+        elif filename.lower().endswith('.mov'):
+            media_type = "video/quicktime"
+        else:
+            media_type = "application/octet-stream"
+            
+        logger.info(f"✅ Serving video: {filename} ({video_path.stat().st_size / 1024 / 1024:.1f}MB)")
+        
+        return FileResponse(
+            path=str(video_path),
+            media_type=media_type,
+            headers={
+                "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
+                "Content-Disposition": f"inline; filename={filename}",
+                "Accept-Ranges": "bytes"  # Enable video seeking
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving video {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to serve video")
+
+@router.get("/videos/cache/stats")
+async def get_video_cache_stats(campaign_id: str = None):
+    """Get video cache statistics for monitoring and debugging."""
+    try:
+        from agents.visual_content_agent import CampaignVideoCache
+        
+        cache = CampaignVideoCache()
+        stats = cache.get_cache_stats(campaign_id)
+        
+        return {
+            "video_cache_stats": stats,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Video cache stats error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get video cache stats")
+
+@router.post("/videos/cache/clear")
+async def clear_video_cache(request: dict = None):
+    """Clear video cache for specified campaign or all campaigns."""
+    try:
+        from agents.visual_content_agent import CampaignVideoCache
+        
+        cache = CampaignVideoCache()
+        campaign_id = request.get('campaign_id') if request else None
+        
+        if campaign_id:
+            count = cache.clear_campaign_cache(campaign_id)
+            return {
+                "message": f"Cleared {count} cached videos for campaign {campaign_id}",
+                "campaign_id": campaign_id,
+                "cleared_count": count
+            }
+        else:
+            count = cache.clear_all_cache()
+            return {
+                "message": f"Cleared all {count} cached videos",
+                "cleared_count": count
+            }
+        
+    except Exception as e:
+        logger.error(f"Video cache clear error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear video cache")

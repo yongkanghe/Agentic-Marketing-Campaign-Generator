@@ -37,10 +37,18 @@ setup-logging: ## 🔧 Setup logging infrastructure (create log directory and fi
 	@echo "🔧 Setting up logging infrastructure..."
 	@mkdir -p $(LOG_DIR)
 	@mkdir -p data/images/cache
+	@mkdir -p data/images/generated
+	@mkdir -p data/videos/cache
+	@mkdir -p data/videos/generated
 	@echo "📁 Created logs directory: $(LOG_DIR)"
 	@echo "📁 Created image cache directory: data/images/cache"
+	@echo "📁 Created image storage directory: data/images/generated"
+	@echo "📁 Created video cache directory: data/videos/cache"
+	@echo "📁 Created video storage directory: data/videos/generated"
 	@echo "🗑️ Cleaning up old cached images (keeping current images)..."
-	@python3 -c "from backend.agents.visual_content_agent import CampaignImageCache; cache = CampaignImageCache(); cache.cleanup_old_images()" 2>/dev/null || echo "   Cache cleanup skipped (no cache found)"
+	@python3 -c "from backend.agents.visual_content_agent import CampaignImageCache; cache = CampaignImageCache(); cache.cleanup_old_images()" 2>/dev/null || echo "   Image cache cleanup skipped (no cache found)"
+	@echo "🗑️ Cleaning up old cached videos (keeping current videos)..."
+	@python3 -c "from backend.agents.visual_content_agent import VideoGenerationAgent; agent = VideoGenerationAgent(); agent.cleanup_old_videos()" 2>/dev/null || echo "   Video cache cleanup skipped (no cache found)"
 	@echo "# AI Marketing Campaign Post Generator - Backend Debug Log" > $(BACKEND_LOG_FILE)
 	@echo "# Started: $$(date)" >> $(BACKEND_LOG_FILE)
 	@echo "# Log Level: DEBUG" >> $(BACKEND_LOG_FILE)
@@ -65,10 +73,22 @@ clean-cache: ## 🗑️ Clean image cache for fresh testing
 	@rm -rf data/images/cache/*
 	@echo "✅ Image cache cleaned"
 
+clean-video-cache: ## 🗑️ Clean video cache for fresh testing
+	@echo "🗑️ Cleaning video cache..."
+	@rm -rf data/videos/cache/*
+	@rm -rf data/videos/generated/*
+	@echo "✅ Video cache cleaned"
+
+clean-all-cache: ## 🗑️ Clean both image and video caches
+	@echo "🗑️ Cleaning all media caches..."
+	@make clean-cache
+	@make clean-video-cache
+	@echo "✅ All media caches cleaned"
+
 clean-all: ## 🧹 Clean logs and cache
 	@echo "🧹 Cleaning all temporary files..."
 	@make clean-logs
-	@make clean-cache
+	@make clean-all-cache
 	@echo "✅ All temporary files cleaned"
 
 view-backend-logs: ## 📖 View backend debug logs (live tail)

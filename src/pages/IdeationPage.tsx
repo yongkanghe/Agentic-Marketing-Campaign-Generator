@@ -296,57 +296,47 @@ const IdeationPage: React.FC = () => {
         platform_optimized: post.platform_optimized || {}
       }));
       
-      // STEP 2: For visual content types, generate visuals if not already included
-      if ((columnId === 'text-image' || columnId === 'text-video') && 
-          !transformedPosts.some(post => post.content.imageUrl || post.content.videoUrl)) {
-        
+      // STEP 2: Generate visual content (images/videos) if needed
+      if ((columnId === 'text-image' || columnId === 'text-video') && transformedPosts.length > 0) {
         console.log(`🎨 Generating visual content for ${columnId} posts...`);
         
-        // Update UI to show visual generation phase
+        // Update loading state to show visual generation in progress
         setSocialMediaColumns(prev => prev.map(col => 
           col.id === columnId ? { 
             ...col, 
-            posts: transformedPosts, // Update with text content first
-            isGenerating: true // Keep generating state for visuals
+            posts: transformedPosts, 
+            isGenerating: true // Keep generating state for visual content
           } : col
         ));
         
-        // Prepare posts for visual generation
-        const postsForVisuals = transformedPosts.map(post => ({
-          id: post.id,
-          type: (columnId === 'text-image' ? 'text_image' : 'text_video') as 'text_image' | 'text_video',
-          content: post.content.text,
-          platform: post.platform,
-          hashtags: post.content.hashtags
-        }));
+        const visualResponse = await VideoVentureLaunchAPI.generateVisualContent({
+          social_posts: transformedPosts.map(post => ({
+            id: post.id,
+            content: post.content.text,
+            type: columnId === 'text-image' ? 'text_image' : 'text_video',
+            platform: post.platform || 'linkedin',
+            hashtags: post.content.hashtags
+          })),
+          business_context: {
+            // Use comprehensive business context from AI analysis
+            business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
+            industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
+            objective: currentCampaign?.objective || 'increase sales',
+            target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
+            brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
+          },
+          campaign_objective: currentCampaign?.objective || 'increase sales',
+          target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
+        });
         
-        // Generate visual content using abortable API
-        const visualData = await executeAbortableCall(
-          (signal) => VideoVentureLaunchAPI.generateVisualContent({
-            social_posts: postsForVisuals,
-            business_context: {
-              // Use comprehensive business context from AI analysis
-              business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-              industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
-              objective: currentCampaign?.objective || 'increase sales',
-              target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-              brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
-            },
-            campaign_objective: currentCampaign?.objective || 'increase sales',
-            target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
-          })
-        );
+        console.log(`🎨 Visual generation response:`, {
+          postsCount: visualResponse.posts_with_visuals?.length || 0,
+          hasVisualStrategy: !!visualResponse.visual_strategy,
+          hasGenerationMetadata: !!visualResponse.generation_metadata
+        });
         
-        if (visualData && visualData.posts_with_visuals) {
-          console.log(`✅ Generated visual content for ${visualData.posts_with_visuals.length} posts`);
-          
-          // CRITICAL FIX: Update posts with generated visual content using proper field mapping
-          console.log(`🎨 VISUAL MAPPING DEBUG:`, {
-            totalPosts: transformedPosts.length,
-            visualPostsReceived: visualData.posts_with_visuals.length,
-            visualPostIds: visualData.posts_with_visuals.map((vp: any) => vp.id),
-            transformedPostIds: transformedPosts.map(p => p.id)
-          });
+        if (visualResponse.posts_with_visuals && visualResponse.posts_with_visuals.length > 0) {
+          const visualData = visualResponse;
           
           transformedPosts = transformedPosts.map(post => {
             const visualPost = visualData.posts_with_visuals.find((vp: any) => vp.id === post.id);
@@ -354,9 +344,12 @@ const IdeationPage: React.FC = () => {
               console.log(`🔗 Mapping visual content for post ${post.id}:`, {
                 hasBackendImageUrl: !!visualPost.image_url,
                 backendImageLength: visualPost.image_url?.length || 0,
+                hasBackendVideoUrl: !!visualPost.video_url,
+                backendVideoLength: visualPost.video_url?.length || 0,
                 hasExistingImageUrl: !!post.content.imageUrl,
                 existingImageLength: post.content.imageUrl?.length || 0,
-                backendImageUrlPreview: visualPost.image_url?.substring(0, 100) || 'N/A'
+                backendImageUrlPreview: visualPost.image_url?.substring(0, 100) || 'N/A',
+                backendVideoUrlPreview: visualPost.video_url?.substring(0, 100) || 'N/A'
               });
               
               const updatedPost = {
@@ -372,8 +365,11 @@ const IdeationPage: React.FC = () => {
               // VERIFY THE MAPPING WORKED
               console.log(`✅ POST UPDATE VERIFICATION for ${post.id}:`, {
                 originalHadImage: !!post.content.imageUrl,
+                originalHadVideo: !!post.content.videoUrl,
                 updatedHasImage: !!updatedPost.content.imageUrl,
-                imageUrlLength: updatedPost.content.imageUrl?.length || 0
+                updatedHasVideo: !!updatedPost.content.videoUrl,
+                imageUrlLength: updatedPost.content.imageUrl?.length || 0,
+                videoUrlLength: updatedPost.content.videoUrl?.length || 0
               });
               
               return updatedPost;
@@ -383,7 +379,7 @@ const IdeationPage: React.FC = () => {
             return post;
           });
           
-          // DETAILED IMAGE URL LOGGING FOR DEBUGGING
+          // DETAILED VISUAL URL LOGGING FOR DEBUGGING
           transformedPosts.forEach((post, index) => {
             if (post.content.imageUrl) {
               console.log(`🖼️ Post ${post.id} has imageUrl: ${post.content.imageUrl.substring(0, 50)}... (${post.content.imageUrl.length} chars)`);
@@ -394,6 +390,10 @@ const IdeationPage: React.FC = () => {
             }
             if (post.content.videoUrl) {
               console.log(`🎬 Post ${post.id} has videoUrl: ${post.content.videoUrl.substring(0, 50)}... (${post.content.videoUrl.length} chars)`);
+              // STDOUT for test visibility
+              console.log(`✅ FRONTEND_VIDEO_VALIDATION: Post ${post.id} has videoUrl (${post.content.videoUrl.length} chars)`);
+            } else if (columnId === 'text-video') {
+              console.log(`❌ Post ${post.id} missing videoUrl (expected for text-video column)`);
             }
           });
           
@@ -406,12 +406,12 @@ const IdeationPage: React.FC = () => {
         }
       }
       
-      // STEP 3: Final state update with all content (text + visuals)
+      // STEP 3: Final state update with all content (text + visuals) - ONLY NOW clear loading state
       setSocialMediaColumns(prev => prev.map(col => 
         col.id === columnId ? { 
           ...col, 
           posts: transformedPosts, 
-          isGenerating: false // Clear generation state
+          isGenerating: false // Clear generation state ONLY after visuals are complete
         } : col
       ));
       
@@ -420,7 +420,8 @@ const IdeationPage: React.FC = () => {
         postsCount: transformedPosts.length,
         postsWithImages: transformedPosts.filter(p => p.content.imageUrl).length,
         postsWithVideos: transformedPosts.filter(p => p.content.videoUrl).length,
-        sampleImageUrl: transformedPosts.find(p => p.content.imageUrl)?.content.imageUrl?.substring(0, 50)
+        sampleImageUrl: transformedPosts.find(p => p.content.imageUrl)?.content.imageUrl?.substring(0, 50),
+        sampleVideoUrl: transformedPosts.find(p => p.content.videoUrl)?.content.videoUrl?.substring(0, 50)
       });
 
       const visualType = columnId === 'text-image' ? 'with images' : 
@@ -1578,7 +1579,76 @@ const IdeationPage: React.FC = () => {
                                     className="w-full h-48 object-cover"
                                     controls
                                     poster="https://picsum.photos/400/240?blur=2"
+                                    onLoadStart={() => {
+                                      console.log(`🎬 VIDEO_LOAD_START: Post ${post.id} video loading started`);
+                                    }}
+                                    onLoadedData={() => {
+                                      console.log(`✅ VIDEO_LOADED: Post ${post.id} video loaded successfully`);
+                                      console.log(`🔍 Video URL: ${post.content.videoUrl?.substring(0, 100)}...`);
+                                    }}
+                                    onError={(e) => {
+                                      console.error(`❌ VIDEO_ERROR: Post ${post.id} video failed to load:`, e);
+                                      console.log(`🔍 Video URL: ${post.content.videoUrl}`);
+                                      console.log(`🔍 Video URL length: ${post.content.videoUrl?.length}`);
+                                      
+                                      // Show error state
+                                      const videoElement = e.currentTarget;
+                                      const container = videoElement.parentElement;
+                                      if (container) {
+                                        container.innerHTML = `
+                                          <div class="flex flex-col items-center justify-center h-48 text-center p-4">
+                                            <div class="text-4xl mb-2">🎬</div>
+                                            <p class="text-sm text-gray-400 mb-2">Video Preview Not Available</p>
+                                            <p class="text-xs text-gray-500">Generated video ready for download</p>
+                                            <a href="${post.content.videoUrl}" target="_blank" 
+                                               class="mt-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30">
+                                              Open Video
+                                            </a>
+                                          </div>
+                                        `;
+                                      }
+                                    }}
+                                    onCanPlay={() => {
+                                      console.log(`▶️ VIDEO_CAN_PLAY: Post ${post.id} video ready to play`);
+                                    }}
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                    style={{
+                                      maxWidth: '100%',
+                                      height: '192px',
+                                      objectFit: 'cover'
+                                    }}
                                   />
+                                  {/* Debug overlay for videos */}
+                                  <div className="absolute top-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
+                                    {post.content.videoUrl ? 
+                                      (post.content.videoUrl.includes('mock_') ? 'Mock' : 
+                                       post.content.videoUrl.includes('localhost') ? 'Local' : 'External') 
+                                      : 'No Video'}
+                                  </div>
+                                  {/* Play button overlay */}
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer"
+                                       onClick={(e) => {
+                                         const video = e.currentTarget.previousElementSibling as HTMLVideoElement;
+                                         if (video) {
+                                           if (video.paused) {
+                                             video.play().catch(err => {
+                                               console.log('Video autoplay prevented:', err);
+                                               // Show click to play message
+                                               toast.info('Click the video controls to play');
+                                             });
+                                           } else {
+                                             video.pause();
+                                           }
+                                         }
+                                       }}>
+                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 hover:bg-white/30 transition-colors">
+                                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                      </svg>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </div>
