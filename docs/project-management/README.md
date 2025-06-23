@@ -11,6 +11,7 @@ This folder contains project management documentation to track the development p
 - `TODO.md` - Detailed checklist of specific tasks and implementation items
 - `EPIC.md` - High-level feature epics and major functionality blocks
 - `ROADMAP.md` - Production maturity roadmap and deployment considerations
+- `Visual-Cues.md` - Bug analysis and documentation for AI processing visual feedback issues
 
 ## Current Maturity State
 
