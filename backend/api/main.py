@@ -32,7 +32,12 @@ from google.adk.telemetry import tracer
 from .routes.campaigns import router as campaigns_router
 from .routes.content import router as content_router
 from .routes.analysis import router as analysis_router
+
+from .routes.social_auth import router as social_auth_router
+from .routes.social_posts import router as social_posts_router
+
 from .routes.test_endpoints import router as test_router
+
 from .models import CampaignRequest, CampaignResponse, ErrorResponse
 from agents.marketing_orchestrator import create_marketing_orchestrator_agent
 
@@ -135,9 +140,20 @@ app.include_router(
     tags=["Business Analysis"]
 )
 app.include_router(
+
+    social_auth_router,
+    prefix="/api/v1/auth/social",
+    tags=["Social Media Authentication"]
+)
+app.include_router(
+    social_posts_router,
+    prefix="/api/v1/posts",
+    tags=["Social Media Publishing"]
+
     test_router,
     prefix="/api/v1",
     tags=["Testing"]
+
 )
 
 @app.get("/", response_model=dict)

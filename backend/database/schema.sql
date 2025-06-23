@@ -221,6 +221,105 @@ CREATE TABLE user_sessions (
 );
 
 -- ============================================================================
+-- SOCIAL MEDIA CONNECTIONS TABLE
+-- ============================================================================
+CREATE TABLE social_media_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,                 -- Foreign key to users table
+    platform TEXT NOT NULL,               -- 'linkedin', 'twitter', 'instagram', 'facebook', 'tiktok'
+    platform_user_id TEXT NOT NULL,       -- Platform-specific user ID
+    platform_username TEXT,               -- Platform username/handle
+    access_token TEXT NOT NULL,           -- Encrypted OAuth access token
+    refresh_token TEXT,                   -- Encrypted OAuth refresh token
+    token_expires_at DATETIME,            -- Token expiration timestamp
+    scopes TEXT,                          -- JSON: granted OAuth scopes
+    connection_status TEXT DEFAULT 'active', -- 'active', 'expired', 'revoked', 'error'
+    platform_metadata TEXT,              -- JSON: additional platform-specific data
+    last_used_at DATETIME,               -- Last time connection was used
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Foreign Key Constraints
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Unique constraint to prevent duplicate connections
+    UNIQUE(user_id, platform, platform_user_id),
+    
+    -- Check Constraints
+    CONSTRAINT social_platform_values CHECK (platform IN ('linkedin', 'twitter', 'instagram', 'facebook', 'tiktok')),
+    CONSTRAINT connection_status_values CHECK (connection_status IN ('active', 'expired', 'revoked', 'error'))
+);
+
+-- ============================================================================
+-- SCHEDULED POSTS TABLE
+-- ============================================================================
+CREATE TABLE scheduled_posts (
+    id TEXT PRIMARY KEY,                   -- UUID v4 format
+    campaign_id TEXT NOT NULL,            -- Foreign key to campaigns table
+    user_id TEXT NOT NULL,                -- Foreign key to users table
+    content_id TEXT,                      -- Foreign key to generated_content table (optional)
+    social_connection_id INTEGER,         -- Foreign key to social_media_connections table
+    
+    -- Post Content
+    platform TEXT NOT NULL,              -- Target platform
+    post_content TEXT NOT NULL,           -- Post text content
+    media_urls TEXT,                      -- JSON: array of media URLs
+    hashtags TEXT,                        -- JSON: array of hashtags
+    mentions TEXT,                        -- JSON: array of mentions
+    
+    -- Scheduling Information
+    scheduled_time DATETIME NOT NULL,     -- When post should be published
+    actual_post_time DATETIME,            -- When post was actually published
+    status TEXT DEFAULT 'pending',        -- 'pending', 'posted', 'failed', 'cancelled'
+    
+    -- Platform Response
+    platform_post_id TEXT,               -- Platform-specific post ID after publishing
+    platform_response TEXT,              -- JSON: full platform API response
+    posting_error TEXT,                   -- Error message if posting failed
+    retry_count INTEGER DEFAULT 0,        -- Number of retry attempts
+    max_retries INTEGER DEFAULT 3,        -- Maximum retry attempts
+    
+    -- Post Performance (optional future feature)
+    engagement_data TEXT,                 -- JSON: likes, shares, comments, etc.
+    performance_score REAL,               -- Calculated performance score
+    
+    -- Metadata
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Foreign Key Constraints
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (content_id) REFERENCES generated_content(id) ON DELETE SET NULL,
+    FOREIGN KEY (social_connection_id) REFERENCES social_media_connections(id) ON DELETE SET NULL,
+    
+    -- Check Constraints
+    CONSTRAINT scheduled_platform_values CHECK (platform IN ('linkedin', 'twitter', 'instagram', 'facebook', 'tiktok')),
+    CONSTRAINT scheduled_status_values CHECK (status IN ('pending', 'posted', 'failed', 'cancelled')),
+    CONSTRAINT retry_count_positive CHECK (retry_count >= 0),
+    CONSTRAINT max_retries_positive CHECK (max_retries >= 0),
+    CONSTRAINT scheduled_time_future CHECK (scheduled_time > created_at OR status != 'pending')
+);
+
+-- ============================================================================
+-- CAMPAIGN CHAT HISTORY TABLE
+-- ============================================================================
+CREATE TABLE campaign_chat_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id TEXT NOT NULL,            -- Foreign key to campaigns table
+    user_id TEXT NOT NULL,                -- Foreign key to users table
+    conversation_history TEXT NOT NULL,   -- JSON: array of chat messages
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Foreign Key Constraints
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Unique constraint - one chat history per campaign per user
+    UNIQUE(campaign_id, user_id)
+);
+
+-- ============================================================================
 -- PERFORMANCE INDEXES
 -- ============================================================================
 
@@ -289,6 +388,26 @@ CREATE INDEX idx_sessions_expires_active ON user_sessions(expires_at, is_active)
 -- Template usage
 CREATE INDEX idx_templates_public_category ON campaign_templates(is_public, category);
 
+-- Social media connections indexes
+CREATE INDEX idx_social_connections_user_id ON social_media_connections(user_id);
+CREATE INDEX idx_social_connections_platform ON social_media_connections(platform);
+CREATE INDEX idx_social_connections_status ON social_media_connections(connection_status);
+CREATE INDEX idx_social_connections_user_platform ON social_media_connections(user_id, platform);
+CREATE INDEX idx_social_connections_expires ON social_media_connections(token_expires_at);
+
+-- Scheduled posts indexes
+CREATE INDEX idx_scheduled_posts_campaign_id ON scheduled_posts(campaign_id);
+CREATE INDEX idx_scheduled_posts_user_id ON scheduled_posts(user_id);
+CREATE INDEX idx_scheduled_posts_platform ON scheduled_posts(platform);
+CREATE INDEX idx_scheduled_posts_status ON scheduled_posts(status);
+CREATE INDEX idx_scheduled_posts_scheduled_time ON scheduled_posts(scheduled_time);
+CREATE INDEX idx_scheduled_posts_connection_id ON scheduled_posts(social_connection_id);
+CREATE INDEX idx_scheduled_posts_status_time ON scheduled_posts(status, scheduled_time);
+
+-- Campaign chat history indexes
+CREATE INDEX idx_chat_history_campaign_id ON campaign_chat_history(campaign_id);
+CREATE INDEX idx_chat_history_user_id ON campaign_chat_history(user_id);
+
 -- ============================================================================
 -- SCHEMA VERSION TRACKING
 -- ============================================================================
@@ -301,6 +420,9 @@ CREATE TABLE schema_version (
 -- Insert current schema version
 INSERT INTO schema_version (version, description) 
 VALUES ('1.0.1', 'Updated schema to align with test expectations - full_name, description, objectives, ai_analysis fields');
+
+INSERT INTO schema_version (version, description) 
+VALUES ('1.1.0', 'Added social media integration - social_media_connections, scheduled_posts, campaign_chat_history tables');
 
 -- ============================================================================
 -- DATABASE VIEWS FOR ANALYTICS
