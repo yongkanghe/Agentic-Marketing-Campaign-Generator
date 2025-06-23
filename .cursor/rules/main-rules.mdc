@@ -5,6 +5,12 @@ alwaysApply: true
 ---
 use makefiles for application operations, running, testing and similar.
 
+do not use image or vide placeholders. implement real functionality. (i.e. no BigBuckBunny placeholder)
+
+Check Frontend and Backend logs before and after implementing a fix, to validate the solution
+
+python 'genai' library is now deprecated. use the modern google.generativeai library instead
+
 run the full stack with launch-all for consinstent runtime behaviour during run validation
 
 do not create or use mocks, or stubs, unleass this is aprt of the test suite.

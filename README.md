@@ -1,7 +1,8 @@
 # AI Marketing Campaign Post Generator 🚀
 ### Agentic AI Marketing Campaign Manager
 
-**Author: JP + 2025-06-15**
+**Author: JP + 2025-06-23**
+**Version: 1.0.0-beta.1**
 
 > **Transform your business ideas into professional marketing campaigns using Google's ADK Framework and Gemini API**
 
@@ -35,6 +36,7 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 | **Creative Ideation** | AI-powered campaign concepts and themes | Idea Agent |
 | **Content Generation** | Social media posts with hashtags and optimization | Content Agent |
 | **Visual Content** | AI-generated images using Google Imagen 3.0 | Visual Content Agent |
+| **Video Generation** | Real video creation with Google Veo 2.0 | Video Generation Agent |
 | **Multi-Format Export** | JSON, CSV, XLSX export capabilities | API Layer |
 
 ---

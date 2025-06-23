@@ -451,11 +451,23 @@ async def generate_visual_content(request: dict):
                     logger.info(f"      🖼️ image_url in response: {'✅ YES' if image_url else '❌ NO'}")
                     logger.info(f"      🎬 video_url in response: {'✅ YES' if video_url else '❌ NO'}")
                     
-                    # STDOUT VALIDATION for test visibility
-                    if image_url:
-                        print(f"✅ IMAGE_URL_VALIDATION: Post {post.get('id')} has image_url ({len(image_url)} chars)", flush=True)
+                    # TYPE-SPECIFIC VALIDATION for test visibility
+                    post_type = post.get('type', 'unknown')
+                    
+                    if post_type == 'text_image':
+                        if image_url:
+                            print(f"✅ IMAGE_URL_VALIDATION: Post {post.get('id')} has image_url ({len(image_url)} chars)", flush=True)
+                        else:
+                            print(f"❌ IMAGE_URL_VALIDATION: Post {post.get('id')} type {post_type} MISSING image_url!", flush=True)
+                    elif post_type == 'text_video':
+                        if video_url:
+                            print(f"✅ VIDEO_URL_VALIDATION: Post {post.get('id')} has video_url ({len(video_url)} chars)", flush=True)
+                        else:
+                            print(f"❌ VIDEO_URL_VALIDATION: Post {post.get('id')} type {post_type} MISSING video_url!", flush=True)
+                    elif post_type == 'text_url':
+                        print(f"✅ TEXT_URL_VALIDATION: Post {post.get('id')} type {post_type} (no visual content required)", flush=True)
                     else:
-                        print(f"❌ IMAGE_URL_VALIDATION: Post {post.get('id')} MISSING image_url!", flush=True)
+                        print(f"⚠️ UNKNOWN_TYPE_VALIDATION: Post {post.get('id')} has unknown type {post_type}", flush=True)
             
             return {
                 "posts_with_visuals": posts_with_visuals,
@@ -1181,6 +1193,7 @@ async def serve_generated_image(campaign_id: str, filename: str):
         raise HTTPException(status_code=500, detail="Failed to serve image")
 
 @router.get("/videos/{campaign_id}/{filename}")
+@router.head("/videos/{campaign_id}/{filename}")
 async def serve_generated_video(campaign_id: str, filename: str):
     """
     Serve generated videos with proper headers and security validation.

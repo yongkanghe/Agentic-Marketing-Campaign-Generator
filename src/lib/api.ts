@@ -39,7 +39,7 @@ info('🚀 API Client initialized', { baseURL: API_BASE_URL, timeout: 45000 }, '
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds timeout for AI operations (Gemini/Imagen/Veo generation can be slow)
+  timeout: 120000, // 120 seconds timeout for AI operations (video generation can be slow)
   headers: {
     'Content-Type': 'application/json',
   },
