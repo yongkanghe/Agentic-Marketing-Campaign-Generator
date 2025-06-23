@@ -376,6 +376,22 @@ async def generate_visual_content(request: dict):
         campaign_objective = request.get('campaign_objective', 'increase engagement')
         target_platforms = request.get('target_platforms', ['instagram', 'linkedin'])
         
+        # CRITICAL FIX: Extract campaign creative guidance parameters from frontend request
+        campaign_media_tuning = request.get('campaign_media_tuning', '')
+        campaign_guidance = request.get('campaign_guidance', {})
+        visual_style = request.get('visual_style', {})
+        creative_direction = request.get('creative_direction', '')
+        product_context = request.get('product_context', {})
+        campaign_id = request.get('campaign_id', 'default')
+        
+        # Log received campaign guidance for debugging
+        logger.info(f"📋 Campaign Creative Guidance Received:")
+        logger.info(f"   campaign_media_tuning: {len(campaign_media_tuning)} chars")
+        logger.info(f"   visual_style keys: {list(visual_style.keys()) if visual_style else 'None'}")
+        logger.info(f"   creative_direction: {len(creative_direction)} chars")
+        logger.info(f"   campaign_guidance keys: {list(campaign_guidance.keys()) if campaign_guidance else 'None'}")
+        logger.info(f"   product_context keys: {list(product_context.keys()) if product_context else 'None'}")
+        
         if not social_posts:
             raise HTTPException(status_code=400, detail="No social posts provided for visual generation")
         
@@ -391,18 +407,24 @@ async def generate_visual_content(request: dict):
                 logger.info(f"   Post {i+1}: ID={post.get('id', 'N/A')}, Type={post.get('type', 'N/A')}, Platform={post.get('platform', 'N/A')}")
             
             # Extract or generate campaign_id from request
-            campaign_id = request.get('campaign_id', 'default')
             if campaign_id == 'default':
                 # Generate campaign_id from business context for consistency
                 company_name = business_context.get('company_name', 'company')
                 import hashlib
                 campaign_id = hashlib.md5(f"{company_name}_{campaign_objective}".encode()).hexdigest()[:8]
             
+            # CRITICAL FIX: Pass ALL campaign creative guidance parameters to the visual generation function
             visual_results = await generate_visual_content_for_posts(
                 social_posts=social_posts,
                 business_context=business_context,
                 campaign_objective=campaign_objective,
                 target_platforms=target_platforms,
+                # ENHANCED: Pass campaign creative guidance parameters
+                campaign_media_tuning=campaign_media_tuning,
+                campaign_guidance=campaign_guidance,
+                product_context=product_context,
+                visual_style=visual_style,
+                creative_direction=creative_direction,
                 campaign_id=campaign_id
             )
             
