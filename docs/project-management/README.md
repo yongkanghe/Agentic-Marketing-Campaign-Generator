@@ -12,6 +12,7 @@ This folder contains project management documentation to track the development p
 - `EPIC.md` - High-level feature epics and major functionality blocks
 - `ROADMAP.md` - Production maturity roadmap and deployment considerations
 - `Visual-Cues.md` - Bug analysis and documentation for AI processing visual feedback issues
+- `Video-Content-Generation.md` - Critical video preview functionality requirements and fixes needed
 
 ## Current Maturity State
 

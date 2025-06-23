@@ -123,6 +123,10 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@echo "🚀 Launching AI Marketing Campaign Post Generator - Full Application Stack"
 	@echo "=========================================================="
 	@echo ""
+	@echo "🛑 Step 0: Cleaning up any existing processes..."
+	@make stop-all
+	@sleep 2
+	@echo ""
 	@echo "📋 Pre-flight checks..."
 	@make status-check-quiet
 	@echo ""
@@ -133,14 +137,16 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@make setup-database
 	@echo ""
 	@echo "🔧 Step 2: Starting backend server with DEBUG logging (port 8000)..."
-	@make start-backend &
-	@echo "⏳ Waiting for backend to initialize..."
-	@sleep 5
+	@echo "📄 Backend logs will be written to: $(BACKEND_LOG_FILE)"
+	@nohup make start-backend > /dev/null 2>&1 &
+	@echo "⏳ Waiting for backend to initialize (10 seconds)..."
+	@sleep 10
 	@echo ""
 	@echo "🎨 Step 3: Starting frontend server with DEBUG logging (port 8080)..."
-	@make start-frontend &
-	@echo "⏳ Waiting for frontend to initialize..."
-	@sleep 3
+	@echo "📄 Frontend logs will be written to: $(FRONTEND_LOG_FILE)"
+	@nohup make start-frontend > /dev/null 2>&1 &
+	@echo "⏳ Waiting for frontend to initialize (8 seconds)..."
+	@sleep 8
 	@echo ""
 	@echo "🏥 Step 4: Running health checks..."
 	@make health-check
@@ -149,15 +155,21 @@ launch-all: ## 🚀 Launch complete application stack (SQLite + Backend + Fronte
 	@echo "================================"
 	@echo "🌐 Frontend: http://localhost:8080"
 	@echo "🔌 Backend:  http://localhost:8000"
-	@echo "🗄️  Database: SQLite (backend/database.db)"
+	@echo "🗄️  Database: SQLite (backend/database/data/database.db)"
 	@echo ""
-	@echo "📄 Debug Logs:"
+	@echo "📄 Debug Logs (Live Monitoring):"
 	@echo "   Backend:  $(BACKEND_LOG_FILE)"
 	@echo "   Frontend: $(FRONTEND_LOG_FILE)"
 	@echo ""
+	@echo "🔍 Process Status:"
+	@echo -n "   Backend (8000):  "
+	@if pgrep -f "uvicorn.*8000" > /dev/null; then echo "✅ Running (PID: $$(pgrep -f 'uvicorn.*8000'))"; else echo "❌ Not running"; fi
+	@echo -n "   Frontend (8080): "
+	@if pgrep -f "vite.*8080" > /dev/null; then echo "✅ Running (PID: $$(pgrep -f 'vite.*8080'))"; else echo "❌ Not running"; fi
+	@echo ""
 	@echo "⚡ Run 'make test-quick' for fast essential tests (recommended)"
 	@echo "🧪 Run 'make test-full-stack' to test the entire application"
-	@echo "📖 Run 'make view-all-logs' to monitor debug logs"
+	@echo "📖 Run 'make view-all-logs' to monitor debug logs in real-time"
 	@echo "🛑 Run 'make stop-all' to stop all services"
 
 test-quick: ## ⚡ Quick essential functionality tests (10s timeout per test)
@@ -202,9 +214,15 @@ setup-database: ## 🗄️ Initialize SQLite database with schema
 start-backend: ## 🔧 Start backend server with DEBUG logging to file
 	@echo "🔧 Starting backend server with DEBUG logging to file..."
 	@make setup-logging
+	@echo "🔍 Checking if port 8000 is available..."
+	@if lsof -ti:8000 > /dev/null 2>&1; then \
+		echo "⚠️  Port 8000 is in use, killing existing process..."; \
+		lsof -ti:8000 | xargs kill -9 2>/dev/null || true; \
+		sleep 2; \
+	fi
 	@if [ ! -f backend/.env ]; then \
 		echo "⚠️  Creating backend/.env file..."; \
-		echo "DATABASE_URL=sqlite:///./data/database.db" >> backend/.env; \
+		echo "DATABASE_URL=sqlite:///./database/data/database.db" >> backend/.env; \
 		echo "LOG_LEVEL=DEBUG" >> backend/.env; \
 		echo "LOG_FILE=../$(BACKEND_LOG_FILE)" >> backend/.env; \
 		echo "📝 Please update backend/.env with your GEMINI_API_KEY"; \
@@ -220,18 +238,26 @@ start-backend: ## 🔧 Start backend server with DEBUG logging to file
 		fi; \
 	fi
 	@echo "🐛 DEBUG logging enabled - Backend logs: $(BACKEND_LOG_FILE)"
-	@echo "🔧 Starting backend server..."
+	@echo "🔧 Starting backend server on port 8000..."
 	@cd backend && python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --log-level debug --reload 2>&1 | tee -a ../$(BACKEND_LOG_FILE)
 
 start-frontend: ## 🎨 Start frontend server with DEBUG logging to file
 	@echo "🎨 Starting frontend server with DEBUG logging to file..."
 	@make setup-logging
 	@echo "🐛 DEBUG logging enabled - Frontend logs: $(FRONTEND_LOG_FILE)"
-	@echo "🎨 Starting frontend server..."
+	@echo "🎨 Starting frontend server on port 8080..."
+	@echo "🔍 Checking if port 8080 is available..."
+	@if lsof -ti:8080 > /dev/null 2>&1; then \
+		echo "⚠️  Port 8080 is in use, killing existing process..."; \
+		lsof -ti:8080 | xargs kill -9 2>/dev/null || true; \
+		sleep 2; \
+	fi
 	@if [ "$(BUN_AVAILABLE)" ]; then \
-		DEBUG=vite:* VITE_LOG_LEVEL=debug bun run dev --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
+		echo "🚀 Starting with Bun..."; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug bun run dev --port 8080 --host 0.0.0.0 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	elif [ "$(NODE_AVAILABLE)" ]; then \
-		DEBUG=vite:* VITE_LOG_LEVEL=debug npm run dev -- --port 8080 --debug 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
+		echo "🚀 Starting with Node.js..."; \
+		DEBUG=vite:* VITE_LOG_LEVEL=debug npm run dev -- --port 8080 --host 0.0.0.0 2>&1 | tee -a $(FRONTEND_LOG_FILE); \
 	else \
 		echo "❌ No JavaScript runtime available"; \
 		exit 1; \

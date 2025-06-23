@@ -149,11 +149,11 @@ app.include_router(
     social_posts_router,
     prefix="/api/v1/posts",
     tags=["Social Media Publishing"]
-
+)
+app.include_router(
     test_router,
     prefix="/api/v1",
     tags=["Testing"]
-
 )
 
 @app.get("/", response_model=dict)

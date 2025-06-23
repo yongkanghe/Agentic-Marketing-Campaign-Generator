@@ -284,9 +284,9 @@ const IdeationPage: React.FC = () => {
         content: {
           text: post.content || `Generated ${postType.replace('_', ' + ')} content`,
           hashtags: post.hashtags || suggestedHashtags.slice(0, 3),
-          // FIXED: Map backend field names to frontend field names
-          imageUrl: post.image_url, // Backend returns image_url, frontend expects imageUrl
-          videoUrl: post.video_url, // Backend returns video_url, frontend expects videoUrl
+          // CRITICAL FIX: Initialize visual URLs as undefined - they'll be set by visual generation API
+          imageUrl: undefined, // Will be set by visual generation API
+          videoUrl: undefined, // Will be set by visual generation API
           // MARKETING FIX: ALL post types should include product URL for effective marketing
           productUrl: post.url || currentCampaign?.productServiceUrl || currentCampaign?.businessUrl
         },
@@ -297,7 +297,9 @@ const IdeationPage: React.FC = () => {
       }));
       
       // STEP 2: Generate visual content (images/videos) if needed
-      if ((columnId === 'text-image' || columnId === 'text-video') && transformedPosts.length > 0) {
+      if ((columnId === 'text-image' || columnId === 'text-video') && 
+          transformedPosts.length > 0 && 
+          !transformedPosts.some(post => post.content.imageUrl || post.content.videoUrl)) {
         console.log(`🎨 Generating visual content for ${columnId} posts...`);
         
         // Update loading state to show visual generation in progress
@@ -327,7 +329,14 @@ const IdeationPage: React.FC = () => {
             brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
           },
           campaign_objective: currentCampaign?.objective || 'increase sales',
-          target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
+          target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter'],
+          // CRITICAL FIX: Include campaign creative guidance for visual generation
+          campaign_media_tuning: preferredDesign || '',
+          campaign_guidance: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
+          visual_style: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.visual_style || {},
+          creative_direction: currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.creative_direction || '',
+          product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {},
+          campaign_id: currentCampaign?.id || 'default'
         });
         
         console.log(`🎨 Visual generation response:`, {
@@ -456,26 +465,49 @@ const IdeationPage: React.FC = () => {
     } catch (err) {
       console.error(`❌ Failed to generate ${columnId} posts:`, err);
       
-      // Reset loading state and clear any partial posts using functional update
-      setSocialMediaColumns(prev => prev.map(col => 
-        col.id === columnId ? { 
-          ...col, 
-          isGenerating: false, 
-          posts: [] // Keep posts empty on error for clean state
-        } : col
-      ));
-      
-      // Show detailed error message for debugging
+      // IMPROVED ERROR HANDLING: Keep loading state if it's a timeout/network issue
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      const postType = columnId === 'text-only' ? 'text_url' : 
-                      columnId === 'text-image' ? 'text_image' : 'text_video';
-      console.error(`Generation error details:`, { columnId, postType, error: err });
+      const isTimeoutError = errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('network');
       
-      toast.error(`Failed to generate ${columnId.replace('-', ' + ')} posts: ${errorMessage}. Please check your connection and try again.`);
-    } finally {
-      // CRITICAL FIX: Always clear the ref state
-      generationStateRef.current[columnId] = false;
-    }
+      if (isTimeoutError) {
+        // For timeout errors, keep the loading state and show retry option
+        console.log(`⏳ Timeout detected for ${columnId}, keeping loading state for retry`);
+        setSocialMediaColumns(prev => prev.map(col => 
+          col.id === columnId ? { 
+            ...col, 
+            isGenerating: true, // Keep loading for timeout errors
+            posts: [] // Clear any partial posts
+          } : col
+        ));
+        
+        toast.error(`Generation is taking longer than expected. Please wait or try again.`, {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onClick: () => generateColumnPosts(columnId)
+          }
+        });
+      } else {
+        // For actual errors, reset the loading state
+        setSocialMediaColumns(prev => prev.map(col => 
+          col.id === columnId ? { 
+            ...col, 
+            isGenerating: false, 
+            posts: [] // Keep posts empty on error for clean state
+          } : col
+        ));
+        
+        const postType = columnId === 'text-only' ? 'text_url' : 
+                        columnId === 'text-image' ? 'text_image' : 'text_video';
+        console.error(`Generation error details:`, { columnId, postType, error: err });
+        
+        toast.error(`Failed to generate ${columnId.replace('-', ' + ')} posts: ${errorMessage}. Please check your connection and try again.`);
+      }
+          } finally {
+        // CRITICAL FIX: Always clear the ref state after processing
+        // The loading state management is handled in the catch block
+        generationStateRef.current[columnId] = false;
+      }
   }, [currentCampaign, preferredDesign, suggestedHashtags, socialMediaColumns, executeAbortableCall]);
 
 
@@ -710,9 +742,44 @@ const IdeationPage: React.FC = () => {
       
       setSocialMediaColumns(cleanedColumns as SocialMediaColumn[]);
     } else {
-      console.log('🎯 No saved columns found - generating initial posts');
-      // Auto-generate initial posts when page loads
-      generateAllPosts();
+      // CRITICAL FIX: Only auto-generate posts if campaign analysis is complete
+      // This prevents generic, low-quality posts and token waste on new campaigns
+      const hasCompletedAnalysis = currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance;
+      
+      if (hasCompletedAnalysis) {
+        console.log('🎯 No saved columns found - generating initial posts (analysis complete)');
+        // Auto-generate initial posts when page loads
+        generateAllPosts();
+      } else {
+        console.log('⏳ Campaign analysis not complete - skipping auto-generation to prevent generic posts');
+        // Initialize empty columns for manual generation after analysis
+        setSocialMediaColumns([
+          {
+            id: 'text-only',
+            title: '# Text + URL Posts',
+            description: 'Marketing text with product URL for link unfurling',
+            mediaType: 'text-only',
+            posts: [],
+            isGenerating: false
+          },
+          {
+            id: 'text-image',
+            title: '📸 Text + Image Posts',
+            description: 'Marketing text with AI-generated brand-aligned images',
+            mediaType: 'text-with-image',
+            posts: [],
+            isGenerating: false
+          },
+          {
+            id: 'text-video',
+            title: '🎬 Text + Video Posts',
+            description: 'Marketing text with AI-generated product demo videos',
+            mediaType: 'text-with-video',
+            posts: [],
+            isGenerating: false
+          }
+        ]);
+      }
     }
   }, [currentCampaign, navigate, isRegeneratingAnalysis, loadColumnsFromStorage, generateAllPosts, regenerateAIAnalysis]);
 
@@ -895,7 +962,28 @@ const IdeationPage: React.FC = () => {
                   <h4 className="text-sm font-semibold vvl-text-primary mb-3 flex items-center gap-2">
                     <Sparkles size={16} className="text-blue-400" />
                     AI Analysis
+                    {/* Show analysis status indicator */}
+                    {!currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance && (
+                      <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                        Incomplete
+                      </span>
+                    )}
                   </h4>
+                  
+                  {/* Analysis Status Alert */}
+                  {!currentCampaign.aiAnalysis?.businessAnalysis?.campaign_guidance && (
+                    <div className="bg-orange-500/10 border border-orange-400/20 rounded-lg p-3 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle size={14} className="text-orange-400" />
+                        <span className="text-xs font-medium text-orange-400">Analysis Required</span>
+                      </div>
+                      <p className="text-xs text-orange-300 leading-relaxed">
+                        Campaign analysis is incomplete. Auto-generation is disabled to prevent generic posts and token waste. 
+                        Complete the analysis first for personalized, high-quality content.
+                      </p>
+                    </div>
+                  )}
+                  
                   <p className="text-sm vvl-text-secondary leading-relaxed mb-4">
                     {currentCampaign?.aiAnalysis?.summary || aiSummary || "AI-generated summary will appear here after analyzing your business URLs. Click 'Regenerate Analysis' to analyze your campaign context."}
                   </p>

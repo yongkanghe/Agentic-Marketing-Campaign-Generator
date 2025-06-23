@@ -478,6 +478,12 @@ export class VideoVentureLaunchAPI {
     };
     campaign_objective: string;
     target_platforms?: string[];
+    campaign_media_tuning?: string;
+    campaign_guidance?: any;
+    visual_style?: any;
+    creative_direction?: string;
+    product_context?: any;
+    campaign_id?: string;
   }): Promise<{
     posts_with_visuals: Array<{
       id: string | number;

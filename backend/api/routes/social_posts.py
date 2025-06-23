@@ -22,7 +22,7 @@ from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel
 import httpx
 
-from backend.database.database import get_database_connection
+from database.database import get_database_connection
 from .social_auth import decrypt_token, SOCIAL_PLATFORMS
 
 # Configure logging

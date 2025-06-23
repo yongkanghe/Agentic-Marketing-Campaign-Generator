@@ -472,7 +472,7 @@ class ImageGenerationAgent:
             return f"https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Generated+Image+{index+1}"
     
     def _enhance_prompt_with_context(self, base_prompt: str, business_context: Dict[str, Any]) -> str:
-        """Enhance image prompt with business context for brand consistency."""
+        """Enhance image prompt with business context and campaign creative guidance for brand consistency."""
         
         company_name = business_context.get('company_name', 'Company')
         industry = business_context.get('industry', 'business')
@@ -480,35 +480,70 @@ class ImageGenerationAgent:
         visual_elements = business_context.get('visual_elements', 'modern, clean design')
         key_themes = business_context.get('key_themes', [])
         
-        # Build enhanced prompt
+        # CRITICAL ENHANCEMENT: Extract visual style guidance from campaign guidance
+        visual_style = business_context.get('visual_style', {})
+        creative_direction = business_context.get('creative_direction', '')
+        campaign_media_tuning = business_context.get('campaign_media_tuning', '')
+        
+        # Build enhanced prompt starting with base
         enhanced_prompt = f"{base_prompt}"
         
-        # Add brand context
-        if 'professional' in brand_voice.lower():
-            enhanced_prompt += ", professional and polished style"
-        if 'innovative' in brand_voice.lower():
-            enhanced_prompt += ", innovative and cutting-edge aesthetic"
-        if 'modern' in visual_elements.lower():
-            enhanced_prompt += ", modern design elements"
+        # PRIORITY 1: Apply campaign creative direction if available
+        if creative_direction and creative_direction.strip():
+            enhanced_prompt += f", {creative_direction}"
         
-        # Add industry context
-        if 'technology' in industry.lower():
-            enhanced_prompt += ", tech-focused imagery with digital elements"
-        elif 'healthcare' in industry.lower():
-            enhanced_prompt += ", clean medical aesthetic with health-focused elements"
-        elif 'finance' in industry.lower():
-            enhanced_prompt += ", professional financial imagery with trust elements"
+        # PRIORITY 2: Apply visual style guidance if available
+        if visual_style:
+            # Photography style
+            photography_style = visual_style.get('photography_style') or visual_style.get('photography')
+            if photography_style:
+                enhanced_prompt += f", {photography_style}"
+            
+            # Mood
+            mood = visual_style.get('mood') or visual_style.get('brand_mood')
+            if mood:
+                enhanced_prompt += f", {mood} mood"
+            
+            # Lighting
+            lighting = visual_style.get('lighting') or visual_style.get('lighting_style')
+            if lighting:
+                enhanced_prompt += f", {lighting}"
         
-        # Add theme-based enhancements
-        if 'innovation' in key_themes:
-            enhanced_prompt += ", innovative and forward-thinking visual style"
-        if 'sustainability' in key_themes:
-            enhanced_prompt += ", eco-friendly and sustainable visual elements"
-        if 'quality' in key_themes:
-            enhanced_prompt += ", high-quality and premium aesthetic"
+        # PRIORITY 3: Apply user-provided media tuning
+        if campaign_media_tuning and campaign_media_tuning.strip():
+            enhanced_prompt += f", {campaign_media_tuning}"
+        
+        # FALLBACK: Apply generic brand context if no specific guidance
+        if not creative_direction and not visual_style and not campaign_media_tuning:
+            # Add brand context
+            if 'professional' in brand_voice.lower():
+                enhanced_prompt += ", professional and polished style"
+            if 'innovative' in brand_voice.lower():
+                enhanced_prompt += ", innovative and cutting-edge aesthetic"
+            if 'modern' in visual_elements.lower():
+                enhanced_prompt += ", modern design elements"
+            
+            # Add industry context
+            if 'technology' in industry.lower():
+                enhanced_prompt += ", tech-focused imagery with digital elements"
+            elif 'healthcare' in industry.lower():
+                enhanced_prompt += ", clean medical aesthetic with health-focused elements"
+            elif 'finance' in industry.lower():
+                enhanced_prompt += ", professional financial imagery with trust elements"
+            
+            # Add theme-based enhancements
+            if 'innovation' in key_themes:
+                enhanced_prompt += ", innovative and forward-thinking visual style"
+            if 'sustainability' in key_themes:
+                enhanced_prompt += ", eco-friendly and sustainable visual elements"
+            if 'quality' in key_themes:
+                enhanced_prompt += ", high-quality and premium aesthetic"
         
         # Add general quality modifiers
         enhanced_prompt += ", high quality, professional photography style, well-lit, sharp focus"
+        
+        # Log the enhancement for debugging
+        logger.info(f"Enhanced prompt with campaign guidance: {enhanced_prompt[:150]}...")
         
         return enhanced_prompt
     
@@ -954,18 +989,38 @@ class VideoGenerationAgent:
                 if product_themes:
                     scene_description += f", emphasizing {', '.join(product_themes)}"
             
-            # 3. INDUSTRY-SPECIFIC VISUAL CONTEXT
+            # 3. PRODUCT-SPECIFIC VISUAL CONTEXT (ENHANCED FOR AUDIENCE TARGETING)
             industry_context = ""
-            if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
-                industry_context = "outdoor furniture lifestyle setting, comfortable patio living spaces, modern home design aesthetics"
-            elif 'technology' in industry.lower():
-                industry_context = "modern professional office environment, clean technology workspace, digital innovation showcase"
-            elif 'healthcare' in industry.lower():
-                industry_context = "professional healthcare facility, modern medical environment, caring professional atmosphere"
-            elif 'finance' in industry.lower():
-                industry_context = "professional business office, modern corporate environment, trust and reliability focus"
+            product_lower = (product_name + " " + business_description).lower()
+            
+            # PET PRODUCTS - Show happy pets using the product
+            if any(pet in product_lower for pet in ['cat', 'dog', 'pet', 'animal', 'food', 'treat', 'toy']):
+                if 'cat' in product_lower:
+                    industry_context = "happy healthy cat enjoying the product, natural home environment, cat lifestyle content, no text overlays, focus on cat behavior and satisfaction"
+                elif 'dog' in product_lower:
+                    industry_context = "happy energetic dog using the product, outdoor or home setting, dog lifestyle content, no text overlays, focus on dog enjoyment and activity"
+                else:
+                    industry_context = "happy pets enjoying the product, natural pet environment, pet lifestyle content, no text overlays, focus on pet satisfaction and wellbeing"
+            
+            # FURNITURE/HOME PRODUCTS - Show product in beautiful settings
+            elif any(furniture in product_lower for furniture in ['furniture', 'outdoor', 'patio', 'chair', 'table', 'sofa', 'home', 'living']):
+                industry_context = "beautiful furniture showcase, elegant home interior or outdoor patio setting, smooth panning shots of the furniture, no text overlays, focus on design and comfort"
+            
+            # FOOD PRODUCTS - Show the food being enjoyed
+            elif any(food in product_lower for food in ['food', 'meal', 'recipe', 'cooking', 'kitchen', 'restaurant']):
+                industry_context = "delicious food presentation, beautiful culinary setting, food preparation or dining experience, no text overlays, focus on food quality and appeal"
+            
+            # TECHNOLOGY PRODUCTS - Show the product in use
+            elif 'technology' in industry.lower() or any(tech in product_lower for tech in ['software', 'app', 'digital', 'tech', 'computer']):
+                industry_context = "modern professionals using the technology naturally, clean workspace environment, focus on user experience, no text overlays, emphasis on ease of use and results"
+            
+            # HEALTH/FITNESS - Show active lifestyle
+            elif any(health in product_lower for health in ['fitness', 'health', 'wellness', 'exercise', 'workout']):
+                industry_context = "active healthy lifestyle, fitness activities, wellness focus, people enjoying healthy activities, no text overlays, emphasis on vitality and wellbeing"
+            
+            # GENERIC BUSINESS FALLBACK - Focus on product benefits
             else:
-                industry_context = f"professional {industry} business environment, modern commercial setting"
+                industry_context = f"product showcase for {industry} industry, real-world usage scenario, people benefiting from the product, no text overlays, focus on product value and satisfaction"
             
             # 4. CAMERA WORK & CINEMATOGRAPHY (Veo documentation emphasis)
             camera_work = "cinematic camera movement"
@@ -1027,8 +1082,8 @@ class VideoGenerationAgent:
             # Join with proper punctuation for Veo understanding
             veo_prompt = ". ".join([part.strip() for part in veo_prompt_parts if part.strip()])
             
-            # Add final Veo-specific enhancements
-            veo_prompt += ". Cinematic quality, professional marketing video, engaging visual storytelling, brand-consistent presentation."
+            # Add final Veo-specific enhancements with explicit NO TEXT instruction
+            veo_prompt += ". Cinematic quality, professional marketing video, engaging visual storytelling, brand-consistent presentation. IMPORTANT: No text overlays, no words, no subtitles, purely visual content focusing on the product and its benefits."
             
             logger.info(f"🎬 Enhanced Veo 2.0 marketing prompt created: {len(veo_prompt)} characters")
             logger.debug(f"🎬 Full prompt: {veo_prompt[:200]}...")
@@ -1549,21 +1604,38 @@ class VisualContentOrchestrator:
         target_audience = business_context.get('target_audience', 'professionals')
         business_description = business_context.get('business_description', '')
         
-        # Enhanced business context integration for videos
+        # PRODUCT-FOCUSED VIDEO CONTEXT (NO TEXT, AUDIENCE-TARGETED)
         visual_context = ""
+        content_lower = (post_content + " " + business_description).lower()
         
-        # Industry-specific video context
-        if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
-            visual_context = f"Lifestyle video showcasing outdoor furniture and patio living, comfortable outdoor spaces, modern home design"
-        elif 'technology' in industry.lower():
-            visual_context = f"Modern professionals using technology solutions, clean office environments, digital innovation"
-        elif 'fitness' in industry.lower():
-            visual_context = f"Active lifestyle content, fitness activities, health and wellness focus"
-        elif 'food' in industry.lower():
-            visual_context = f"Culinary excellence, restaurant ambiance, food preparation and presentation"
+        # PET PRODUCTS - Focus on happy pets
+        if any(pet in content_lower for pet in ['cat', 'dog', 'pet', 'animal', 'food', 'treat', 'toy']):
+            if 'cat' in content_lower:
+                visual_context = f"Happy healthy cat interacting with the product, natural home setting, cat enjoying daily life, no text or words visible, focus on cat satisfaction and natural behavior"
+            elif 'dog' in content_lower:
+                visual_context = f"Happy energetic dog using the product, outdoor or home environment, dog lifestyle content, no text or words visible, focus on dog joy and activity"
+            else:
+                visual_context = f"Happy pets enjoying the product, natural pet environment, pet lifestyle showcase, no text or words visible, focus on pet wellbeing and satisfaction"
+        
+        # FURNITURE/HOME PRODUCTS - Show beautiful product showcase
+        elif any(furniture in content_lower for furniture in ['furniture', 'outdoor', 'patio', 'chair', 'table', 'sofa', 'home', 'living']):
+            visual_context = f"Beautiful furniture product showcase, elegant interior or outdoor setting, smooth camera panning across the furniture, no text or words visible, focus on design aesthetics and comfort appeal"
+        
+        # FOOD PRODUCTS - Show appetizing food
+        elif any(food in content_lower for food in ['food', 'meal', 'recipe', 'cooking', 'kitchen', 'restaurant']):
+            visual_context = f"Delicious food presentation, beautiful culinary environment, food being prepared or enjoyed, no text or words visible, focus on food appeal and quality"
+        
+        # TECHNOLOGY - Show product in natural use
+        elif 'technology' in industry.lower() or any(tech in content_lower for tech in ['software', 'app', 'digital', 'tech']):
+            visual_context = f"People naturally using the technology product, clean modern environment, focus on user experience and results, no text or words visible, emphasis on ease and effectiveness"
+        
+        # FITNESS/HEALTH - Show active lifestyle
+        elif any(health in content_lower for health in ['fitness', 'health', 'wellness', 'exercise', 'workout']):
+            visual_context = f"Active healthy lifestyle content, people enjoying fitness activities, wellness-focused environment, no text or words visible, emphasis on vitality and positive outcomes"
+        
+        # GENERIC BUSINESS - Focus on product benefits
         else:
-            # Generic business fallback with specific business focus
-            visual_context = f"Professional business environment for {industry} industry, showing real {company_name} business activities"
+            visual_context = f"Product showcase for {company_name}, real people benefiting from the product, professional environment, no text or words visible, focus on product value and customer satisfaction"
         
         # Add target audience context for video
         if 'young' in target_audience.lower():

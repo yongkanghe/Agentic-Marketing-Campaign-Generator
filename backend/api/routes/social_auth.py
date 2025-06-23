@@ -23,7 +23,7 @@ from pydantic import BaseModel
 import httpx
 from cryptography.fernet import Fernet
 
-from backend.database.database import get_database_connection
+from database.database import get_database_connection
 
 # Configure logging
 logger = logging.getLogger(__name__)
