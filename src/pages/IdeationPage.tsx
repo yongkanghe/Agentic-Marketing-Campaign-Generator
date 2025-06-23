@@ -301,11 +301,12 @@ const IdeationPage: React.FC = () => {
         console.log(`🎨 Generating visual content for ${columnId} posts...`);
         
         // Update loading state to show visual generation in progress
+        // CRITICAL FIX: Show posts but keep loading state active during visual generation
         setSocialMediaColumns(prev => prev.map(col => 
           col.id === columnId ? { 
             ...col, 
             posts: transformedPosts, 
-            isGenerating: true // Keep generating state for visual content
+            isGenerating: true // MUST keep generating state for visual content
           } : col
         ));
         
@@ -362,15 +363,30 @@ const IdeationPage: React.FC = () => {
                 }
               };
               
-              // VERIFY THE MAPPING WORKED
+              // ENHANCED VERIFICATION WITH DETAILED LOGGING
               console.log(`✅ POST UPDATE VERIFICATION for ${post.id}:`, {
                 originalHadImage: !!post.content.imageUrl,
                 originalHadVideo: !!post.content.videoUrl,
                 updatedHasImage: !!updatedPost.content.imageUrl,
                 updatedHasVideo: !!updatedPost.content.videoUrl,
                 imageUrlLength: updatedPost.content.imageUrl?.length || 0,
-                videoUrlLength: updatedPost.content.videoUrl?.length || 0
+                videoUrlLength: updatedPost.content.videoUrl?.length || 0,
+                backendImageUrl: visualPost.image_url,
+                backendVideoUrl: visualPost.video_url,
+                finalImageUrl: updatedPost.content.imageUrl,
+                finalVideoUrl: updatedPost.content.videoUrl
               });
+              
+              // CRITICAL: Log video URL details for debugging
+              if (columnId === 'text-video') {
+                console.log(`🎬 VIDEO_URL_MAPPING_DEBUG for ${post.id}:`, {
+                  backendHasVideoUrl: !!visualPost.video_url,
+                  backendVideoUrl: visualPost.video_url,
+                  frontendVideoUrl: updatedPost.content.videoUrl,
+                  mappingSuccessful: !!updatedPost.content.videoUrl,
+                  urlLength: updatedPost.content.videoUrl?.length || 0
+                });
+              }
               
               return updatedPost;
             } else {
@@ -729,98 +745,6 @@ const IdeationPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => {
-                  // AGGRESSIVE RESET: Clear all stuck states AND localStorage cache
-                  console.log('🔧 AGGRESSIVE RESET: Clearing all stuck states and localStorage cache');
-                  
-                  // Clear ALL campaign-related localStorage data
-                  Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('campaign-')) {
-                      console.log(`🗑️ Removing localStorage key: ${key}`);
-                      localStorage.removeItem(key);
-                    }
-                  });
-                  
-                  // Clear marketing context cache
-                  localStorage.removeItem('marketing-context');
-                  localStorage.removeItem('current-campaign');
-                  
-                  // Reset all columns to initial state
-                  setSocialMediaColumns([
-                    {
-                      id: 'text-only',
-                      title: 'Text + URL Posts',
-                      description: 'Marketing text with product URL for link unfurling',
-                      mediaType: 'text-only' as const,
-                      posts: [],
-                      isGenerating: false
-                    },
-                    {
-                      id: 'text-image',
-                      title: 'Text + Image Posts',
-                      description: 'Shortened text with AI-generated images',
-                      mediaType: 'text-with-image' as const,
-                      posts: [],
-                      isGenerating: false
-                    },
-                    {
-                      id: 'text-video',
-                      title: 'Text + Video Posts',
-                      description: 'Marketing text with AI-generated videos',
-                      mediaType: 'text-with-video' as const,
-                      posts: [],
-                      isGenerating: false
-                    }
-                  ]);
-                  
-                  toast.success('🔧 AGGRESSIVE RESET: All states cleared');
-                }}
-                className="vvl-button-secondary text-xs flex items-center gap-2 px-2 py-1"
-                title="Aggressive reset - clear all stuck states"
-              >
-                🔧 Reset All
-              </button>
-              <button 
-                onClick={async () => {
-                  // DEBUG: Test visual generation with mock data
-                  console.log('🧪 DEBUG: Testing visual generation with mock data');
-                  try {
-                    const mockPosts = [
-                      {
-                        id: 'mock-1',
-                        type: 'text_image' as const,
-                        content: 'Test post for image generation',
-                        platform: 'instagram',
-                        hashtags: ['#test', '#debug']
-                      }
-                    ];
-                    
-                    const result = await VideoVentureLaunchAPI.generateVisualContent({
-                      social_posts: mockPosts,
-                      business_context: {
-                        business_name: 'Test Company',
-                        industry: 'Technology',
-                        objective: 'test visual generation',
-                        target_audience: 'developers',
-                        brand_voice: 'professional'
-                      },
-                      campaign_objective: 'test visual generation',
-                      target_platforms: ['instagram']
-                    });
-                    
-                    console.log('✅ DEBUG: Visual generation test result:', result);
-                    toast.success('🧪 Visual generation test completed - check console');
-                  } catch (error) {
-                    console.error('❌ DEBUG: Visual generation test failed:', error);
-                    toast.error('🧪 Visual generation test failed - check console');
-                  }
-                }}
-                className="vvl-button-secondary text-xs flex items-center gap-2 px-2 py-1"
-                title="Test visual generation API"
-              >
-                🧪 Test Visual
-              </button>
               <button 
                 onClick={() => navigate('/')}
                 className="vvl-button-secondary text-sm flex items-center gap-2"
@@ -1500,36 +1424,78 @@ const IdeationPage: React.FC = () => {
 
 
                   
-                  {/* Loading State with AI Indicators */}
+                  {/* Enhanced Loading State with AI Processing Indicators */}
                   {column.isGenerating && (
-                    <div className="mt-4 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+                    <div className="mt-4 p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-sm border border-blue-400/20 rounded-lg">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="relative">
+                          <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="absolute inset-0 w-6 h-6 border-2 border-purple-400/30 border-b-transparent rounded-full animate-spin animation-delay-300" style={{animationDirection: 'reverse'}}></div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-blue-400">AI Processing in Progress</h4>
+                          <p className="text-xs text-gray-400">Please wait while our AI agents work on your content...</p>
+                        </div>
+                      </div>
+                      
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 text-sm text-blue-400">
                           <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                          <span>Analyzing business context with Gemini AI...</span>
+                          <span>🧠 Analyzing business context with Gemini AI...</span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-green-400">
-                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse animation-delay-300"></div>
-                          <span>Generating creative content variations...</span>
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                          <span>✨ Generating creative content variations...</span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-purple-400">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse animation-delay-600"></div>
-                          <span>Optimizing for platform engagement...</span>
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+                          <span>🎯 Optimizing for platform engagement...</span>
                         </div>
                         {column.id !== 'text-only' && (
                           <div className="flex items-center gap-3 text-sm text-orange-400">
-                            <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse animation-delay-900"></div>
-                            <span>Generating {column.id === 'text-image' ? 'images' : 'videos'} with Imagen/Veo AI...</span>
+                            <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.9s'}}></div>
+                            <span>
+                              {column.id === 'text-image' ? '🎨 Generating images with Imagen AI...' : '🎬 Generating videos with Veo AI...'}
+                            </span>
                           </div>
                         )}
                       </div>
                       
-                      {/* Progress Bar */}
-                      <div className="mt-4">
-                        <div className="w-full bg-gray-700 rounded-full h-1">
-                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full animate-pulse w-3/4 transition-all duration-1000"></div>
+                      {/* Enhanced Progress Bar with Time Estimation */}
+                      <div className="mt-6">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-medium text-gray-300">Processing Progress</span>
+                          <span className="text-xs text-blue-400">
+                            {column.id === 'text-only' ? '~5-8 seconds' : 
+                             column.id === 'text-image' ? '~10-15 seconds' : '~15-25 seconds'}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2 text-center">Expected completion: ~5-10 seconds</p>
+                        <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
+                          <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 h-2 rounded-full animate-pulse transition-all duration-2000 relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-xs text-gray-500">
+                            {column.id === 'text-only' ? 'Text Generation' : 
+                             column.id === 'text-image' ? 'Text + Image Generation' : 'Text + Video Generation'}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 bg-blue-400 rounded-full animate-bounce"></div>
+                            <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Important Notice */}
+                      <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-400/20 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <div className="w-4 h-4 text-yellow-400 mt-0.5">⚠️</div>
+                          <div className="text-xs text-yellow-300">
+                            <strong>Please wait:</strong> AI processing is in progress. The "Regenerate" button is disabled to prevent duplicate requests and ensure optimal results.
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1573,69 +1539,52 @@ const IdeationPage: React.FC = () => {
                               )}
                               
                               {post.content.videoUrl && (
-                                <div className="relative rounded-lg overflow-hidden bg-gray-800">
+                                <div className="relative rounded-lg overflow-hidden bg-gray-800 group">
+                                  {/* Debug Info */}
+                                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded z-30">
+                                    {post.content.videoUrl ? `✅ ${Math.round(post.content.videoUrl.length / 1024)}KB` : '❌ No URL'}
+                                  </div>
+                                  
+                                  {/* Simplified Video Player - YouTube Style */}
                                   <video 
                                     src={post.content.videoUrl}
                                     className="w-full h-48 object-cover"
                                     controls
-                                    poster="https://picsum.photos/400/240?blur=2"
-                                    onLoadStart={() => {
-                                      console.log(`🎬 VIDEO_LOAD_START: Post ${post.id} video loading started`);
-                                    }}
-                                    onLoadedData={() => {
-                                      console.log(`✅ VIDEO_LOADED: Post ${post.id} video loaded successfully`);
-                                      console.log(`🔍 Video URL: ${post.content.videoUrl?.substring(0, 100)}...`);
-                                    }}
-                                    onError={(e) => {
-                                      console.error(`❌ VIDEO_ERROR: Post ${post.id} video failed to load:`, e);
-                                      console.log(`🔍 Video URL: ${post.content.videoUrl}`);
-                                      console.log(`🔍 Video URL length: ${post.content.videoUrl?.length}`);
-                                      
-                                      // Show error state
-                                      const videoElement = e.currentTarget;
-                                      const container = videoElement.parentElement;
-                                      if (container) {
-                                        container.innerHTML = `
-                                          <div class="flex flex-col items-center justify-center h-48 text-center p-4">
-                                            <div class="text-4xl mb-2">🎬</div>
-                                            <p class="text-sm text-gray-400 mb-2">Video Preview Not Available</p>
-                                            <p class="text-xs text-gray-500">Generated video ready for download</p>
-                                            <a href="${post.content.videoUrl}" target="_blank" 
-                                               class="mt-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30">
-                                              Open Video
-                                            </a>
-                                          </div>
-                                        `;
-                                      }
-                                    }}
-                                    onCanPlay={() => {
-                                      console.log(`▶️ VIDEO_CAN_PLAY: Post ${post.id} video ready to play`);
-                                    }}
-                                    preload="metadata"
                                     muted
                                     playsInline
+                                    preload="metadata"
+                                    onLoadStart={() => {
+                                      console.log(`🎬 VIDEO_LOAD_START: ${post.id} - ${post.content.videoUrl}`);
+                                    }}
+                                    onLoadedData={() => {
+                                      console.log(`✅ VIDEO_LOADED: ${post.id} - Video loaded successfully`);
+                                    }}
+                                    onCanPlay={() => {
+                                      console.log(`▶️ VIDEO_CAN_PLAY: ${post.id} - Ready to play`);
+                                    }}
+                                    onError={(e) => {
+                                      console.error(`❌ VIDEO_ERROR: ${post.id}`, {
+                                        error: e,
+                                        videoUrl: post.content.videoUrl,
+                                        errorCode: e.currentTarget.error?.code,
+                                        errorMessage: e.currentTarget.error?.message
+                                      });
+                                    }}
                                     style={{
                                       maxWidth: '100%',
                                       height: '192px',
                                       objectFit: 'cover'
                                     }}
                                   />
-                                  {/* Debug overlay for videos */}
-                                  <div className="absolute top-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
-                                    {post.content.videoUrl ? 
-                                      (post.content.videoUrl.includes('mock_') ? 'Mock' : 
-                                       post.content.videoUrl.includes('localhost') ? 'Local' : 'External') 
-                                      : 'No Video'}
-                                  </div>
-                                  {/* Play button overlay */}
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer"
+                                  
+                                  {/* YouTube-Style Play Button Overlay */}
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-all duration-300 cursor-pointer opacity-0 group-hover:opacity-100"
                                        onClick={(e) => {
                                          const video = e.currentTarget.previousElementSibling as HTMLVideoElement;
-                                         if (video) {
+                                         if (video && video.tagName === 'VIDEO') {
                                            if (video.paused) {
                                              video.play().catch(err => {
                                                console.log('Video autoplay prevented:', err);
-                                               // Show click to play message
                                                toast.info('Click the video controls to play');
                                              });
                                            } else {
@@ -1643,11 +1592,21 @@ const IdeationPage: React.FC = () => {
                                            }
                                          }
                                        }}>
-                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 hover:bg-white/30 transition-colors">
-                                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 hover:bg-white/30 hover:scale-110 transition-all duration-200 border border-white/30">
+                                      <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                       </svg>
                                     </div>
+                                  </div>
+                                  
+                                  {/* Video Status Indicators */}
+                                  <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                    <span>Local</span>
+                                  </div>
+                                  
+                                  <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                                    🎬 AI Generated
                                   </div>
                                 </div>
                               )}
