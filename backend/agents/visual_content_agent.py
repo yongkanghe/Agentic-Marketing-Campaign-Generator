@@ -328,58 +328,169 @@ class ImageGenerationAgent:
     
     async def generate_images(self, prompts: List[str], business_context: Dict[str, Any], campaign_id: str = "default") -> List[Dict[str, Any]]:
         """
-        Generate images based on prompts and business context.
+        Generate images based on prompts and business context with comprehensive debug logging.
         
         Args:
             prompts: List of image generation prompts
             business_context: Business context for brand-consistent generation
+            campaign_id: Campaign identifier for file organization and caching
             
         Returns:
             List of generated image data
         """
+        generation_context = {
+            "method": "generate_images",
+            "campaign_id": campaign_id,
+            "total_prompts": len(prompts),
+            "max_images": self.max_images,
+            "has_client": bool(self.client),
+            "has_api_key": bool(self.gemini_api_key),
+            "company_name": business_context.get('company_name', 'Unknown')
+        }
+        
+        logger.info(f"🎨 IMAGE_GENERATION_BATCH_START: {generation_context}")
+        print(f"🎨 Starting batch image generation for campaign '{campaign_id}' - {len(prompts)} prompts requested")
+        
         try:
             # Apply cost control: limit to max_images
             limited_prompts = prompts[:self.max_images]
-            logger.info(f"Generating {len(limited_prompts)} images with business context (limited to {self.max_images} for cost control)")
+            
+            if len(prompts) > self.max_images:
+                logger.warning(f"⚠️ COST_CONTROL_APPLIED: Limiting {len(prompts)} prompts to {self.max_images} for cost control")
+                print(f"⚠️ Cost control: Limiting to {self.max_images} images (requested {len(prompts)})")
+            
+            logger.info(f"📋 PROCESSING_PROMPTS: {len(limited_prompts)} prompts after cost control")
+            print(f"📋 Processing {len(limited_prompts)} image prompts for campaign '{campaign_id}'")
             
             generated_images = []
+            successful_generations = 0
+            failed_generations = 0
             
             for i, prompt in enumerate(limited_prompts):
+                prompt_context = {
+                    "prompt_index": i,
+                    "prompt_length": len(prompt),
+                    "campaign_id": campaign_id
+                }
+                
+                logger.info(f"🖼️ IMAGE_PROMPT_{i+1}_START: {prompt_context}")
+                print(f"🖼️ Processing image {i+1}/{len(limited_prompts)} for campaign '{campaign_id}'")
+                
                 try:
                     # Enhance prompt with business context
+                    logger.info(f"📝 PROMPT_CONTEXT_ENHANCEMENT_START: Original: '{prompt[:100]}...'")
                     enhanced_prompt = self._enhance_prompt_with_context(prompt, business_context)
+                    logger.info(f"📝 PROMPT_ENHANCED: '{enhanced_prompt[:100]}...' (length: {len(enhanced_prompt)})")
                     
                     if self.client:
+                        logger.info(f"🚀 REAL_GENERATION_PATH: Using Imagen API for image {i+1}")
+                        print(f"🚀 Generating real image {i+1} using Imagen API")
                         # Generate real image using Imagen
                         image_data = await self._generate_real_image(enhanced_prompt, i, campaign_id)
                     else:
-                        # Generate mock image data
+                        logger.warning(f"⚠️ MOCK_GENERATION_PATH: No client available for image {i+1}")
+                        print(f"⚠️ No Gemini client - attempting mock generation for image {i+1}")
+                        # Generate mock image data (which will now return error state)
                         image_data = self._generate_mock_image(enhanced_prompt, i, campaign_id)
+                    
+                    if image_data.get('status') == 'success':
+                        successful_generations += 1
+                        logger.info(f"✅ IMAGE_{i+1}_SUCCESS: {image_data.get('generation_method')}")
+                        print(f"✅ Image {i+1} generated successfully")
+                    else:
+                        failed_generations += 1
+                        logger.error(f"❌ IMAGE_{i+1}_FAILED: Status: {image_data.get('status')}, Error: {image_data.get('error')}")
+                        print(f"❌ Image {i+1} generation failed: {image_data.get('error')}")
                     
                     generated_images.append(image_data)
                     
                 except Exception as e:
-                    logger.error(f"Failed to generate image {i}: {e}")
-                    # Add fallback image
-                    generated_images.append(self._generate_fallback_image(prompt, i))
+                    failed_generations += 1
+                    error_details = {
+                        "prompt_index": i,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "campaign_id": campaign_id
+                    }
+                    logger.error(f"❌ IMAGE_GENERATION_EXCEPTION: {error_details}", exc_info=True)
+                    print(f"❌ Exception during image {i+1} generation: {str(e)}")
+                    
+                    # Add fallback image (which now returns error state)
+                    fallback_image = self._generate_fallback_image(prompt, i)
+                    generated_images.append(fallback_image)
+            
+            # Final batch summary
+            batch_summary = {
+                "campaign_id": campaign_id,
+                "total_requested": len(prompts),
+                "total_processed": len(limited_prompts),
+                "successful": successful_generations,
+                "failed": failed_generations,
+                "success_rate": f"{(successful_generations/len(limited_prompts)*100):.1f}%" if limited_prompts else "0%"
+            }
+            
+            logger.info(f"📊 IMAGE_GENERATION_BATCH_SUMMARY: {batch_summary}")
+            print(f"📊 Batch image generation complete for campaign '{campaign_id}': {successful_generations}/{len(limited_prompts)} successful")
+            
+            if successful_generations == 0:
+                logger.error(f"❌ ALL_IMAGE_GENERATION_FAILED: No images were successfully generated for campaign '{campaign_id}'")
+                print(f"❌ CRITICAL: All image generation failed for campaign '{campaign_id}'")
             
             return generated_images
             
         except Exception as e:
-            logger.error(f"Image generation failed: {e}", exc_info=True)
+            batch_error = {
+                "campaign_id": campaign_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "total_prompts": len(prompts)
+            }
+            logger.error(f"❌ IMAGE_GENERATION_BATCH_FAILED: {batch_error}", exc_info=True)
+            print(f"❌ CRITICAL: Entire image generation batch failed for campaign '{campaign_id}': {str(e)}")
+            
+            # Return error states for all requested images
             return [self._generate_fallback_image(f"Image {i+1}", i) for i in range(min(len(prompts), self.max_images))]
     
     async def _generate_real_image(self, prompt: str, index: int, campaign_id: str) -> Dict[str, Any]:
-        """Generate real image using Google Imagen with proper marketing prompt engineering."""
+        """Generate real image using Google Imagen with comprehensive debug logging."""
+        debug_context = {
+            "method": "_generate_real_image",
+            "campaign_id": campaign_id,
+            "index": index,
+            "prompt_length": len(prompt),
+            "model": self.image_model
+        }
+        
+        logger.info(f"🎨 IMAGEN_GENERATION_START: {debug_context}")
+        print(f"🎨 Starting Imagen generation for campaign '{campaign_id}', image {index+1}")
+        
         try:
-            logger.info(f"Generating real image {index+1} with {self.image_model}")
+            if not self.client:
+                error_msg = f"❌ IMAGEN_CLIENT_MISSING: No Gemini client available for image generation"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg}")
+                raise Exception("Gemini client not initialized")
+            
+            if not self.gemini_api_key:
+                error_msg = f"❌ GEMINI_API_KEY_MISSING: API key not configured"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg}")
+                raise Exception("GEMINI_API_KEY not configured")
+            
+            logger.info(f"📝 PROMPT_ENHANCEMENT_START: Original prompt: '{prompt[:100]}...'")
             
             # Enhance prompt for marketing use case based on Imagen best practices
             marketing_prompt = self._create_marketing_prompt(prompt, index)
             
+            logger.info(f"📝 PROMPT_ENHANCED: '{marketing_prompt[:150]}...' (length: {len(marketing_prompt)})")
+            print(f"📝 Enhanced prompt for campaign '{campaign_id}': '{marketing_prompt[:100]}...'")
+            
             # CHECK CACHE FIRST for consistent user experience
+            logger.info(f"🔍 CACHE_CHECK_START: Checking cache for campaign '{campaign_id}'")
             cached_image = self.cache.get_cached_image(marketing_prompt, self.image_model, campaign_id)
             if cached_image:
+                logger.info(f"✅ CACHE_HIT: Found cached image for campaign '{campaign_id}'")
+                print(f"✅ Using cached image for campaign '{campaign_id}', image {index+1}")
                 return {
                     "id": f"imagen_cached_{index+1}",
                     "prompt": marketing_prompt,
@@ -397,52 +508,100 @@ class ImageGenerationAgent:
                     }
                 }
             
+            logger.info(f"🔄 CACHE_MISS: No cached image found, proceeding with API generation")
+            print(f"🔄 No cached image found, generating new image for campaign '{campaign_id}'")
+            
             # Generate image using Imagen 3.0 with correct API method
-            # Based on Google's documentation: use generate_images method
+            logger.info(f"🚀 IMAGEN_API_CALL_START: Calling {self.image_model} API")
+            print(f"🚀 Calling Imagen API for campaign '{campaign_id}', image {index+1}")
+            
+            api_config = {
+                "number_of_images": 1,
+                "aspect_ratio": "16:9",
+                "person_generation": "ALLOW_ADULT",
+                "safety_filter_level": "BLOCK_LOW_AND_ABOVE"
+            }
+            logger.info(f"⚙️ IMAGEN_CONFIG: {api_config}")
+            
             response = await asyncio.to_thread(
                 self.client.models.generate_images,
                 model=self.image_model,
                 prompt=marketing_prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    aspect_ratio="16:9",  # Good for social media
-                    person_generation="ALLOW_ADULT",  # Allow people in marketing content
-                    safety_filter_level="BLOCK_LOW_AND_ABOVE"  # Use supported safety level
-                )
+                config=types.GenerateImagesConfig(**api_config)
             )
             
-            if response.generated_images and len(response.generated_images) > 0:
-                generated_image = response.generated_images[0]
-                
-                # Save image and get URL
-                image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index, campaign_id)
-                
-                # CACHE THE GENERATED IMAGE for future consistent UX
-                self.cache.cache_image(marketing_prompt, self.image_model, campaign_id, image_url, is_current=True)
-                
-                return {
-                    "id": f"imagen_generated_{index+1}",
-                    "prompt": marketing_prompt,
-                    "original_prompt": prompt,
-                    "image_url": image_url,
-                    "generation_method": f"{self.image_model}_real",
-                    "status": "success",
-                    "metadata": {
-                        "model": self.image_model,
-                        "safety_rating": "approved",
-                        "generation_time": 4.5,
-                        "aspect_ratio": "16:9",
-                        "quality": "high",
-                        "marketing_optimized": True,
-                        "cached": False
-                    }
+            logger.info(f"📨 IMAGEN_API_RESPONSE: Response received")
+            print(f"📨 Imagen API response received for campaign '{campaign_id}'")
+            
+            if not response.generated_images:
+                error_msg = f"❌ IMAGEN_NO_IMAGES: API returned no generated images"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg} for campaign '{campaign_id}'")
+                raise Exception("No images in API response")
+            
+            if len(response.generated_images) == 0:
+                error_msg = f"❌ IMAGEN_EMPTY_IMAGES: API returned empty images array"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg} for campaign '{campaign_id}'")
+                raise Exception("Empty images array in API response")
+            
+            generated_image = response.generated_images[0]
+            
+            if not generated_image.image or not generated_image.image.image_bytes:
+                error_msg = f"❌ IMAGEN_NO_BYTES: Generated image has no image bytes"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg} for campaign '{campaign_id}'")
+                raise Exception("Generated image has no image bytes")
+            
+            image_size = len(generated_image.image.image_bytes)
+            logger.info(f"📦 IMAGEN_IMAGE_RECEIVED: Size: {image_size} bytes ({image_size/1024:.1f}KB)")
+            print(f"📦 Generated image received: {image_size/1024:.1f}KB for campaign '{campaign_id}'")
+            
+            # Save image and get URL
+            logger.info(f"💾 IMAGE_SAVE_START: Saving image to filesystem")
+            image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index, campaign_id)
+            logger.info(f"💾 IMAGE_SAVED: URL: {image_url}")
+            print(f"💾 Image saved successfully for campaign '{campaign_id}': {image_url}")
+            
+            # CACHE THE GENERATED IMAGE for future consistent UX
+            logger.info(f"🗄️ CACHE_STORE_START: Caching generated image")
+            cache_success = self.cache.cache_image(marketing_prompt, self.image_model, campaign_id, image_url, is_current=True)
+            logger.info(f"🗄️ CACHE_STORE_RESULT: Success: {cache_success}")
+            
+            success_result = {
+                "id": f"imagen_generated_{index+1}",
+                "prompt": marketing_prompt,
+                "original_prompt": prompt,
+                "image_url": image_url,
+                "generation_method": f"{self.image_model}_real",
+                "status": "success",
+                "metadata": {
+                    "model": self.image_model,
+                    "safety_rating": "approved",
+                    "generation_time": 4.5,
+                    "aspect_ratio": "16:9",
+                    "quality": "high",
+                    "marketing_optimized": True,
+                    "cached": False,
+                    "file_size_kb": image_size/1024
                 }
-            else:
-                raise Exception(f"No images generated by {self.image_model}")
+            }
+            
+            logger.info(f"✅ IMAGEN_GENERATION_SUCCESS: {debug_context}")
+            print(f"✅ Image generation completed successfully for campaign '{campaign_id}', image {index+1}")
+            
+            return success_result
                 
         except Exception as e:
-            logger.error(f"{self.image_model} generation failed for image {index}: {e}")
-            # Fall back to enhanced placeholder
+            error_details = {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "debug_context": debug_context
+            }
+            logger.error(f"❌ IMAGEN_GENERATION_FAILED: {error_details}", exc_info=True)
+            print(f"❌ Image generation failed for campaign '{campaign_id}', image {index+1}: {str(e)}")
+            
+            # Fall back to enhanced placeholder (which now returns error state)
             return self._generate_enhanced_placeholder(prompt, index)
     
     async def _save_generated_image_data(self, image_data_bytes: bytes, index: int, campaign_id: str = "default") -> str:
@@ -472,7 +631,7 @@ class ImageGenerationAgent:
             return f"https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Generated+Image+{index+1}"
     
     def _enhance_prompt_with_context(self, base_prompt: str, business_context: Dict[str, Any]) -> str:
-        """Enhance image prompt with business context and campaign creative guidance for brand consistency."""
+        """Enhance image prompt with business context for brand consistency."""
         
         company_name = business_context.get('company_name', 'Company')
         industry = business_context.get('industry', 'business')
@@ -480,70 +639,35 @@ class ImageGenerationAgent:
         visual_elements = business_context.get('visual_elements', 'modern, clean design')
         key_themes = business_context.get('key_themes', [])
         
-        # CRITICAL ENHANCEMENT: Extract visual style guidance from campaign guidance
-        visual_style = business_context.get('visual_style', {})
-        creative_direction = business_context.get('creative_direction', '')
-        campaign_media_tuning = business_context.get('campaign_media_tuning', '')
-        
-        # Build enhanced prompt starting with base
+        # Build enhanced prompt
         enhanced_prompt = f"{base_prompt}"
         
-        # PRIORITY 1: Apply campaign creative direction if available
-        if creative_direction and creative_direction.strip():
-            enhanced_prompt += f", {creative_direction}"
+        # Add brand context
+        if 'professional' in brand_voice.lower():
+            enhanced_prompt += ", professional and polished style"
+        if 'innovative' in brand_voice.lower():
+            enhanced_prompt += ", innovative and cutting-edge aesthetic"
+        if 'modern' in visual_elements.lower():
+            enhanced_prompt += ", modern design elements"
         
-        # PRIORITY 2: Apply visual style guidance if available
-        if visual_style:
-            # Photography style
-            photography_style = visual_style.get('photography_style') or visual_style.get('photography')
-            if photography_style:
-                enhanced_prompt += f", {photography_style}"
-            
-            # Mood
-            mood = visual_style.get('mood') or visual_style.get('brand_mood')
-            if mood:
-                enhanced_prompt += f", {mood} mood"
-            
-            # Lighting
-            lighting = visual_style.get('lighting') or visual_style.get('lighting_style')
-            if lighting:
-                enhanced_prompt += f", {lighting}"
+        # Add industry context
+        if 'technology' in industry.lower():
+            enhanced_prompt += ", tech-focused imagery with digital elements"
+        elif 'healthcare' in industry.lower():
+            enhanced_prompt += ", clean medical aesthetic with health-focused elements"
+        elif 'finance' in industry.lower():
+            enhanced_prompt += ", professional financial imagery with trust elements"
         
-        # PRIORITY 3: Apply user-provided media tuning
-        if campaign_media_tuning and campaign_media_tuning.strip():
-            enhanced_prompt += f", {campaign_media_tuning}"
-        
-        # FALLBACK: Apply generic brand context if no specific guidance
-        if not creative_direction and not visual_style and not campaign_media_tuning:
-            # Add brand context
-            if 'professional' in brand_voice.lower():
-                enhanced_prompt += ", professional and polished style"
-            if 'innovative' in brand_voice.lower():
-                enhanced_prompt += ", innovative and cutting-edge aesthetic"
-            if 'modern' in visual_elements.lower():
-                enhanced_prompt += ", modern design elements"
-            
-            # Add industry context
-            if 'technology' in industry.lower():
-                enhanced_prompt += ", tech-focused imagery with digital elements"
-            elif 'healthcare' in industry.lower():
-                enhanced_prompt += ", clean medical aesthetic with health-focused elements"
-            elif 'finance' in industry.lower():
-                enhanced_prompt += ", professional financial imagery with trust elements"
-            
-            # Add theme-based enhancements
-            if 'innovation' in key_themes:
-                enhanced_prompt += ", innovative and forward-thinking visual style"
-            if 'sustainability' in key_themes:
-                enhanced_prompt += ", eco-friendly and sustainable visual elements"
-            if 'quality' in key_themes:
-                enhanced_prompt += ", high-quality and premium aesthetic"
+        # Add theme-based enhancements
+        if 'innovation' in key_themes:
+            enhanced_prompt += ", innovative and forward-thinking visual style"
+        if 'sustainability' in key_themes:
+            enhanced_prompt += ", eco-friendly and sustainable visual elements"
+        if 'quality' in key_themes:
+            enhanced_prompt += ", high-quality and premium aesthetic"
         
         # Add general quality modifiers
         enhanced_prompt += ", high quality, professional photography style, well-lit, sharp focus"
-        
-        # Log the enhancement for debugging
-        logger.info(f"Enhanced prompt with campaign guidance: {enhanced_prompt[:150]}...")
         
         return enhanced_prompt
     
@@ -601,40 +725,62 @@ class ImageGenerationAgent:
         return enhanced_prompt
     
     def _generate_enhanced_placeholder(self, prompt: str, index: int) -> Dict[str, Any]:
-        """Generate enhanced placeholder when real generation fails."""
-        # Use Picsum with blur for more professional look
-        placeholder_url = f"https://picsum.photos/1024/576?random={index+100}&blur=1"
+        """
+        CRITICAL: This method violates ADR-016 requirements.
+        Instead of generating irrelevant placeholder images, we should fail gracefully
+        with clear error messages to prevent misleading visual content.
+        """
+        error_message = (
+            f"❌ VISUAL_GENERATION_FAILED: Unable to generate contextually relevant image for '{prompt[:50]}...'. "
+            f"This would have shown generic placeholder content unrelated to your campaign. "
+            f"Please check Imagen API configuration or try regenerating."
+        )
+        logger.error(error_message)
         
+        # Return error state instead of misleading placeholder
         return {
-            "id": f"enhanced_placeholder_{index+1}",
+            "id": f"generation_failed_{index+1}",
             "prompt": prompt,
-            "image_url": placeholder_url,
-            "generation_method": "enhanced_placeholder",
-            "status": "placeholder",
+            "image_url": None,  # No misleading placeholder URL
+            "generation_method": "failed_generation",
+            "status": "error",
+            "error": "Image generation failed - no contextually relevant content available",
             "metadata": {
-                "model": "picsum_placeholder",
-                "safety_rating": "approved",
-                "generation_time": 0.5,
-                "aspect_ratio": "16:9",
-                "quality": "placeholder",
+                "model": "imagen_failed",
+                "safety_rating": "unknown",
+                "generation_time": 0.0,
+                "aspect_ratio": "unknown",
+                "quality": "failed",
                 "marketing_optimized": False,
-                "note": "Enhanced placeholder - Imagen API required for real generation"
+                "note": "CRITICAL: Image generation failed. Check API configuration and regenerate for campaign-relevant content."
             }
         }
     
     def _generate_mock_image(self, prompt: str, index: int, campaign_id: str) -> Dict[str, Any]:
-        """Generate mock image data when real generation is unavailable."""
+        """
+        CRITICAL: This method violates ADR-016 requirements.
+        Mock images are not contextually relevant to campaigns and mislead users.
+        """
+        error_message = (
+            f"❌ MOCK_IMAGE_BLOCKED: Attempted to generate mock image for campaign '{campaign_id}'. "
+            f"Mock images violate ADR-016 requirements for contextually relevant content. "
+            f"Prompt: '{prompt[:100]}...'"
+        )
+        logger.error(error_message)
+        print(f"🚫 {error_message}")
+        
         return {
-            "id": f"mock_generated_{index+1}",
+            "id": f"mock_blocked_{index+1}",
             "prompt": prompt,
-            "image_url": f"https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=AI+Generated+{index+1}",
-            "generation_method": "mock_placeholder",
-            "status": "mock",
+            "image_url": None,  # No misleading mock URL
+            "generation_method": "mock_blocked",
+            "status": "error",
+            "error": "Mock image generation blocked - violates contextual relevance requirements",
             "metadata": {
-                "model": "mock_generator",
-                "safety_rating": "approved",
-                "generation_time": 1.0,
-                "note": "Mock image - GEMINI_API_KEY required for real generation"
+                "model": "mock_blocked",
+                "safety_rating": "blocked",
+                "generation_time": 0.0,
+                "note": "CRITICAL: Mock images blocked per ADR-016. Configure Imagen API for real generation."
             }
         }
     
@@ -771,43 +917,14 @@ class VideoGenerationAgent:
             if creative_direction:
                 enhanced_prompt += f", {creative_direction}"
             
-            # Visual style application - ENHANCED for photography business
+            # Visual style application
             if visual_style:
                 color_scheme = visual_style.get('color_scheme', '')
                 aesthetic = visual_style.get('aesthetic', '')
-                # PHOTOGRAPHY-SPECIFIC ENHANCEMENTS
-                photography_style = visual_style.get('photography', '')
-                mood = visual_style.get('mood', '')
-                lighting = visual_style.get('lighting', '')
-                
                 if color_scheme:
                     enhanced_prompt += f", {color_scheme} color palette"
                 if aesthetic:
                     enhanced_prompt += f", {aesthetic} aesthetic"
-                
-                # CRITICAL: Extract photography-specific guidance for video
-                if photography_style:
-                    enhanced_prompt += f", {photography_style} cinematography style"
-                if mood:
-                    enhanced_prompt += f", {mood} atmosphere and mood"
-                if lighting:
-                    enhanced_prompt += f", {lighting} for cinematic quality"
-                    
-                # Extract additional photography guidance from campaign guidance
-                if campaign_guidance and 'visual_style' in campaign_guidance:
-                    campaign_visual = campaign_guidance['visual_style']
-                    if isinstance(campaign_visual, str):
-                        # Parse visual style text for key photography terms
-                        if 'natural light' in campaign_visual.lower():
-                            enhanced_prompt += ", natural lighting, soft and diffused illumination"
-                        if 'golden hour' in campaign_visual.lower():
-                            enhanced_prompt += ", golden hour lighting, warm glow"
-                        if 'lifestyle' in campaign_visual.lower():
-                            enhanced_prompt += ", lifestyle cinematography, authentic interactions"
-                        if 'candid' in campaign_visual.lower():
-                            enhanced_prompt += ", candid moments, genuine expressions"
-                        if 'intimate' in campaign_visual.lower():
-                            enhanced_prompt += ", intimate atmosphere, close personal moments"
             
             # Video-specific enhancements for Veo 2.0
             enhanced_prompt += ", cinematic quality, smooth camera movement, professional lighting, 5-second duration"
@@ -1018,38 +1135,18 @@ class VideoGenerationAgent:
                 if product_themes:
                     scene_description += f", emphasizing {', '.join(product_themes)}"
             
-            # 3. PRODUCT-SPECIFIC VISUAL CONTEXT (ENHANCED FOR AUDIENCE TARGETING)
+            # 3. INDUSTRY-SPECIFIC VISUAL CONTEXT
             industry_context = ""
-            product_lower = (product_name + " " + business_description).lower()
-            
-            # PET PRODUCTS - Show happy pets using the product
-            if any(pet in product_lower for pet in ['cat', 'dog', 'pet', 'animal', 'food', 'treat', 'toy']):
-                if 'cat' in product_lower:
-                    industry_context = "happy healthy cat enjoying the product, natural home environment, cat lifestyle content, no text overlays, focus on cat behavior and satisfaction"
-                elif 'dog' in product_lower:
-                    industry_context = "happy energetic dog using the product, outdoor or home setting, dog lifestyle content, no text overlays, focus on dog enjoyment and activity"
-                else:
-                    industry_context = "happy pets enjoying the product, natural pet environment, pet lifestyle content, no text overlays, focus on pet satisfaction and wellbeing"
-            
-            # FURNITURE/HOME PRODUCTS - Show product in beautiful settings
-            elif any(furniture in product_lower for furniture in ['furniture', 'outdoor', 'patio', 'chair', 'table', 'sofa', 'home', 'living']):
-                industry_context = "beautiful furniture showcase, elegant home interior or outdoor patio setting, smooth panning shots of the furniture, no text overlays, focus on design and comfort"
-            
-            # FOOD PRODUCTS - Show the food being enjoyed
-            elif any(food in product_lower for food in ['food', 'meal', 'recipe', 'cooking', 'kitchen', 'restaurant']):
-                industry_context = "delicious food presentation, beautiful culinary setting, food preparation or dining experience, no text overlays, focus on food quality and appeal"
-            
-            # TECHNOLOGY PRODUCTS - Show the product in use
-            elif 'technology' in industry.lower() or any(tech in product_lower for tech in ['software', 'app', 'digital', 'tech', 'computer']):
-                industry_context = "modern professionals using the technology naturally, clean workspace environment, focus on user experience, no text overlays, emphasis on ease of use and results"
-            
-            # HEALTH/FITNESS - Show active lifestyle
-            elif any(health in product_lower for health in ['fitness', 'health', 'wellness', 'exercise', 'workout']):
-                industry_context = "active healthy lifestyle, fitness activities, wellness focus, people enjoying healthy activities, no text overlays, emphasis on vitality and wellbeing"
-            
-            # GENERIC BUSINESS FALLBACK - Focus on product benefits
+            if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
+                industry_context = "outdoor furniture lifestyle setting, comfortable patio living spaces, modern home design aesthetics"
+            elif 'technology' in industry.lower():
+                industry_context = "modern professional office environment, clean technology workspace, digital innovation showcase"
+            elif 'healthcare' in industry.lower():
+                industry_context = "professional healthcare facility, modern medical environment, caring professional atmosphere"
+            elif 'finance' in industry.lower():
+                industry_context = "professional business office, modern corporate environment, trust and reliability focus"
             else:
-                industry_context = f"product showcase for {industry} industry, real-world usage scenario, people benefiting from the product, no text overlays, focus on product value and satisfaction"
+                industry_context = f"professional {industry} business environment, modern commercial setting"
             
             # 4. CAMERA WORK & CINEMATOGRAPHY (Veo documentation emphasis)
             camera_work = "cinematic camera movement"
@@ -1111,8 +1208,8 @@ class VideoGenerationAgent:
             # Join with proper punctuation for Veo understanding
             veo_prompt = ". ".join([part.strip() for part in veo_prompt_parts if part.strip()])
             
-            # Add final Veo-specific enhancements with explicit NO TEXT instruction
-            veo_prompt += ". Cinematic quality, professional marketing video, engaging visual storytelling, brand-consistent presentation. IMPORTANT: No text overlays, no words, no subtitles, purely visual content focusing on the product and its benefits."
+            # Add final Veo-specific enhancements
+            veo_prompt += ". Cinematic quality, professional marketing video, engaging visual storytelling, brand-consistent presentation."
             
             logger.info(f"🎬 Enhanced Veo 2.0 marketing prompt created: {len(veo_prompt)} characters")
             logger.debug(f"🎬 Full prompt: {veo_prompt[:200]}...")
@@ -1243,40 +1340,15 @@ class VideoGenerationAgent:
             return self._create_minimal_mp4(str(campaign_metadata), company_name)
 
     def _create_minimal_mp4(self, prompt: str, company_name: str) -> bytes:
-        """Create a minimal but PROPERLY SIZED valid MP4 file with content-specific metadata."""
-        try:
-            # CRITICAL FIX: Create a proper-sized MP4 file (not just 1KB)
-            # This creates a basic but playable MP4 file structure
-            
-            # MP4 file header (proper FTYP box)
-            ftyp_box = b'\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2mp41'
-            
-            # MDAT box with substantial content (makes file playable)
-            # Create a larger content block to make the video file substantial
-            content_data = f"Marketing video for {company_name}: {prompt[:100]}".encode('utf-8')
-            
-            # Pad the content to create a proper-sized file (at least 50KB for proper video)
-            padding_size = 50 * 1024  # 50KB minimum for proper video file
-            content_padding = b'\x00' * padding_size
-            
-            # Create MDAT box (movie data)
-            mdat_content = content_data + content_padding
-            mdat_size = len(mdat_content) + 8  # +8 for box header
-            mdat_box = mdat_size.to_bytes(4, 'big') + b'mdat' + mdat_content
-            
-            # Combine boxes to create a proper MP4 structure
-            mp4_content = ftyp_box + mdat_box
-            
-            logger.info(f"✅ Created proper-sized MP4: {len(mp4_content)} bytes ({len(mp4_content)/1024:.1f}KB)")
-            return mp4_content
-            
-        except Exception as e:
-            logger.error(f"Error creating minimal MP4: {e}")
-            # Absolute fallback - but still make it substantial
-            mp4_header = b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
-            mp4_metadata = f"Generated for {company_name}: {prompt[:50]}".encode('utf-8')
-            padding = b'\x00' * (10 * 1024)  # 10KB minimum
-            return mp4_header + mp4_metadata + padding
+        """Create a minimal valid MP4 file with content-specific metadata."""
+        # This creates a very basic MP4 file structure
+        # In a real implementation, this would use proper video encoding
+        mp4_header = b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
+        mp4_metadata = f"Generated for {company_name}: {prompt[:50]}".encode('utf-8')
+        
+        # Create a minimal but valid MP4 structure
+        # This is a simplified approach - real implementation would use proper encoding
+        return mp4_header + mp4_metadata + b'\x00' * 1000  # Minimal file size
 
     def cleanup_old_videos(self):
         """Clean up old video files while keeping current (curr_) prefixed videos."""
@@ -1658,38 +1730,21 @@ class VisualContentOrchestrator:
         target_audience = business_context.get('target_audience', 'professionals')
         business_description = business_context.get('business_description', '')
         
-        # PRODUCT-FOCUSED VIDEO CONTEXT (NO TEXT, AUDIENCE-TARGETED)
+        # Enhanced business context integration for videos
         visual_context = ""
-        content_lower = (post_content + " " + business_description).lower()
         
-        # PET PRODUCTS - Focus on happy pets
-        if any(pet in content_lower for pet in ['cat', 'dog', 'pet', 'animal', 'food', 'treat', 'toy']):
-            if 'cat' in content_lower:
-                visual_context = f"Happy healthy cat interacting with the product, natural home setting, cat enjoying daily life, no text or words visible, focus on cat satisfaction and natural behavior"
-            elif 'dog' in content_lower:
-                visual_context = f"Happy energetic dog using the product, outdoor or home environment, dog lifestyle content, no text or words visible, focus on dog joy and activity"
-            else:
-                visual_context = f"Happy pets enjoying the product, natural pet environment, pet lifestyle showcase, no text or words visible, focus on pet wellbeing and satisfaction"
-        
-        # FURNITURE/HOME PRODUCTS - Show beautiful product showcase
-        elif any(furniture in content_lower for furniture in ['furniture', 'outdoor', 'patio', 'chair', 'table', 'sofa', 'home', 'living']):
-            visual_context = f"Beautiful furniture product showcase, elegant interior or outdoor setting, smooth camera panning across the furniture, no text or words visible, focus on design aesthetics and comfort appeal"
-        
-        # FOOD PRODUCTS - Show appetizing food
-        elif any(food in content_lower for food in ['food', 'meal', 'recipe', 'cooking', 'kitchen', 'restaurant']):
-            visual_context = f"Delicious food presentation, beautiful culinary environment, food being prepared or enjoyed, no text or words visible, focus on food appeal and quality"
-        
-        # TECHNOLOGY - Show product in natural use
-        elif 'technology' in industry.lower() or any(tech in content_lower for tech in ['software', 'app', 'digital', 'tech']):
-            visual_context = f"People naturally using the technology product, clean modern environment, focus on user experience and results, no text or words visible, emphasis on ease and effectiveness"
-        
-        # FITNESS/HEALTH - Show active lifestyle
-        elif any(health in content_lower for health in ['fitness', 'health', 'wellness', 'exercise', 'workout']):
-            visual_context = f"Active healthy lifestyle content, people enjoying fitness activities, wellness-focused environment, no text or words visible, emphasis on vitality and positive outcomes"
-        
-        # GENERIC BUSINESS - Focus on product benefits
+        # Industry-specific video context
+        if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
+            visual_context = f"Lifestyle video showcasing outdoor furniture and patio living, comfortable outdoor spaces, modern home design"
+        elif 'technology' in industry.lower():
+            visual_context = f"Modern professionals using technology solutions, clean office environments, digital innovation"
+        elif 'fitness' in industry.lower():
+            visual_context = f"Active lifestyle content, fitness activities, health and wellness focus"
+        elif 'food' in industry.lower():
+            visual_context = f"Culinary excellence, restaurant ambiance, food preparation and presentation"
         else:
-            visual_context = f"Product showcase for {company_name}, real people benefiting from the product, professional environment, no text or words visible, focus on product value and customer satisfaction"
+            # Generic business fallback with specific business focus
+            visual_context = f"Professional business environment for {industry} industry, showing real {company_name} business activities"
         
         # Add target audience context for video
         if 'young' in target_audience.lower():

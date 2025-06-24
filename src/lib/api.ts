@@ -150,15 +150,15 @@ export interface Campaign {
   id: string;
   name: string;
   objective: string;
-  business_description: string;
-  example_content?: string;
-  business_url?: string;
-  about_page_url?: string;
-  product_service_url?: string;
-  campaign_type: 'product' | 'service' | 'brand' | 'event';
-  creativity_level: number;
-  created_at: string;
-  updated_at: string;
+  businessDescription: string;
+  exampleContent?: string;
+  businessUrl?: string;
+  aboutPageUrl?: string;
+  productServiceUrl?: string;
+  campaignType: 'product' | 'service' | 'brand' | 'event';
+  creativityLevel: number;
+  createdAt: string;
+  updatedAt: string;
   status: 'draft' | 'analyzing' | 'ready' | 'published';
 }
 
@@ -178,102 +178,118 @@ export interface CreateCampaignRequest {
 }
 
 export interface ContentGenerationRequest {
-  campaign_id: string;
-  content_type: 'social_media' | 'blog' | 'email' | 'ad_copy';
+  campaignId: string;
+  contentType: 'social_media' | 'blog' | 'email' | 'ad_copy';
   platform?: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'tiktok';
   tone?: 'professional' | 'casual' | 'humorous' | 'inspirational';
-  include_hashtags?: boolean;
-  max_posts?: number;
+  includeHashtags?: boolean;
+  maxPosts?: number;
 }
 
 export interface ContentGenerationResponse {
-  campaign_id: string;
-  content_type: string;
+  campaignId: string;
+  contentType: string;
   platform?: string;
   posts: Array<{
     id: string;
     content: string;
     hashtags?: string[];
-    platform_specific?: any;
+    platformSpecific?: any;
   }>;
-  total_posts: number;
-  generation_metadata: {
-    creativity_level: number;
+  totalPosts: number;
+  generationMetadata: {
+    creativityLevel: number;
     tone: string;
-    generated_at: string;
+    generatedAt: string;
   };
 }
 
 export interface UrlAnalysisRequest {
   urls: string[];
-  analysis_type?: 'business_context' | 'competitor_analysis' | 'content_analysis';
+  analysisType?: 'business_context' | 'competitor_analysis' | 'content_analysis';
 }
 
 export interface UrlAnalysisResponse {
-  analysis_results: {
-    business_context?: {
+  analysisResults: {
+    businessContext?: {
       industry: string;
-      target_audience: string;
-      key_products: string[];
-      brand_voice: string;
-      competitive_advantages: string[];
+      targetAudience: string;
+      keyProducts: string[];
+      brandVoice: string;
+      competitiveAdvantages: string[];
     };
-    content_insights?: {
-      main_topics: string[];
-      content_style: string;
-      key_messages: string[];
+    contentInsights?: {
+      mainTopics: string[];
+      contentStyle: string;
+      keyMessages: string[];
     };
-    technical_details?: {
-      site_structure: string[];
-      performance_notes: string[];
+    technicalDetails?: {
+      siteStructure: string[];
+      performanceNotes: string[];
     };
   };
-  analysis_metadata: {
-    urls_analyzed: string[];
-    analysis_type: string;
-    analyzed_at: string;
+  analysisMetadata: {
+    urlsAnalyzed: string[];
+    analysisType: string;
+    analyzedAt: string;
   };
-  extracted_insights: string[];
-  suggested_themes?: string[];
-  suggested_tags?: string[];
-  business_analysis?: {
-    company_name?: string;
-    business_description?: string;
+  extractedInsights: string[];
+  suggestedThemes?: string[];
+  suggestedTags?: string[];
+  businessAnalysis?: {
+    companyName?: string;
+    businessDescription?: string;
     industry?: string;
-    target_audience?: string;
-    campaign_guidance?: {
-      suggested_themes?: string[];
-      suggested_tags?: string[];
-      creative_direction?: string;
-      visual_style?: any;
+    targetAudience?: string;
+    campaignGuidance?: {
+      suggestedThemes?: string[];
+      suggestedTags?: string[];
+      creativeDirection?: string;
+      visualStyle?: any;
     };
   };
-  processing_time: number;
+  processingTime: number;
 }
 
 export interface FileAnalysisRequest {
-  analysis_type?: 'document_analysis' | 'image_analysis' | 'mixed_analysis';
+  analysisType?: 'document_analysis' | 'image_analysis' | 'mixed_analysis';
 }
 
 export interface FileAnalysisResponse {
-  analysis_results: {
-    document_insights?: {
-      key_topics: string[];
-      content_summary: string;
-      extracted_text: string;
+  analysisResults: {
+    documentInsights?: {
+      keyTopics: string[];
+      contentSummary: string;
+      extractedText: string;
     };
-    image_insights?: {
-      visual_elements: string[];
-      brand_colors: string[];
-      style_analysis: string;
+    imageInsights?: {
+      visualElements: string[];
+      brandColors: string[];
+      styleAnalysis: string;
     };
   };
-  analysis_metadata: {
-    files_analyzed: string[];
-    analysis_type: string;
-    analyzed_at: string;
+  analysisMetadata: {
+    filesAnalyzed: string[];
+    analysisType: string;
+    analyzedAt: string;
   };
-  extracted_insights: string[];
+  extractedInsights: string[];
+}
+
+export interface SocialMediaPost {
+  id: string;
+  type: string;
+  content: string;
+  url?: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+  videoPrompt?: string;
+  videoUrl?: string;
+  hashtags: string[];
+  platformOptimized: any;
+  engagementScore: number;
+  selected: boolean;
+  error?: string | null;
 }
 
 // API Client Class
@@ -393,8 +409,8 @@ export class VideoVentureLaunchAPI {
   static async regenerateContent(campaignId: string, postId: string): Promise<ContentGenerationResponse> {
     try {
       const response = await apiClient.post<ApiResponse<ContentGenerationResponse>>('/api/v1/content/regenerate', {
-        campaign_id: campaignId,
-        post_id: postId
+        campaignId: campaignId,
+        postId: postId
       });
       
       if (!response.data.success || !response.data.data) {
@@ -410,38 +426,25 @@ export class VideoVentureLaunchAPI {
 
   // Bulk content generation for specific post types (used by IdeationPage)
   static async generateBulkContent(request: {
-    post_type: 'text_url' | 'text_image' | 'text_video';
-    regenerate_count: number;
-    business_context: {
-      company_name: string;
+    postType: 'text_url' | 'text_image' | 'text_video';
+    regenerateCount: number;
+    businessContext: {
+      companyName: string;
       objective: string;
-      campaign_type: string;
-      target_audience?: string;
-      business_description?: string;
-      business_website?: string;
-      product_service_url?: string;
-      campaign_media_tuning?: string;
-      campaign_guidance?: any;
-      product_context?: any;
+      campaignType: string;
+      targetAudience?: string;
+      businessDescription?: string;
+      businessWebsite?: string;
+      productServiceUrl?: string;
+      campaignMediaTuning?: string;
+      campaignGuidance?: any;
+      productContext?: any;
     };
-    creativity_level: number;
+    creativityLevel: number;
   }): Promise<{
-    new_posts: Array<{
-      id: string;
-      type: string;
-      content: string;
-      url?: string;
-      image_prompt?: string;
-      image_url?: string;
-      video_prompt?: string;
-      video_url?: string;
-      hashtags: string[];
-      platform_optimized: any;
-      engagement_score: number;
-      selected: boolean;
-    }>;
-    regeneration_metadata: any;
-    processing_time: number;
+    newPosts: SocialMediaPost[];
+    regenerationMetadata: any;
+    processingTime: number;
   }> {
     try {
       debug('🎯 Generating bulk content', request, 'API');
@@ -449,8 +452,8 @@ export class VideoVentureLaunchAPI {
       const response = await apiClient.post('/api/v1/content/generate-bulk', request);
       
       info('✅ Bulk content generated successfully', { 
-        postCount: response.data.new_posts?.length || 0,
-        postType: request.post_type 
+        postCount: response.data.newPosts?.length || 0,
+        postType: request.postType 
       }, 'API');
       
       return response.data;
@@ -462,42 +465,42 @@ export class VideoVentureLaunchAPI {
 
   // Visual Content Generation
   static async generateVisualContent(request: {
-    social_posts: Array<{
+    socialPosts: Array<{
       id: string | number;
       type: 'text_image' | 'text_video' | 'text_url';
       content: string;
       platform: string;
       hashtags?: string[];
     }>;
-    business_context: {
-      business_name?: string;
+    businessContext: {
+      businessName?: string;
       industry?: string;
       objective?: string;
-      target_audience?: string;
-      brand_voice?: string;
+      targetAudience?: string;
+      brandVoice?: string;
     };
-    campaign_objective: string;
-    target_platforms?: string[];
-    campaign_media_tuning?: string;
-    campaign_guidance?: any;
-    visual_style?: any;
-    creative_direction?: string;
-    product_context?: any;
-    campaign_id?: string;
+    campaignObjective: string;
+    targetPlatforms?: string[];
+    campaignMediaTuning?: string;
+    campaignGuidance?: any;
+    visualStyle?: any;
+    creativeDirection?: string;
+    productContext?: any;
+    campaignId?: string;
   }): Promise<{
-    posts_with_visuals: Array<{
+    postsWithVisuals: Array<{
       id: string | number;
       type: string;
       content: string;
       platform: string;
       hashtags?: string[];
-      image_prompt?: string;
-      image_url?: string;
-      video_prompt?: string;
-      video_url?: string;
+      imagePrompt?: string;
+      imageUrl?: string;
+      videoPrompt?: string;
+      videoUrl?: string;
     }>;
-    visual_strategy: any;
-    generation_metadata: any;
+    visualStrategy: any;
+    generationMetadata: any;
   }> {
     try {
       debug('🎨 Generating visual content', request, 'API');
@@ -505,7 +508,7 @@ export class VideoVentureLaunchAPI {
       const response = await apiClient.post('/api/v1/content/generate-visuals', request);
       
       info('✅ Visual content generated successfully', { 
-        postsCount: response.data.posts_with_visuals?.length || 0 
+        postsCount: response.data.postsWithVisuals?.length || 0 
       }, 'API');
       
       return response.data;
@@ -518,7 +521,7 @@ export class VideoVentureLaunchAPI {
   // URL Analysis
   static async analyzeUrls(request: UrlAnalysisRequest): Promise<UrlAnalysisResponse> {
     try {
-      info('🔍 Starting URL analysis', { urls: request.urls, analysisType: request.analysis_type }, 'API');
+      info('🔍 Starting URL analysis', { urls: request.urls, analysisType: request.analysisType }, 'API');
       
       const response = await apiClient.post('/api/v1/analysis/url', request);
       
@@ -528,10 +531,10 @@ export class VideoVentureLaunchAPI {
       }
       
       info('✅ URL analysis completed successfully', { 
-        businessAnalysis: !!response.data.business_analysis,
-        themes: response.data.suggested_themes?.length || 0,
-        tags: response.data.suggested_tags?.length || 0,
-        processingTime: response.data.processing_time 
+        businessAnalysis: !!response.data.businessAnalysis,
+        themes: response.data.suggestedThemes?.length || 0,
+        tags: response.data.suggestedTags?.length || 0,
+        processingTime: response.data.processingTime 
       }, 'API');
       
       return response.data;
@@ -549,8 +552,8 @@ export class VideoVentureLaunchAPI {
         formData.append(`files`, file);
       });
       
-      if (request?.analysis_type) {
-        formData.append('analysis_type', request.analysis_type);
+      if (request?.analysisType) {
+        formData.append('analysisType', request.analysisType);
       }
 
       const response = await apiClient.post<ApiResponse<FileAnalysisResponse>>('/api/v1/analysis/files', formData, {

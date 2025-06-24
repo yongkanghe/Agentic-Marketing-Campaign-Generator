@@ -11,6 +11,17 @@ from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field, HttpUrl
 from datetime import datetime
 from enum import Enum
+# Function to convert snake_case to camelCase for Pydantic aliases
+def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase for API response consistency (ADR-018)."""
+    components = string.split('_')
+    return components[0] + ''.join(word.capitalize() for word in components[1:])
+
+# Base model with camelCase aliasing
+class Base(BaseModel):
+    class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
 
 # Enums
 class CampaignType(str, Enum):
@@ -33,7 +44,7 @@ class PostType(str, Enum):
     TEXT_VIDEO = "text_video"
 
 # Base Models
-class BusinessAnalysis(BaseModel):
+class BusinessAnalysis(Base):
     """
     Business analysis results from URL and file processing.
     
@@ -64,15 +75,15 @@ class BusinessAnalysis(BaseModel):
     # ADK ENHANCEMENT: Campaign guidance for UI and content generation
     campaign_guidance: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
-class FileUpload(BaseModel):
+class FileUpload(Base):
     """File upload information."""
     filename: str
     content_type: str
     size: int
     category: str  # "images", "documents", "campaigns"
 
-class SocialMediaPost(BaseModel):
-    """Social media post structure."""
+class SocialMediaPost(Base):
+    """Social media post structure with per-post error handling (ADR-016)."""
     id: str
     type: PostType
     content: str
@@ -86,9 +97,10 @@ class SocialMediaPost(BaseModel):
     platform_optimized: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     engagement_score: Optional[float] = None
     selected: bool = False
+    error: Optional[str] = None  # ADR-016: Per-post error handling
 
 # Request Models
-class CampaignRequest(BaseModel):
+class CampaignRequest(Base):
     """Enhanced campaign creation request."""
     # Basic campaign info
     business_description: str = Field(..., min_length=10, max_length=2000)
@@ -111,12 +123,12 @@ class CampaignRequest(BaseModel):
     # Campaign template
     template_data: Optional[Dict[str, Any]] = None
 
-class URLAnalysisRequest(BaseModel):
+class URLAnalysisRequest(Base):
     """URL analysis request."""
     urls: List[str] = Field(..., min_length=1, max_length=5)
     analysis_depth: str = Field(default="standard", pattern="^(basic|standard|comprehensive)$")
 
-class ContentGenerationRequest(BaseModel):
+class ContentGenerationRequest(Base):
     """Content generation request."""
     campaign_type: Optional[CampaignType] = None
     business_context: BusinessAnalysis
@@ -125,7 +137,7 @@ class ContentGenerationRequest(BaseModel):
     post_count: int = Field(default=9, ge=3, le=15)
     include_hashtags: bool = True
 
-class SocialPostRegenerationRequest(BaseModel):
+class SocialPostRegenerationRequest(Base):
     """Social post regeneration request."""
     post_type: PostType
     regenerate_count: int = Field(default=3, ge=1, le=10)
@@ -134,7 +146,7 @@ class SocialPostRegenerationRequest(BaseModel):
     current_posts: Optional[List[SocialMediaPost]] = Field(default_factory=list)
 
 # Response Models
-class CampaignResponse(BaseModel):
+class CampaignResponse(Base):
     """Campaign creation response."""
     campaign_id: str
     summary: str
@@ -143,7 +155,7 @@ class CampaignResponse(BaseModel):
     created_at: datetime
     status: str = "completed"
 
-class URLAnalysisResponse(BaseModel):
+class URLAnalysisResponse(Base):
     """URL analysis response."""
     business_analysis: BusinessAnalysis
     url_insights: Dict[str, Dict[str, Any]]
@@ -152,20 +164,20 @@ class URLAnalysisResponse(BaseModel):
     business_intelligence: Optional[Dict[str, Any]] = None
     analysis_metadata: Optional[Dict[str, Any]] = None
 
-class ContentGenerationResponse(BaseModel):
+class ContentGenerationResponse(Base):
     """Content generation response."""
     posts: List[SocialMediaPost]
     hashtag_suggestions: List[str]
     generation_metadata: Dict[str, Any]
     processing_time: float
 
-class SocialPostRegenerationResponse(BaseModel):
-    """Social post regeneration response."""
+class SocialPostRegenerationResponse(Base):
+    """Social post regeneration response with camelCase output (ADR-018)."""
     new_posts: List[SocialMediaPost]
     regeneration_metadata: Dict[str, Any]
     processing_time: float
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(Base):
     """Error response model."""
     error: str
     status_code: int
@@ -174,7 +186,7 @@ class ErrorResponse(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 # Agent State Models
-class AgentState(BaseModel):
+class AgentState(Base):
     """Agent execution state."""
     agent_name: str
     status: str  # "pending", "running", "completed", "failed"
@@ -183,7 +195,7 @@ class AgentState(BaseModel):
     output: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
-class WorkflowState(BaseModel):
+class WorkflowState(Base):
     """Complete workflow state tracking."""
     workflow_id: str
     campaign_request: CampaignRequest
@@ -195,7 +207,7 @@ class WorkflowState(BaseModel):
     final_result: Optional[CampaignResponse] = None
 
 # Health Check Models
-class HealthResponse(BaseModel):
+class HealthResponse(Base):
     """Health check response."""
     status: str
     agent_initialized: bool

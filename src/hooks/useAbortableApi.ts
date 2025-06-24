@@ -4,7 +4,7 @@
  * Author: JP + 2025-06-20
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 
 interface AbortableApiOptions {
   onSuccess?: (data: any) => void;
@@ -15,6 +15,7 @@ interface AbortableApiOptions {
 export const useAbortableApi = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const isActiveRef = useRef(true);
+  const [hasActiveRequest, setHasActiveRequest] = useState(false);
 
   // Cleanup function to abort ongoing requests
   const cleanup = useCallback(() => {
@@ -22,6 +23,7 @@ export const useAbortableApi = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    setHasActiveRequest(false);
   }, []);
 
   // Create a new AbortController for a request
@@ -31,6 +33,7 @@ export const useAbortableApi = () => {
     
     // Create new controller
     abortControllerRef.current = new AbortController();
+    setHasActiveRequest(true);
     return abortControllerRef.current;
   }, [cleanup]);
 
@@ -66,13 +69,11 @@ export const useAbortableApi = () => {
       }
       
       throw error;
+    } finally {
+      setHasActiveRequest(false);
+      abortControllerRef.current = null;
     }
   }, [createAbortController]);
-
-  // Check if there's an active request
-  const hasActiveRequest = useCallback(() => {
-    return abortControllerRef.current !== null;
-  }, []);
 
   // Manually abort current request
   const abortCurrentRequest = useCallback(() => {
@@ -80,6 +81,7 @@ export const useAbortableApi = () => {
       abortControllerRef.current.abort();
       console.log('🚫 Manually aborted current API request');
     }
+    setHasActiveRequest(false);
   }, []);
 
   // Cleanup on unmount
