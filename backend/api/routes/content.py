@@ -29,13 +29,18 @@ except ImportError as e:
     logger.warning(f"❌ Marketing orchestrator agent not available: {e}")
     execute_campaign_workflow = None
 
-# Import visual content generation
+# Import visual content generation - ENHANCED: Use ADK agentic visual generation
 try:
-    from agents.visual_content_agent import generate_visual_content_for_posts
-    logger.info("✅ Visual content agent available for API endpoints")
+    from agents.adk_visual_agents import generate_agentic_visual_content
+    logger.info("✅ ADK agentic visual content agent available for API endpoints")
+    generate_visual_content_for_posts = generate_agentic_visual_content  # Use ADK agents
 except ImportError as e:
-    logger.warning(f"❌ Visual content agent not available: {e}")
-    generate_visual_content_for_posts = None
+    try:
+        from agents.visual_content_agent import generate_visual_content_for_posts
+        logger.info("✅ Fallback visual content agent available for API endpoints")
+    except ImportError as e2:
+        logger.warning(f"❌ No visual content agent available: {e}, {e2}")
+        generate_visual_content_for_posts = None
 
 router = APIRouter()
 
@@ -415,18 +420,13 @@ async def generate_visual_content(request: dict):
                 import hashlib
                 campaign_id = hashlib.md5(f"{company_name}_{campaign_objective}".encode()).hexdigest()[:8]
             
-            # ADK ENHANCEMENT: Pass comprehensive campaign context to visual generation
+            # ADK ENHANCEMENT: Pass comprehensive campaign context to ADK agentic visual generation
             visual_results = await generate_visual_content_for_posts(
                 social_posts=social_posts,
                 business_context=business_context,
                 campaign_objective=campaign_objective,
-                target_platforms=target_platforms,
-                campaign_id=campaign_id,
-                campaign_media_tuning=campaign_media_tuning,
-                campaign_guidance=campaign_guidance,
-                product_context=product_context,
-                visual_style=visual_style,
-                creative_direction=creative_direction
+                campaign_guidance=campaign_guidance,  # Pass complete campaign guidance
+                campaign_id=campaign_id
             )
             
             # CRITICAL REGRESSION DETECTION: Log visual results structure

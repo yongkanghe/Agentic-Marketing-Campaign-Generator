@@ -184,13 +184,18 @@ This document defines the **complete ADK agent architecture** with explicit **up
 
 ---
 
-## 3. Visual Content Agent
+## 3. ADK Agentic Visual Content System (ADR-019)
 
 ### **Role Definition**
-**Primary Responsibility**: Generate contextually relevant images and videos using comprehensive business context and product-specific information.
+**Primary Responsibility**: Autonomous visual content generation with validation and self-correction using true ADK agent framework.
 
-### **Agent Type**: `VisualContentAgent` (Custom Agent)
-**File**: `backend/agents/visual_content_agent.py`
+### **Agent Hierarchy**: 
+- **`VisualContentOrchestratorAgent`** (ADK SequentialAgent)
+- **`ImageGenerationAgent`** (ADK LlmAgent) 
+- **`VideoGenerationAgent`** (ADK LlmAgent)
+- **`VisualContentValidationTool`** (Validation Framework)
+
+**File**: `backend/agents/adk_visual_agents.py`
 
 ### **UPSTREAM DEPENDENCIES** (Inputs)
 ```python
@@ -201,12 +206,13 @@ This document defines the **complete ADK agent architecture** with explicit **up
     "campaign_objective": str,            # FROM: User input
     "target_platforms": List[str],        # FROM: Campaign configuration
     
-    # ADK ENHANCEMENT: Product-specific context for relevant generation
+    # ADK AGENTIC ENHANCEMENT: Campaign-aware autonomous generation
     "campaign_media_tuning": str,         # FROM: business_analysis.campaign_guidance
     "campaign_guidance": Dict[str, Any],  # FROM: business_analysis.campaign_guidance  
     "product_context": Dict[str, Any],    # FROM: business_analysis.product_context
     "visual_style": Dict[str, Any],       # FROM: business_analysis.campaign_guidance.visual_style
-    "creative_direction": str             # FROM: business_analysis.campaign_guidance.creative_direction
+    "creative_direction": str,            # FROM: business_analysis.campaign_guidance.creative_direction
+    "campaign_id": str                    # FROM: Campaign context for caching and validation
 }
 ```
 
@@ -224,25 +230,34 @@ This document defines the **complete ADK agent architecture** with explicit **up
 
 ### **DOWNSTREAM DEPENDENCIES** (Outputs)
 ```python
-# OUTPUT SCHEMA - FRONTEND AND API DEPEND ON THIS STRUCTURE
+# OUTPUT SCHEMA - ADK AGENTIC VISUAL CONTENT WITH VALIDATION
 {
     "visual_content": {
-        "images": List[Dict[str, Any]],   # Generated images with metadata
-        "videos": List[Dict[str, Any]]    # Generated videos with metadata
+        "images": List[Dict[str, Any]],   # Validated generated images with metadata
+        "videos": List[Dict[str, Any]]    # Validated generated videos with metadata
     },
     
-    # CRITICAL: Each visual content item structure
+    # CRITICAL: Each visual content item structure with ADK validation
     "visual_item_structure": {
         "id": str,                        # Unique content identifier
         "post_id": str,                   # Links to original social post
         "content_type": str,              # "image" | "video"
         "url": str,                       # Generated content URL
-        "prompt_used": str,               # Generation prompt for debugging
+        "prompt_used": str,               # Final enhanced generation prompt
         "generation_metadata": {
-            "model_used": str,            # "imagen-3.0-generate-002" | "veo-2"
+            "model_used": str,            # "imagen-3.0-generate-002" | "veo-2.0"
             "generation_time": float,     # Time taken to generate
             "cost": float,                # Generation cost
-            "retry_count": int            # Number of retry attempts
+            "retry_count": int,           # Number of retry attempts
+            "validation_score": float,    # Autonomous validation score (0-100)
+            "iterations": int             # Number of self-correction iterations
+        },
+        "adk_agent_metadata": {
+            "agent_used": str,            # "ImageGenerationAgent" | "VideoGenerationAgent"
+            "autonomous_validation": bool, # Whether agent validated its own work
+            "self_correction_applied": bool, # Whether agent self-corrected
+            "campaign_context_integration": bool, # Whether campaign guidance was used
+            "validation_details": Dict[str, Any] # Detailed validation results
         },
         "business_context_applied": {
             "product_context_used": bool, # Whether product context influenced generation
@@ -253,20 +268,59 @@ This document defines the **complete ADK agent architecture** with explicit **up
 }
 ```
 
-### **Critical Visual Generation Logic**
+### **ADK Agentic Visual Generation Logic**
 ```python
-# PRODUCT-SPECIFIC IMAGE GENERATION - NEVER BREAK THIS LOGIC
-def _create_image_prompt(self, post: Dict, business_context: Dict, objective: str) -> str:
-    product_context = business_context.get('product_context', {})
+# ADK AUTONOMOUS VISUAL GENERATION WITH VALIDATION - NEVER BREAK THIS LOGIC
+class ImageGenerationAgent(LlmAgent):
+    async def generate_and_validate_image(
+        self, 
+        post_content: str,
+        campaign_guidance: Dict[str, Any],
+        business_context: Dict[str, Any],
+        campaign_id: str,
+        max_iterations: int = 3
+    ) -> Dict[str, Any]:
+        """Generate and validate image with autonomous iteration."""
+        
+        for iteration in range(max_iterations):
+            # Step 1: Create campaign-aware prompt
+            enhanced_prompt = self._create_campaign_aware_prompt(
+                post_content, campaign_guidance, business_context
+            )
+            
+            # Step 2: Generate image using Imagen API
+            image_result = await self._generate_imagen_content(enhanced_prompt, campaign_id)
+            
+            # Step 3: Autonomous validation
+            validation_result = await self.validator.validate_image_content(
+                image_result["image_url"], post_content, campaign_guidance, business_context
+            )
+            
+            # Step 4: Self-correction if validation fails
+            if validation_result.get("valid") and validation_result.get("overall_score", 0) >= 75:
+                return {"success": True, "image_url": image_result["image_url"], ...}
+            else:
+                # Use validation feedback to improve next iteration
+                campaign_guidance["validation_feedback"] = validation_result.get("recommendations", [])
+        
+        return {"success": False, "error": "Failed after max iterations"}
+
+# CRITICAL: Campaign-aware prompt creation
+def _create_campaign_aware_prompt(self, post_content: str, campaign_guidance: Dict, business_context: Dict) -> str:
+    """Create enhanced image prompt incorporating campaign guidance."""
+    base_prompt = f"Create a professional marketing image for: {post_content}"
     
-    # CRITICAL: Product-specific prompt generation
-    if 'joker' in str(product_context.get('primary_products', [])).lower():
-        # Generate Joker t-shirt specific imagery
-        return f"People wearing {product_context['primary_products'][0]} 
-                 in {product_context['target_scenarios'][0]} setting"
+    # Add campaign context from guidance
+    if campaign_guidance.get("visual_style"):
+        base_prompt += f" Visual style: {campaign_guidance['visual_style']}."
+    if campaign_guidance.get("brand_voice"):
+        base_prompt += f" Brand voice: {campaign_guidance['brand_voice']}."
     
-    # CRITICAL: Fallback must still use business context
-    return f"Professional imagery for {business_context.get('company_name', 'business')}"
+    # Add business context
+    if business_context.get("company_name"):
+        base_prompt += f" Company: {business_context['company_name']}."
+    
+    return base_prompt + " High quality, professional, social media optimized, brand consistent."
 ```
 
 ### **Data Flow Dependencies**
@@ -278,12 +332,15 @@ def _create_image_prompt(self, post: Dict, business_context: Dict, objective: st
 1. **Frontend UI** - Displays generated images/videos in campaign results
 2. **Campaign Results API** - Returns visual content URLs to user
 
-### **Functional Change Rules**
+### **ADK Agentic Functional Change Rules**
 ⚠️ **BREAKING CHANGE PREVENTION**:
-- **NEVER** ignore `product_context` from Business Analysis Agent
+- **NEVER** bypass autonomous validation in ADK agents
 - **NEVER** change `visual_item_structure` without updating frontend
-- **ALWAYS** use campaign guidance and media tuning for context-aware generation
-- **NEVER** fall back to generic images without exhausting business context
+- **NEVER** remove self-correction capabilities from agents
+- **ALWAYS** use campaign guidance in system prompts for context-aware generation
+- **NEVER** fall back to non-ADK wrapper classes
+- **ALWAYS** maintain validation score thresholds (>=75 for success)
+- **NEVER** ignore validation feedback in self-correction loops
 
 ---
 

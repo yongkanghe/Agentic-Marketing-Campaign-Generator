@@ -475,25 +475,9 @@ export class VideoVentureLaunchAPI {
       objective?: string;
       target_audience?: string;
       brand_voice?: string;
-      company_name?: string;
-      business_description?: string;
     };
     campaign_objective: string;
     target_platforms?: string[];
-    // ENHANCED: Campaign guidance context for ADK agentic visual generation
-    campaign_guidance?: {
-      suggested_themes?: string[];
-      suggested_tags?: string[];
-      creative_direction?: string;
-      visual_style?: any;
-      brand_voice?: string;
-      target_audience?: string;
-    };
-    campaign_media_tuning?: string;
-    product_context?: any;
-    visual_style?: any;
-    creative_direction?: string;
-    campaign_id?: string;
   }): Promise<{
     posts_with_visuals: Array<{
       id: string | number;

@@ -5,6 +5,11 @@ alwaysApply: true
 ---
 use makefiles for application operations, running, testing and similar.
 
+always read logs in logs/ folder to validate the runtime quality and operational stability of the solution stack
+
+
+ensure you use 'launch-all' to start both frontend and backend where appropriate
+
 do not use image or vide placeholders. implement real functionality. (i.e. no BigBuckBunny placeholder)
 
 Check Frontend and Backend logs before and after implementing a fix, to validate the solution

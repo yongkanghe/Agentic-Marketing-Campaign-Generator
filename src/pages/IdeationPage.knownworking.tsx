@@ -320,22 +320,13 @@ const IdeationPage: React.FC = () => {
           business_context: {
             // Use comprehensive business context from AI analysis
             business_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
-            company_name: currentCampaign?.aiAnalysis?.businessAnalysis?.company_name || currentCampaign?.name || 'Your Company',
             industry: currentCampaign?.aiAnalysis?.businessAnalysis?.industry || 'Professional Services',
             objective: currentCampaign?.objective || 'increase sales',
             target_audience: currentCampaign?.aiAnalysis?.businessAnalysis?.target_audience || 'business professionals',
-            brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional',
-            business_description: currentCampaign?.businessDescription || currentCampaign?.aiAnalysis?.businessAnalysis?.business_description || 'Professional business services'
+            brand_voice: currentCampaign?.aiAnalysis?.businessAnalysis?.brand_voice || 'Professional'
           },
           campaign_objective: currentCampaign?.objective || 'increase sales',
-          target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter'],
-          // ENHANCED: Pass complete campaign guidance context for ADK agentic visual generation
-          campaign_guidance: currentCampaign?.aiAnalysis?.campaignGuidance || currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance || {},
-          campaign_media_tuning: '',  // TODO: Add campaign media tuning to Campaign interface
-          product_context: currentCampaign?.aiAnalysis?.businessAnalysis?.product_context || {},
-          visual_style: currentCampaign?.aiAnalysis?.campaignGuidance?.visual_style || currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.visual_style || {},
-          creative_direction: currentCampaign?.aiAnalysis?.campaignGuidance?.creative_direction || currentCampaign?.aiAnalysis?.businessAnalysis?.campaign_guidance?.creative_direction || '',
-          campaign_id: currentCampaign?.id || 'default'
+          target_platforms: ['instagram', 'linkedin', 'facebook', 'twitter']
         });
         
         console.log(`🎨 Visual generation response:`, {

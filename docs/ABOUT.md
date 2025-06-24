@@ -17,7 +17,7 @@ Empower marketers, entrepreneurs, and businesses to create compelling social med
 - **🎨 Campaign Creation**: Intuitive campaign setup with business context analysis
 - **🤖 AI-Powered Ideation**: Generate creative campaign concepts using Gemini AI
 - **📱 Social Media Content**: Create platform-optimized posts with hashtags
-- **🖼️ Visual Content Generation**: AI-powered image and video prompts with proper display
+- **🖼️ Visual Content Generation**: ADK agentic image and video generation with autonomous validation and self-correction
 - **📊 Campaign Management**: Full CRUD operations with export capabilities
 - **🧪 Comprehensive Testing**: 90+ tests with full-stack validation
 - **🎨 Professional Layout**: Fixed text wrapping and visual content integration ✨ NEW!
@@ -37,7 +37,7 @@ Empower marketers, entrepreneurs, and businesses to create compelling social med
 - **✅ CampaignOrchestratorAgent**: Master workflow coordination
 - **✅ BusinessAnalysisAgent**: URL and context analysis
 - **✅ ContentGenerationAgent**: Social media post creation with batch optimization
-- **✅ VisualContentAgent**: Image and video generation with Imagen/Veo integration
+- **✅ VisualContentOrchestratorAgent**: ADK agentic image and video generation with autonomous validation and self-correction (ADR-019)
 - **⏳ SocialMediaAgent**: Platform optimization (planned)
 - **⏳ SchedulingAgent**: Optimal posting times (planned)
 - **⏳ MonitoringAgent**: Performance analytics (planned)
@@ -60,7 +60,7 @@ Empower marketers, entrepreneurs, and businesses to create compelling social med
 
 #### ✅ **COMPLETED FEATURES** (90% of Total)
 - **Campaign Creation & Management**: Full CRUD with export/import
-- **AI-Powered Content Generation**: Text + Image + Video prompts with batch optimization
+- **AI-Powered Content Generation**: Text + ADK agentic image + video generation with autonomous validation
 - **Business Context Analysis**: URL analysis and business insights
 - **Database Infrastructure**: Production-ready SQLite with analytics
 - **API Testing**: 100% endpoint coverage with integration tests

@@ -35,8 +35,8 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 | **Campaign Strategy** | Generate comprehensive campaign summaries | Summary Agent |
 | **Creative Ideation** | AI-powered campaign concepts and themes | Idea Agent |
 | **Content Generation** | Social media posts with hashtags and optimization | Content Agent |
-| **Visual Content** | AI-generated images using Google Imagen 3.0 | Visual Content Agent |
-| **Video Generation** | Real video creation with Google Veo 2.0 | Video Generation Agent |
+| **Visual Content** | AI-generated images using Google Imagen 3.0 with autonomous validation | ADK ImageGenerationAgent |
+| **Video Generation** | Real video creation with Google Veo 2.0 with autonomous validation | ADK VideoGenerationAgent |
 | **Social Media Publishing** | OAuth authentication & direct posting to platforms | Social Media Agent |
 | **Campaign Scheduling** | Schedule and manage multi-platform posting | Scheduling Agent |
 | **Multi-Format Export** | JSON, CSV, XLSX export capabilities | API Layer |
@@ -146,6 +146,52 @@ AGENT WORKFLOW PATTERN:
 
 The system implements a **Sequential Agent Pattern** where each agent specializes in a specific domain:
 
+#### 🎨 ADK Agentic Visual Content Generation (ADR-019)
+
+**Revolutionary autonomous visual content generation with validation and self-correction:**
+
+```mermaid
+graph TD
+    A[Visual Content Request] --> B[VisualContentOrchestratorAgent]
+    B --> C[Campaign Context Analysis]
+    C --> D{Parallel Agent Execution}
+    
+    D --> E[ImageGenerationAgent]
+    D --> F[VideoGenerationAgent]
+    
+    E --> G[Campaign-Aware Prompt Creation]
+    F --> H[Campaign-Aware Prompt Creation]
+    
+    G --> I[Imagen 3.0 Generation]
+    H --> J[Veo 2.0 Generation]
+    
+    I --> K[Autonomous Quality Validation]
+    J --> L[Autonomous Quality Validation]
+    
+    K --> M{Image Valid?}
+    L --> N{Video Valid?}
+    
+    M -->|No| O[Self-Correction & Refinement]
+    N -->|No| P[Self-Correction & Refinement]
+    
+    O --> I
+    P --> J
+    
+    M -->|Yes| Q[Cache & Return Success]
+    N -->|Yes| R[Cache & Return Success]
+    
+    Q --> S[Enhanced Social Posts]
+    R --> S
+```
+
+**Key Features:**
+- ✅ **True ADK Agents**: Proper LlmAgent inheritance with autonomous capabilities
+- 🧠 **Campaign Context Integration**: System prompts include campaign creative guidance
+- 🔍 **Autonomous Validation**: Agents validate their own work for quality and relevance
+- 🔄 **Self-Correction**: Agents iterate and improve outputs if validation fails
+- ⚡ **Parallel Processing**: Image and video agents work concurrently
+- 📊 **Quality Metrics**: 5-point validation framework with scoring
+
 ```mermaid
 flowchart TD
     A[User Input] --> B[Analysis Agent]
@@ -227,10 +273,10 @@ CampaignOrchestratorAgent (Root Sequential Agent) ✅
 │   ├── TextGenerationAgent (LLM Agent) ✅
 │   ├── SocialContentAgent (LLM Agent) ✅
 │   └── HashtagOptimizationAgent (LLM Agent) ✅
-├── VisualContentAgent (Sequential Agent) ✅ ENHANCED!
-│   ├── ImageGenerationAgent (LLM Agent) ✅
-│   ├── VideoGenerationAgent (LLM Agent - Veo API) ✅
-│   └── VisualContentOrchestrator (LLM Agent) ✅
+├── VisualContentOrchestratorAgent (Sequential Agent) ✅ ADK AGENTIC!
+│   ├── ImageGenerationAgent (ADK LLM Agent) ✅ AUTONOMOUS VALIDATION
+│   ├── VideoGenerationAgent (ADK LLM Agent) ✅ AUTONOMOUS VALIDATION
+│   └── VisualContentValidationTool ✅ SELF-CORRECTION
 ├── SocialMediaAgent (Sequential Agent) ✅ IMPLEMENTED
 │   ├── PlatformOptimizationAgent ✅
 │   └── EngagementPredictionAgent ❌
@@ -257,7 +303,7 @@ DELETE /api/v1/campaigns/{id}       # Campaign deletion
 # Content Generation (NEW!)
 POST /api/v1/content/generate       # AI content generation
 POST /api/v1/content/regenerate     # Content regeneration
-POST /api/v1/content/generate-visuals # Visual content generation ✅ NEW!
+POST /api/v1/content/generate-visuals # ADK Agentic visual content generation ✅ NEW!
 
 # Analysis Services
 POST /api/v1/analysis/url           # URL analysis & scraping

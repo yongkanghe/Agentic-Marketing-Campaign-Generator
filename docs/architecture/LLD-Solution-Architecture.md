@@ -12,13 +12,27 @@ This document provides a low-level design of the AI Marketing Campaign Post Gene
 
 -   **Frontend**: A React/TypeScript single-page application (SPA) responsible for user interaction, campaign management, and rendering generated content. It uses `camelCase` for all its internal state and object properties.
 -   **Backend API**: A Python/FastAPI application that serves as the gateway between the frontend and the agentic system. Per **[ADR-018](./ADR-018-Backend-CamelCase-API-Contract.md)**, it automatically serializes all JSON responses to `camelCase` to match the frontend's convention.
--   **Agentic System (ADK)**: A multi-agent system built with the Google Agent Development Kit (ADK). It includes a `MarketingOrchestrator` that coordinates specialized agents for analysis, text generation, and visual content generation.
+-   **Agentic System (ADK)**: A multi-agent system built with the Google Agent Development Kit (ADK). It includes a `MarketingOrchestrator` for campaign analysis and text generation, plus a specialized `VisualContentOrchestratorAgent` that coordinates autonomous `ImageGenerationAgent` and `VideoGenerationAgent` with validation and self-correction capabilities (per ADR-019).
 
 ---
 
 ## 2. Data Flow Architecture
 
-The generation of content follows a two-phase process: first text generation, then visual generation. This ensures a fast user response for text, while the more time-consuming visual generation happens subsequently.
+The generation of content follows a two-phase process: first text generation, then autonomous visual generation. This ensures a fast user response for text, while the more time-consuming agentic visual generation (with validation and self-correction) happens subsequently.
+
+### 2.0. Agentic Visual Content Generation (ADR-019)
+
+The visual content generation now uses true ADK agents with autonomous capabilities:
+
+1. **VisualContentOrchestratorAgent** (SequentialAgent): Coordinates the overall visual content workflow
+2. **ImageGenerationAgent** (LlmAgent): Autonomously generates and validates images with self-correction
+3. **VideoGenerationAgent** (LlmAgent): Autonomously generates and validates videos with self-correction
+
+Each agent includes:
+- **Campaign Context Integration**: System prompts include campaign creative guidance
+- **Autonomous Validation**: Agents validate their own work for quality and relevance
+- **Self-Correction**: Agents iterate and improve outputs if validation fails
+- **Parallel Processing**: Image and video agents work concurrently for efficiency
 
 ### 2.1. Sequence Diagram
 
@@ -55,8 +69,14 @@ sequenceDiagram
     Frontend (api.ts)->>Backend (API): POST /api/v1/content/generate-visuals (camelCase payload)
 
     Backend (API)->>Backend (API): Pydantic maps request to snake_case.
-    Backend (API)->>Backend (Agents): Invoke visual content agent with context.
-    Backend (Agents)-->>Backend (API): Return posts with populated snake_case image_url.
+    Backend (API)->>Backend (Agents): Invoke VisualContentOrchestratorAgent with campaign context.
+    
+    Note over Backend (Agents): ADK agents work autonomously with validation loops.
+    Backend (Agents)->>Backend (Agents): ImageGenerationAgent generates & validates images.
+    Backend (Agents)->>Backend (Agents): VideoGenerationAgent generates & validates videos.
+    Backend (Agents)->>Backend (Agents): Agents self-correct if validation fails.
+    
+    Backend (Agents)-->>Backend (API): Return posts with validated snake_case image_url/video_url.
 
     Note over Backend (API): Pydantic serializes response to camelCase.
     Backend (API)-->>Frontend (api.ts): Respond with JSON (camelCase).
@@ -67,7 +87,90 @@ sequenceDiagram
 
 ---
 
-## 3. Data Transformation Strategy
+## 3. ADK Agentic Visual Content Architecture (ADR-019)
+
+### 3.1. Agent Hierarchy
+
+```
+VisualContentOrchestratorAgent (SequentialAgent)
+├── ImageGenerationAgent (LlmAgent)
+│   ├── Campaign Context Analysis
+│   ├── Imagen API Integration
+│   ├── Autonomous Validation
+│   └── Self-Correction Loop
+└── VideoGenerationAgent (LlmAgent)
+    ├── Campaign Context Analysis
+    ├── Veo API Integration
+    ├── Autonomous Validation
+    └── Self-Correction Loop
+```
+
+### 3.2. Autonomous Agent Capabilities
+
+#### 3.2.1. ImageGenerationAgent Features
+- **Campaign-Aware Prompting**: Integrates campaign guidance into system prompts
+- **Contextual Analysis**: Analyzes post content and business context
+- **Quality Validation**: Validates generated images for relevance and quality
+- **Iterative Improvement**: Self-corrects based on validation feedback
+- **Caching Strategy**: Caches successful generations for consistency
+
+#### 3.2.2. VideoGenerationAgent Features
+- **Campaign-Aware Prompting**: Integrates campaign guidance into system prompts
+- **Contextual Analysis**: Analyzes post content and business context
+- **Quality Validation**: Validates generated videos for relevance and quality
+- **Iterative Improvement**: Self-corrects based on validation feedback
+- **Duration Optimization**: Optimizes video length for social media platforms
+
+#### 3.2.3. Validation Framework
+Each agent includes a comprehensive validation process:
+
+1. **Content Relevance Check**: Does the visual match the post content?
+2. **Campaign Alignment Check**: Does it align with campaign objectives?
+3. **Brand Consistency Check**: Does it match the business context?
+4. **Technical Quality Check**: Is the generated content technically sound?
+5. **Platform Optimization Check**: Is it optimized for target platforms?
+
+### 3.3. Agentic Workflow Process
+
+```mermaid
+graph TD
+    A[Visual Content Request] --> B[VisualContentOrchestratorAgent]
+    B --> C[Analyze Posts & Campaign Context]
+    C --> D{Parallel Agent Execution}
+    
+    D --> E[ImageGenerationAgent]
+    D --> F[VideoGenerationAgent]
+    
+    E --> G[Create Campaign-Aware Image Prompt]
+    F --> H[Create Campaign-Aware Video Prompt]
+    
+    G --> I[Generate Image via Imagen API]
+    H --> J[Generate Video via Veo API]
+    
+    I --> K[Validate Image Quality & Relevance]
+    J --> L[Validate Video Quality & Relevance]
+    
+    K --> M{Image Valid?}
+    L --> N{Video Valid?}
+    
+    M -->|No| O[Refine Prompt with Feedback]
+    N -->|No| P[Refine Prompt with Feedback]
+    
+    O --> I
+    P --> J
+    
+    M -->|Yes| Q[Cache & Return Image]
+    N -->|Yes| R[Cache & Return Video]
+    
+    Q --> S[Combine Results]
+    R --> S
+    
+    S --> T[Return Enhanced Posts]
+```
+
+---
+
+## 4. Data Transformation Strategy
 
 As defined in **[ADR-018](./ADR-018-Backend-CamelCase-API-Contract.md)**, there is **no data transformation on the frontend**. The backend is solely responsible for providing a `camelCase` JSON API.
 

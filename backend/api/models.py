@@ -11,16 +11,9 @@ from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field, HttpUrl
 from datetime import datetime
 from enum import Enum
-# Function to convert snake_case to camelCase for Pydantic aliases
-def to_camel(string: str) -> str:
-    """Convert snake_case to camelCase for API response consistency (ADR-018)."""
-    components = string.split('_')
-    return components[0] + ''.join(word.capitalize() for word in components[1:])
-
-# Base model with camelCase aliasing
+# Base model without camelCase aliasing to maintain working API compatibility
 class Base(BaseModel):
     class Config:
-        alias_generator = to_camel
         allow_population_by_field_name = True
 
 # Enums
