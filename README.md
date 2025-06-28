@@ -28,7 +28,7 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 - **📚 ADR Commandments**: Created "Ten Commandments of VVL Development" from .cursorrules
 - **🏗️ Async Architecture**: Built comprehensive async visual content generation system
 
-**📊 Status**: Image and video generation fully working (rate limits may apply), production-ready for blog publication.
+**📊 Status**: Content generation fully working - 80% MVP complete. **Missing: Social media publishing integration for production readiness.**
 
 ---
 
@@ -78,7 +78,7 @@ A comprehensive deep-dive into the technical architecture, development challenge
 | **Content Generation** | Social media posts with hashtags and optimization | Content Agent |
 | **Visual Content** | AI-generated images using Google Imagen 3.0 with autonomous validation | ADK ImageGenerationAgent |
 | **Video Generation** | Real video creation with Google Veo 2.0 with autonomous validation | ADK VideoGenerationAgent |
-| **Social Media Publishing** | OAuth authentication & direct posting to platforms | Social Media Agent |
+| **Social Media Publishing** | OAuth architecture implemented, publishing logic partial | Social Media Agent |
 | **Campaign Scheduling** | Schedule and manage multi-platform posting | Scheduling Agent |
 | **Multi-Format Export** | JSON, CSV, XLSX export capabilities | API Layer |
 
