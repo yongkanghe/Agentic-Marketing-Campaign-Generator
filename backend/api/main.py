@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="AI Marketing Campaign Post Generator API",
     description="Agentic AI Marketing Campaign Manager - Backend API",
-    version="1.0.0",
+    version="v1.0.1alpha-blog-post",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -161,7 +161,7 @@ async def root():
     """Root endpoint providing API information."""
     return {
         "name": "AI Marketing Campaign Post Generator API",
-        "version": "1.0.0",
+        "version": "v1.0.1alpha-blog-post",
         "description": "Agentic AI Marketing Campaign Manager",
         "framework": "Google ADK",
         "author": "Jaroslav Pantsjoha",

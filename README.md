@@ -1,8 +1,8 @@
 # AI Marketing Campaign Post Generator 🚀
 ### Agentic AI Marketing Campaign Manager
 
-**Author: JP + 2025-06-23**
-**Version: 1.0.0-beta.1**
+**Author: JP + 2025-06-28**
+**Version: v1.0.1alpha-blog-post**
 
 > **Transform your business ideas into professional marketing campaigns using Google's ADK Framework and Gemini API**
 
@@ -12,6 +12,23 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![React 18](https://img.shields.io/badge/react-18+-61dafb.svg)](https://reactjs.org/)
 [![Google ADK](https://img.shields.io/badge/Google-ADK%201.0+-4285f4.svg)](https://google.github.io/adk-docs/)
+
+---
+
+## 🆕 What's New in v1.0.1alpha-blog-post
+
+**🎉 Google AI Migration & Real Visual Content Generation**
+
+- **✅ Google AI Library Migration**: Migrated from deprecated `google-generativeai` to official `google-genai` library (v1.23.0+)
+- **🖼️ Real Image Generation**: Imagen 3 now generates actual 1.6MB PNG images instead of 8KB blue placeholders  
+- **🎬 Video Generation**: Implemented Veo 2.0 API for real video content (quota-limited but functional)
+- **🔧 API Response Fixes**: Fixed Imagen API response parsing that was causing "no images" errors
+- **🎯 UI Button Integration**: Fixed `/generate-visuals` endpoint to use same working ADK agents
+- **📝 Text Avoidance**: Added comprehensive "no text overlays" instructions to all visual prompts
+- **📚 ADR Commandments**: Created "Ten Commandments of VVL Development" from .cursorrules
+- **🏗️ Async Architecture**: Built comprehensive async visual content generation system
+
+**📊 Status**: Image generation fully working, video generation partially working, ready for blog publication.
 
 ---
 

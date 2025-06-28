@@ -1,5 +1,5 @@
-# AI Marketing Campaign Post Generator - Makefile
-# Author: JP + 2025-06-18
+# AI Marketing Campaign Post Generator - Makefile  
+# Author: JP + 2025-06-28 (v1.0.1alpha-blog-post)
 # 3 Musketeers pattern for consistent development workflow
 # Uses Docker, Docker Compose, and Make for environment consistency
 

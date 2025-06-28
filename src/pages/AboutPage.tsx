@@ -53,23 +53,25 @@ const AboutPage: React.FC = () => {
         // Fallback to static release info if dynamic file not found
         console.log('Using fallback release info (run `make release` to generate dynamic info)');
         const fallbackReleaseInfo: ReleaseInfo = {
-          version: "v1.0.0-beta.2",
+          version: "v1.0.1alpha-blog-post",
           date: "2025-06-28",
-          status: "MVP-Ready",
-          completion: "90%",
-          features: [
-            "✅ ADK Agent Workflow (Real AI Integration)",
-            "✅ Operational SQLite Database (7 tables)",
-            "✅ Visual Content Generation (Images & Videos)",
-            "✅ Architectural Coherence Enforcement (ADR-023)",
-            "✅ Real Gemini 2.5 Flash Integration",
-            "✅ Production-Ready FastAPI Backend",
-            "✅ Event-Driven Progress Architecture Design",
-            "✅ Comprehensive Testing Framework",
-            "✅ Professional UI/UX with VVL Design System"
-          ],
-          nextMilestone: "Hackathon Submission & Cloud Deployment",
-          lastUpdated: "2025-06-28 - Post Architectural Coherence Recovery"
+          status: "Blog Post Ready",
+          completion: "95%",
+                      features: [
+              "✅ Google AI Library Migration (google-genai v1.23.0+)",
+              "✅ Real Imagen 3 Image Generation (1.6MB PNG files)",
+              "✅ Veo 2.0 Video Generation (Partial - quota limited)",
+              "✅ ADK Agent Workflow (Real AI Integration)",
+              "✅ Operational SQLite Database (7 tables)",
+              "✅ Visual Content Generation (Images & Videos)",
+              "✅ Architectural Coherence Enforcement (ADR-023)",
+              "✅ Real Gemini 2.5 Flash Integration",
+              "✅ Production-Ready FastAPI Backend",
+              "✅ Comprehensive Testing Framework",
+              "✅ Professional UI/UX with VVL Design System"
+            ],
+          nextMilestone: "Medium Blog Post Publication & Cloud Deployment",
+          lastUpdated: "2025-06-28 - Google AI Migration & Real Visual Content Generation"
         };
         setReleaseInfo(fallbackReleaseInfo);
       }
