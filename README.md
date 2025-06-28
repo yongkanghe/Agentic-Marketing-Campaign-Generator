@@ -32,6 +32,30 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 
 ---
 
+## 📖 Featured Blog Post
+
+**🎯 Read the Complete Development Journey:**
+
+**["Build Your Own Social Marketing AI Campaign Generator with Google ADK, Gemini, Imagen & Veo"](https://jaroslav-pantsjoha.medium.com/build-your-own-marketing-ai-campaign-generator-with-gemini-ba0e7fde6169)**
+
+A comprehensive deep-dive into the technical architecture, development challenges, and lessons learned while building this agentic AI solution. Perfect for fellow developers interested in:
+
+- **Agentic AI Architecture**: How sequential agent workflows solve complex marketing challenges
+- **Google ADK Framework**: Real-world implementation patterns and best practices  
+- **Context Engineering**: Why tight data schemas beat "prompt soup" every time
+- **Visual Content Pipeline**: Integrating Imagen 3 and Veo 2.0 for automated media generation
+- **Production Lessons**: Battle-tested insights from API migrations, error handling, and system design
+
+**Key Takeaways for Developers:**
+- Context-Engineering > Prompt-Hacking (pass enriched business objects through every agent)
+- Batch Everything (one Gemini call for five posts vs. five separate calls)
+- Graceful Degradation Wins Demos (fallback logic kept demos alive during quota limits)
+- ADRs as Living Logs (document every grim detour for future developers)
+
+*Published on Medium • 9 min read • Technical deep-dive with screenshots and architecture diagrams*
+
+---
+
 ## 🤖 About This Agentic AI Solution
 
 **AI Marketing Campaign Post Generator** showcases a **production-ready Agentic AI architecture** using Google's Agent Development Kit (ADK). Unlike traditional AI applications that rely on single LLM calls, this system orchestrates **multiple specialized AI agents** that collaborate to solve complex marketing challenges.
