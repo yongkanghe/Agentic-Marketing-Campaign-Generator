@@ -55,12 +55,12 @@ const AboutPage: React.FC = () => {
         const fallbackReleaseInfo: ReleaseInfo = {
           version: "v1.0.1alpha-blog-post",
           date: "2025-06-28",
-          status: "Blog Post Ready",
-          completion: "95%",
+          status: "Production Ready",
+          completion: "98%",
                       features: [
               "✅ Google AI Library Migration (google-genai v1.23.0+)",
               "✅ Real Imagen 3 Image Generation (1.6MB PNG files)",
-              "✅ Veo 2.0 Video Generation (Partial - quota limited)",
+              "✅ Veo 2.0 Video Generation (Fully functional)",
               "✅ ADK Agent Workflow (Real AI Integration)",
               "✅ Operational SQLite Database (7 tables)",
               "✅ Visual Content Generation (Images & Videos)",

@@ -21,14 +21,14 @@ An open-source, AI-powered marketing campaign generator that demonstrates the po
 
 - **✅ Google AI Library Migration**: Migrated from deprecated `google-generativeai` to official `google-genai` library (v1.23.0+)
 - **🖼️ Real Image Generation**: Imagen 3 now generates actual 1.6MB PNG images instead of 8KB blue placeholders  
-- **🎬 Video Generation**: Implemented Veo 2.0 API for real video content (quota-limited but functional)
+- **🎬 Video Generation**: Implemented Veo 2.0 API for real video content generation (fully functional)
 - **🔧 API Response Fixes**: Fixed Imagen API response parsing that was causing "no images" errors
 - **🎯 UI Button Integration**: Fixed `/generate-visuals` endpoint to use same working ADK agents
 - **📝 Text Avoidance**: Added comprehensive "no text overlays" instructions to all visual prompts
 - **📚 ADR Commandments**: Created "Ten Commandments of VVL Development" from .cursorrules
 - **🏗️ Async Architecture**: Built comprehensive async visual content generation system
 
-**📊 Status**: Image generation fully working, video generation partially working, ready for blog publication.
+**📊 Status**: Image and video generation fully working (rate limits may apply), production-ready for blog publication.
 
 ---
 
