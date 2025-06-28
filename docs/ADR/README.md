@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADR)
 
-**Author: JP + 2025-06-15**  
+**Author: JP + 2025-06-15**
 **Last Updated: 2025-06-25**
 
 ## Purpose

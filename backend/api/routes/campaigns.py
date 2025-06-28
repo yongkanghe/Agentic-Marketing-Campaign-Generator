@@ -1,13 +1,16 @@
 """
 FILENAME: campaigns.py
-DESCRIPTION/PURPOSE: Campaign management API routes with ADK agent integration
-Author: JP + 2025-06-15
+DESCRIPTION/PURPOSE: Campaign management API routes with ADK agent integration and CAMPAIGN ISOLATION
+Author: JP + 2025-06-25
+
+CRITICAL: Each campaign must be completely isolated - no shared state, context, or cache contamination.
 """
 
 import logging
 import time
 import os
 import json
+import uuid
 from typing import Dict, Any
 from datetime import datetime
 
@@ -24,34 +27,103 @@ from database.database import get_campaign_by_id, update_campaign_analysis
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# In-memory storage for demo
+# CAMPAIGN ISOLATION: Each campaign gets its own isolated storage
 campaigns_store: Dict[str, Dict[str, Any]] = {}
+
+# CAMPAIGN ISOLATION: Track active campaigns to prevent context bleeding
+active_campaigns: Dict[str, Dict[str, Any]] = {}
 
 # Temporary auth placeholder for MVP
 def get_current_user() -> str:
     """Temporary auth placeholder for MVP - returns default user"""
     return "demo_user"
 
+def create_isolated_campaign_context(campaign_id: str, request: CampaignRequest) -> Dict[str, Any]:
+    """
+    Create completely isolated campaign context to prevent any cross-campaign contamination.
+    
+    CRITICAL: This ensures each campaign is processed in complete isolation.
+    """
+    isolated_context = {
+        "campaign_id": campaign_id,
+        "session_id": f"session_{campaign_id}_{int(time.time())}",
+        "timestamp": datetime.now().isoformat(),
+        "request_hash": hash(f"{campaign_id}_{time.time()}_{request.model_dump()}"),
+        "isolation_key": f"campaign_isolation_{campaign_id}",
+        
+        # Campaign-specific data (deep copy to prevent reference sharing)
+        "business_description": request.business_description,
+        "objective": request.objective,
+        "target_audience": request.target_audience,
+        "campaign_type": request.campaign_type.value,
+        "creativity_level": request.creativity_level,
+        "post_count": request.post_count,
+        
+        # URLs (if provided)
+        "business_website": str(request.business_website) if request.business_website else None,
+        "about_page_url": str(request.about_page_url) if request.about_page_url else None,
+        "product_service_url": str(request.product_service_url) if request.product_service_url else None,
+        
+        # Isolation metadata
+        "cache_namespace": f"campaign_{campaign_id}",
+        "agent_session_id": f"agent_session_{campaign_id}",
+        "processing_isolation": True
+    }
+    
+    logger.info(f"🔒 Created isolated context for campaign {campaign_id}")
+    logger.debug(f"🔒 Isolation key: {isolated_context['isolation_key']}")
+    
+    return isolated_context
+
+def cleanup_campaign_context(campaign_id: str):
+    """Clean up campaign context after processing to prevent memory leaks."""
+    try:
+        # Remove from active campaigns
+        if campaign_id in active_campaigns:
+            del active_campaigns[campaign_id]
+            logger.info(f"🧹 Cleaned up active campaign context: {campaign_id}")
+        
+        # Note: We keep campaigns_store for API access, but clear processing context
+        
+    except Exception as e:
+        logger.warning(f"Campaign context cleanup warning for {campaign_id}: {e}")
+
 @router.post("/create", response_model=CampaignResponse)
-async def create_campaign(request: CampaignRequest) -> CampaignResponse:
+async def create_campaign(
+    request: CampaignRequest,
+    current_user: str = Depends(get_current_user)
+) -> CampaignResponse:
     """Create a new marketing campaign using the ADK agent workflow."""
     start_time = time.time()
     
     try:
         logger.info(f"Creating campaign: {request.objective}")
         
-        # Execute the ADK marketing workflow
+        # Generate unique campaign ID for complete isolation
+        campaign_id = f"campaign_{uuid.uuid4().hex[:12]}_{int(time.time())}"
+        
+        # Create isolated campaign context
+        isolated_context = create_isolated_campaign_context(campaign_id, request)
+        
+        # Track active campaign to prevent context bleeding
+        active_campaigns[campaign_id] = isolated_context
+        
+        # Execute the ADK marketing workflow with isolated context
         workflow_result = await execute_campaign_workflow(
-            business_description=request.business_description,
-            objective=request.objective,
-            target_audience=request.target_audience,
-            campaign_type=request.campaign_type.value,
-            creativity_level=request.creativity_level,
-            post_count=request.post_count,
-            business_website=str(request.business_website) if request.business_website else None,
-            about_page_url=str(request.about_page_url) if request.about_page_url else None,
-            product_service_url=str(request.product_service_url) if request.product_service_url else None,
-            uploaded_files=[file.dict() for file in request.uploaded_files]
+            business_description=isolated_context["business_description"],
+            objective=isolated_context["objective"],
+            target_audience=isolated_context["target_audience"],
+            campaign_type=isolated_context["campaign_type"],
+            creativity_level=isolated_context["creativity_level"],
+            post_count=isolated_context["post_count"],
+            business_website=isolated_context["business_website"],
+            about_page_url=isolated_context["about_page_url"],
+            product_service_url=isolated_context["product_service_url"],
+            uploaded_files=[file.dict() for file in request.uploaded_files],
+            # CRITICAL: Pass campaign isolation context
+            campaign_id=campaign_id,
+            session_id=isolated_context["session_id"],
+            isolation_key=isolated_context["isolation_key"]
         )
         
         # Convert workflow result to response format
@@ -66,6 +138,9 @@ async def create_campaign(request: CampaignRequest) -> CampaignResponse:
         
         # Store campaign for retrieval
         campaigns_store[campaign_response.campaign_id] = workflow_result
+        
+        # Clean up isolation context after successful processing
+        cleanup_campaign_context(campaign_id)
         
         processing_time = time.time() - start_time
         logger.info(f"Campaign created successfully in {processing_time:.2f}s: {campaign_response.campaign_id}")

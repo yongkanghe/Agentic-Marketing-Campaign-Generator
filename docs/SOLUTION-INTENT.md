@@ -28,6 +28,7 @@ The AI Marketing Campaign Post Generator platform is an advanced AI-powered mark
 
 ### Core Value Proposition
 - **Agentic AI**: Leverages Google's ADK framework for sophisticated AI orchestration
+- **Modern AI Integration**: Uses latest `google-genai` library (v1.16.1+) for future-proof Google AI integration
 - **Multi-Modal**: Combines text (Gemini) and video (Veo) generation capabilities
 - **User-Centric**: Intuitive workflow from concept to content
 - **Scalable**: Cloud-native architecture supporting enterprise growth
@@ -188,9 +189,9 @@ USER → FRONTEND → API GATEWAY → BACKEND SERVICES → AI SERVICES → DATAB
 | **API Gateway** | Load Balancer | Traffic distribution, SSL termination |
 | **API Gateway** | Auth Service | Authentication, authorization, session management |
 | **Service** | Campaign Service | Campaign CRUD operations, business logic |
-| **Service** | Content Generator | AI integration, content generation workflows |
-| **Integration** | Gemini API | Text generation, summarization, ideation |
-| **Integration** | Veo API | Video content generation |
+| **Service** | Content Generator | AI integration, content generation workflows via `google-genai` library |
+| **Integration** | Gemini API | Text generation, summarization, ideation (via google-genai v1.16.1+) |
+| **Integration** | Veo API | Video content generation (via google-genai v1.16.1+) |
 | **Data** | Firestore | Primary data storage (campaigns, users) |
 | **Data** | Cloud Storage | Media assets (images, videos) |
 | **Data** | Redis Cache | Session data, API response caching |

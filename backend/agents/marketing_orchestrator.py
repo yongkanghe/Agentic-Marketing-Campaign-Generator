@@ -13,6 +13,7 @@ import json
 import time
 from typing import Dict, List, Optional, Any
 from datetime import datetime
+import uuid
 
 from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.agents.llm_agent import LlmAgent
@@ -28,13 +29,15 @@ from .business_analysis_agent import URLAnalysisAgent
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Import visual content generation
+# Import the NEW ADK-based visual content orchestrator
 try:
-    from .visual_content_agent import generate_visual_content_for_posts
-    logger.info("Visual content agent imported successfully")
+    from .adk_visual_agents import VisualContentOrchestratorAgent
+    logger.info("✅ ADK VisualContentOrchestratorAgent imported successfully")
+    VISUAL_AGENT_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Visual content agent not available: {e}")
-    generate_visual_content_for_posts = None
+    logger.warning(f"❌ ADK VisualContentOrchestratorAgent not available: {e}. Visuals will not be generated.")
+    VisualContentOrchestratorAgent = None
+    VISUAL_AGENT_AVAILABLE = False
 
 # Model configuration - Using standardized environment variables
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -261,76 +264,66 @@ async def create_social_content_agent() -> LlmAgent:
     return LlmAgent(
         name="SocialContentAgent",
         model="gemini-2.5-flash",
-        description="Generates engaging social media posts based on business context and campaign objectives.",
-        instruction="""
-        You are a social media content generation expert. Your task is to create engaging, 
-        platform-optimized social media posts based on the provided business context.
-        
-        IMMEDIATELY call the generate_social_posts tool with the provided parameters to create 
-        a comprehensive set of social media posts. Use the post_count parameter to determine 
-        exactly how many posts to generate in total, divided equally across the three content types.
-        
-        Return your response in the following JSON format:
-        
-        {
-            "text_url_posts": [
-                {
-                    "id": "post_1",
-                    "content": "Engaging post content here...",
-                    "hashtags": ["#relevant", "#hashtags"],
-                    "platform_optimized": {
-                        "twitter": {"content": "Twitter-optimized version"},
-                        "linkedin": {"content": "LinkedIn-optimized version"},
-                        "facebook": {"content": "Facebook-optimized version"}
-                    },
-                    "engagement_score": 0.85,
-                    "selected": true
-                }
-            ],
-            "text_image_posts": [
-                {
-                    "id": "post_2", 
-                    "content": "Visual post content...",
-                    "image_prompt": "Detailed image generation prompt",
-                    "hashtags": ["#visual", "#content"],
-                    "platform_optimized": {
-                        "instagram": {"content": "Instagram-optimized version"},
-                        "facebook": {"content": "Facebook-optimized version"}
-                    },
-                    "engagement_score": 0.90,
-                    "selected": true
-                }
-            ],
-            "text_video_posts": [
-                {
-                    "id": "post_3",
-                    "content": "Video post content...", 
-                    "video_prompt": "Detailed video generation prompt",
-                    "hashtags": ["#video", "#content"],
-                    "platform_optimized": {
-                        "tiktok": {"content": "TikTok-optimized version"},
-                        "youtube": {"content": "YouTube-optimized version"}
-                    },
-                    "engagement_score": 0.95,
-                    "selected": true
-                }
-            ]
-        }
-        
-        Generate the requested number of posts divided equally across the three content types:
-        - text_url_posts: posts with text content and external links
-        - text_image_posts: posts with text content and image prompts
-        - text_video_posts: posts with text content and video prompts
-        
-        CRITICAL: Use the exact post_count parameter from the tool call. Examples:
-        - If post_count=9: generate 3 posts of each type (3+3+3=9)
-        - If post_count=6: generate 2 posts of each type (2+2+2=6)
-        - If post_count=12: generate 4 posts of each type (4+4+4=12)
-        - If post_count doesn't divide evenly by 3, distribute extras across types
-        
-        Ensure variety in content and high engagement potential.
-        Make the content authentic to the business context and aligned with the campaign objective.
-        """,
+        description="Generates engaging social media posts based on business context and campaign objectives, conforming to ADR-020 JSON schema.",
+        instruction="""=== STRICT JSON SCHEMA ENFORCEMENT (ADR-020) ===
+
+You are a social media content generation expert. Your task is to create engaging, 
+platform-optimized social media posts based on the provided business context.
+
+IMMEDIATELY call the generate_social_posts tool with the provided parameters to create 
+a comprehensive set of social media posts.
+
+CRITICAL: You MUST return your response in the following EXACT JSON format - NO VARIATIONS ALLOWED:
+
+{
+  "social_media_posts": [
+    {
+      "id": "post_001",
+      "type": "text_url",
+      "content": "Engaging post content here (100-200 words)...",
+      "hashtags": ["#relevant", "#hashtags"],
+      "image_prompt": null,
+      "video_prompt": null
+    },
+    {
+      "id": "post_002", 
+      "type": "text_image",
+      "content": "Visual post content here (100-200 words)...",
+      "hashtags": ["#visual", "#content"],
+      "image_prompt": "Detailed image generation prompt for AI",
+      "video_prompt": null
+    },
+    {
+      "id": "post_003",
+      "type": "text_video",
+      "content": "Video post content here (100-200 words)...",
+      "hashtags": ["#video", "#content"],
+      "image_prompt": null,
+      "video_prompt": "Detailed video generation prompt for AI"
+    }
+  ]
+}
+
+MANDATORY REQUIREMENTS:
+1. Use ONLY the key "social_media_posts" as the root array
+2. Each post must have EXACTLY these fields: id, type, content, hashtags, image_prompt, video_prompt
+3. The "type" field must be EXACTLY one of: "text_url", "text_image", "text_video"
+4. For text_url posts: image_prompt and video_prompt must be null
+5. For text_image posts: image_prompt must be detailed string, video_prompt must be null
+6. For text_video posts: video_prompt must be detailed string, image_prompt must be null
+7. Generate posts equally distributed across the three types
+8. Each post content must be 100-200 words, engaging and relevant
+9. Include 3-5 relevant hashtags per post
+10. Use sequential IDs: post_001, post_002, post_003, etc.
+
+FORBIDDEN ACTIONS:
+- Do NOT use keys like "text_url_posts", "text_image_posts", "text_video_posts"
+- Do NOT use keys like "generated_content" or any other variations
+- Do NOT include "platform_optimized" or "engagement_score" fields
+- Do NOT deviate from the exact schema above
+
+Generate the exact number of posts specified by the post_count parameter from the tool call.
+""",
         tools=[generate_social_posts],
         output_key="social_posts"
     )
@@ -441,370 +434,102 @@ async def execute_campaign_workflow(
     business_website: Optional[str] = None,
     about_page_url: Optional[str] = None,
     product_service_url: Optional[str] = None,
-    uploaded_files: Optional[List[Dict[str, Any]]] = None
+    uploaded_files: Optional[List[Dict[str, Any]]] = None,
+    campaign_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    isolation_key: Optional[str] = None,
+    campaign_guidance: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Executes the full campaign generation workflow using real AI agents.
-
-    This function orchestrates business analysis and content generation.
-    It will first attempt to get business context from URLs if provided.
-    If no URLs are available, it will use the provided business_description
-    for analysis.
-
-    This workflow no longer uses mock data for initial content generation.
+    Root function to execute the complete ADK-based marketing campaign workflow.
+    This orchestrates business analysis, content generation, and agentic visual content generation.
     """
-    logger.info("Starting real AI campaign workflow...")
-
-    # Ensure API key is available
-    if not GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY not configured. Cannot execute real AI workflow.")
-        # In a real app, you'd return a proper error response
-        return {"error": "AI services are not configured."}
-
-    # Prepare the context for the ADK workflow
-    workflow_context = {
-        "business_description": business_description,
-        "objective": objective,
-        "target_audience": target_audience,
-        "campaign_type": campaign_type,
-        "creativity_level": creativity_level,
-        "business_website": business_website,
-        "about_page_url": about_page_url,
-        "product_service_url": product_service_url,
-        "uploaded_files": uploaded_files,
-        "post_count": post_count,
-        "timestamp": datetime.now().isoformat(),
-    }
+    start_time = time.time()
+    campaign_id = campaign_id or str(uuid.uuid4())
+    logger.info(f"🚀 Starting campaign workflow for campaign_id: {campaign_id}")
 
     try:
-        # STEP 1: Business Analysis
-        business_analysis_result = {}
-        urls_to_analyze = [url for url in [business_website, about_page_url, product_service_url] if url]
-
-        if urls_to_analyze:
-            logger.info(f"Performing URL-based analysis on: {urls_to_analyze}")
-            url_agent = URLAnalysisAgent()
-            # Note: The URLAnalysisAgent itself now uses real AI, so we call it directly.
-            analysis_data = await url_agent.analyze_urls(urls=urls_to_analyze)
-            business_analysis_result = analysis_data.get("business_analysis", {})
-        elif business_description:
-            logger.info("Performing description-based analysis.")
-            business_analysis_result = await _extract_business_context_from_description(
-                business_description=business_description,
-                target_audience=target_audience,
-                objective=objective,
-                campaign_type=campaign_type
-            )
+        # Step 1: Business Analysis
+        # This step creates a detailed analysis from the provided description
+        business_analysis = await _extract_business_context_from_description(
+            business_description, target_audience, objective, campaign_type
+        )
+        if not business_analysis:
+            logger.error(f"Business analysis failed for campaign {campaign_id}.")
+            return {"error": "Business analysis could not be completed."}
+        
+        # Step 1.5: Merge Frontend Campaign Guidance
+        # If campaign_guidance is provided from the frontend (e.g., from AI Campaign Summary),
+        # merge it with the extracted business analysis
+        if campaign_guidance:
+            logger.info(f"🎨 Merging frontend campaign guidance with business analysis: {list(campaign_guidance.keys())}")
+            business_analysis["campaign_guidance"] = campaign_guidance
+            
+            # Log the merged guidance for debugging
+            if campaign_guidance.get('creative_direction'):
+                logger.info(f"🎭 Creative Direction: {campaign_guidance['creative_direction'][:100]}...")
+            if campaign_guidance.get('visual_style'):
+                logger.info(f"🎨 Visual Style: {campaign_guidance['visual_style']}")
         else:
-            logger.warning("No URLs or business description provided for analysis.")
-            return {"error": "Business information required for analysis."}
+            logger.info("📋 No frontend campaign guidance provided, using extracted analysis only")
         
-        if not business_analysis_result:
-            logger.error("Business analysis failed to produce results.")
-            return {"error": "Could not analyze business context."}
+        # Build the context for the content generation agents
+        context = {
+            "business_description": business_description, "objective": objective,
+            "target_audience": target_audience, "campaign_type": campaign_type,
+            "creativity_level": creativity_level, "post_count": post_count,
+            "business_website": business_website, "about_page_url": about_page_url,
+            "product_service_url": product_service_url, "uploaded_files": uploaded_files,
+            "campaign_id": campaign_id,
+        }
 
-        # STEP 2: Content Generation
-        logger.info("Proceeding to real content generation.")
-        # Pass the result of the analysis to the content generation step
-        generation_context = workflow_context.copy()
-        generation_context["business_context"] = business_analysis_result
+        # Step 2: Content Generation (Text)
+        # This agent generates the social media post text based on the analysis
+        generated_content_raw = await _generate_real_social_content(business_analysis, context)
+        
+        # Step 3: Format Generated Content
+        # This structures the raw LLM output into the application's data models
+        formatted_posts = _format_generated_content({"generated_content": generated_content_raw}, context, business_analysis)
 
-        content_generation_agent = await create_content_generation_agent()
-        
-        # Correct ADK Runner pattern for executing SequentialAgent
-        from google.adk.runners import InMemoryRunner
-        from google.genai import types
-        
-        runner = InMemoryRunner(
-            app_name='marketing_campaign_generator',
-            agent=content_generation_agent,
-        )
-        
-        # Create a user message with the generation context
-        user_message = f"""
-        Generate social media content for the following campaign:
-        Business Context: {generation_context.get('business_context', {})}
-        Objective: {generation_context.get('objective', 'Generate engaging content')}
-        Target Audience: {generation_context.get('target_audience', 'General audience')}
-        Campaign Type: {generation_context.get('campaign_type', 'general')}
-        Creativity Level: {generation_context.get('creativity_level', 5)}
-        Post Count: {post_count}
-        
-        Please generate exactly {post_count} social media posts total, divided equally across the three content types:
-        - text_url_posts: {post_count // 3} posts
-        - text_image_posts: {post_count // 3} posts  
-        - text_video_posts: {post_count // 3} posts
-        
-        If the post count doesn't divide evenly by 3, distribute the extra posts among the types.
-        """
-        
-        content = types.Content(
-            role='user', 
-            parts=[types.Part.from_text(text=user_message)]
-        )
-        
-        # Create a session for the runner
-        session = await runner.session_service.create_session(
-            app_name='marketing_campaign_generator', 
-            user_id='system'
-        )
-        
-        # Execute the agent through the runner
-        adk_results = []
-        async for event in runner.run_async(
-            user_id='system',
-            session_id=session.id,
-            new_message=content,
-        ):
-            if event.content and event.content.parts:
-                if event.content.parts[0].text:
-                    adk_results.append(event.content.parts[0].text)
-        
-        # Compile the results
-        adk_result = {
-            "generated_content": adk_results,
+        workflow_result = {
+            "business_analysis": business_analysis,
+            "generated_content": formatted_posts,
             "success": True
         }
 
-        # STEP 3: Formatting and Final Output
-        generated_content = _format_generated_content(
-            content_data=adk_result,
-            context=workflow_context,
-            business_analysis=business_analysis_result
-        )
-        
-        # Generate campaign ID
-        import uuid
-        campaign_id = f"campaign_{uuid.uuid4().hex[:8]}_{int(time.time())}"
-        
-        final_result = {
-            "campaign_id": campaign_id,
-            "summary": f"AI-generated campaign for {business_analysis_result.get('company_name', 'business')}",
-            "business_analysis": business_analysis_result,
-            "social_posts": generated_content,  # Use social_posts key for consistency
-            "generated_content": generated_content,  # Keep for backward compatibility
-            "created_at": workflow_context["timestamp"],
-            "status": "ready",
-            "metadata": {
-                "timestamp": workflow_context["timestamp"],
-                "real_ai_used": True,
-                "workflow_type": "URL-based" if urls_to_analyze else "Description-based"
-            }
+        # Step 4: Agentic Visual Content Generation
+        if VISUAL_AGENT_AVAILABLE and formatted_posts:
+            logger.info("🧠 Engaging ADK VisualContentOrchestratorAgent for visual generation...")
+            visual_orchestrator = VisualContentOrchestratorAgent()
+            
+            # Use the detailed analysis as the context for the visual agents
+            visual_business_context = business_analysis.get("business_context", business_analysis)
+            
+            visual_result = await visual_orchestrator.generate_visual_content_for_posts(
+                social_posts=formatted_posts,
+                business_context=visual_business_context,
+                campaign_objective=objective,
+                campaign_guidance=business_analysis.get("campaign_guidance", {}),
+                campaign_id=campaign_id
+            )
+            
+            workflow_result["generated_content"] = visual_result.get("posts_with_visuals", formatted_posts)
+            workflow_result["visual_generation_metadata"] = visual_result.get("generation_metadata", {})
+            logger.info("✅ Visual content generation complete. Posts updated with media URLs.")
+        else:
+            logger.warning("Visual agent not available or no text posts generated, skipping visual content.")
+
+        processing_time = time.time() - start_time
+        workflow_result["total_processing_time"] = processing_time
+        logger.info(f"✅ Campaign workflow for {campaign_id} completed in {processing_time:.2f} seconds.")
+        return workflow_result
+
+    except Exception as e:
+        logger.error(f"FATAL: Campaign workflow failed for campaign_id {campaign_id}: {e}", exc_info=True)
+        return {
+            "error": f"An unexpected error occurred in the campaign workflow: {str(e)}",
+            "campaign_id": campaign_id
         }
-
-        logger.info("Successfully completed real AI campaign workflow.")
-        return final_result
-
-    except Exception as e:
-        logger.error(f"An error occurred during the real AI workflow: {e}", exc_info=True)
-        # Proper error handling as per remediation plan
-        return {"error": f"An unexpected error occurred: {e}"}
-
-async def _execute_real_adk_workflow(orchestrator: SequentialAgent, context: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    DEPRECATED: This function's logic has been integrated directly into
-    the main execute_campaign_workflow function for a clearer, more direct flow.
-    The core logic for business analysis and content generation is now
-    handled sequentially in the main function.
-    """
-    logger.warning("DEPRECATED: _execute_real_adk_workflow is no longer in use.")
-    # The logic from this function has been moved to execute_campaign_workflow
-    # for a more streamlined process.
-    return {"error": "This execution path is deprecated."}
-
-async def _generate_real_social_content(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate real social media content using Gemini AI."""
-    
-    try:
-        import google.genai as genai
-        
-        # Initialize Gemini client
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
-        
-        company_name = business_analysis.get('company_name', 'Your Company')
-        industry = business_analysis.get('industry', 'Professional Services')
-        objective = context['objective']
-        target_audience = context['target_audience']
-        campaign_type = context['campaign_type']
-        creativity_level = context['creativity_level']
-        
-        # Create comprehensive prompt for social content generation
-        content_prompt = f"""
-        As a professional marketing content creator, generate 9 high-quality social media posts for {company_name}.
-
-        Business Context:
-        - Company: {company_name}
-        - Industry: {industry}
-        - Objective: {objective}
-        - Target Audience: {target_audience}
-        - Campaign Type: {campaign_type}
-        - Creativity Level: {creativity_level}/10
-        - Value Propositions: {', '.join(business_analysis.get('value_propositions', []))}
-        - Brand Voice: {business_analysis.get('brand_voice', 'Professional')}
-
-        Generate 3 posts for each format:
-        1. Text + URL Posts (150-200 words each)
-        2. Text + Image Posts (100-150 words each)
-        3. Text + Video Posts (120-180 words each)
-
-        Requirements:
-        - Professional, engaging content that reflects the brand voice
-        - Include relevant hashtags (4-6 per post)
-        - Optimize for LinkedIn, Instagram, and Facebook
-        - Focus on the campaign objective: {objective}
-        - Make content specific to {company_name} and {industry}
-
-        Format your response as JSON:
-        {{
-            "text_url_posts": [
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "platform_focus": "linkedin"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "platform_focus": "facebook"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "platform_focus": "twitter"}}
-            ],
-            "text_image_posts": [
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "image_prompt": "image description"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "image_prompt": "image description"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "image_prompt": "image description"}}
-            ],
-            "text_video_posts": [
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "video_prompt": "video description"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "video_prompt": "video description"}},
-                {{"content": "post content", "hashtags": ["#tag1", "#tag2"], "video_prompt": "video description"}}
-            ]
-        }}
-        """
-        
-        # Generate content using Gemini
-        response = client.models.generate_content(
-            model=model,
-            contents=content_prompt
-        )
-        
-        # Parse the response
-        import json
-        import re
-        
-        response_text = response.text
-        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        
-        if json_match:
-            try:
-                content_data = json.loads(json_match.group())
-                return _format_generated_content(content_data, context, business_analysis)
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse Gemini JSON response")
-        
-        # Fallback to enhanced content generation
-        return _generate_enhanced_content_fallback(business_analysis, context)
-        
-    except Exception as e:
-        logger.error(f"Real content generation failed: {e}")
-        return _generate_enhanced_content_fallback(business_analysis, context)
-
-def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, Any], business_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Formats the structured content from the LLM into the application's data models.
-    
-    ADK Enhancement: This function now correctly handles ADK agent responses and JSON string parsing.
-    """
-    logger.debug(f"Formatting generated content with creativity level {context.get('creativity_level')}")
-    logger.debug(f"Content data structure: {list(content_data.keys()) if isinstance(content_data, dict) else type(content_data)}")
-    
-    formatted_posts = []
-    
-    # Handle ADK agent response format - check for generated_content list
-    if "generated_content" in content_data and isinstance(content_data["generated_content"], list):
-        # Parse the JSON strings from ADK agents
-        for content_str in content_data["generated_content"]:
-            if isinstance(content_str, str):
-                try:
-                    # Parse JSON content from agent
-                    import json
-                    import re
-                    
-                    # Extract JSON from markdown code blocks if present
-                    json_match = re.search(r'```json\s*(.*?)\s*```', content_str, re.DOTALL)
-                    if json_match:
-                        content_str = json_match.group(1)
-                    
-                    parsed_content = json.loads(content_str)
-                    
-                    # Process each post type from the parsed content
-                    for post_type in ['text_url_posts', 'text_image_posts', 'text_video_posts']:
-                        if post_type in parsed_content:
-                            posts = parsed_content[post_type]
-                            if isinstance(posts, list):
-                                for post in posts:
-                                    formatted_post = _format_single_post(post, post_type, business_analysis)
-                                    formatted_posts.append(formatted_post)
-                    
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse JSON content from agent: {e}")
-                    continue
-    
-    # Fallback: check for direct social_posts format
-    social_posts_data = content_data.get("social_posts", [])
-    if isinstance(social_posts_data, list) and len(formatted_posts) == 0:
-        for i, post_data in enumerate(social_posts_data):
-            if isinstance(post_data, dict):
-                formatted_post = _format_single_post(post_data, "text_url", business_analysis)
-                formatted_posts.append(formatted_post)
-    
-    logger.info(f"Successfully formatted {len(formatted_posts)} social media posts.")
-    return formatted_posts
-
-def _format_single_post(post_data: Dict[str, Any], post_type: str, business_analysis: Dict[str, Any]) -> Dict[str, Any]:
-    """Format a single post from agent response."""
-    post_id = f"post_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(str(post_data))}"
-    
-    # Determine post type from source
-    if post_type == 'text_url_posts' or post_type == 'text_url':
-        type_value = "text_url"
-    elif post_type == 'text_image_posts' or post_type == 'text_image':
-        type_value = "text_image"
-    elif post_type == 'text_video_posts' or post_type == 'text_video':
-        type_value = "text_video"
-    else:
-        type_value = "text_url"
-    
-    # Safely parse platform_optimized content
-    platform_optimized_raw = post_data.get("platform_optimized", {})
-    platform_optimized_data = {}
-    if isinstance(platform_optimized_raw, str):
-        try:
-            platform_optimized_data = json.loads(platform_optimized_raw)
-        except json.JSONDecodeError:
-            logger.warning(f"Failed to decode platform_optimized JSON for post {post_id}")
-            platform_optimized_data = {}
-    elif isinstance(platform_optimized_raw, dict):
-        platform_optimized_data = platform_optimized_raw
-    
-    return {
-        "id": post_data.get("id", post_id),
-        "type": type_value,
-        "content": post_data.get("content", "No content generated."),
-        "url": post_data.get("url"),
-        "image_prompt": post_data.get("image_prompt"),
-        "image_url": None,  # Will be set when visual content is generated
-        "video_prompt": post_data.get("video_prompt"),
-        "video_url": None,  # Will be set when visual content is generated
-        "hashtags": post_data.get("hashtags", []),
-        "platform_optimized": platform_optimized_data,
-        "engagement_score": post_data.get("engagement_score", 0.8),
-        "selected": post_data.get("selected", False),
-        "business_context": business_analysis
-    }
-
-
-
-def _generate_enhanced_content_fallback(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    DEPRECATED: Fallback logic is now handled by raising exceptions and
-    allowing the API layer to return a proper error message.
-    """
-    logger.warning("DEPRECATED: _generate_enhanced_content_fallback is no longer used.")
-    return []
 
 async def _extract_business_context_from_description(
     business_description: str,
@@ -930,4 +655,410 @@ def _manual_business_context_extraction(
             "interests": ["quality", "value", "service"],
             "lifestyle": "active and engaged"
         }
+    }
+
+async def _generate_real_social_content(business_analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate real social media content using Gemini AI, conforming to ADR-020.
+    
+    ⚠️  CRITICAL: ADR-020 SCHEMA ENFORCEMENT ⚠️
+    This function implements the DEFINITIVE solution for consistent JSON schema enforcement.
+    
+    ENFORCED OUTPUT SCHEMA (ADR-020 Canonical):
+    {
+      "social_media_posts": [
+        {
+          "id": "post_001",
+          "type": "text_url" | "text_image" | "text_video",
+          "content": "100-200 word engaging post content",
+          "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
+          "image_prompt": null | "detailed AI image generation prompt",
+          "video_prompt": null | "detailed AI video generation prompt"
+        }
+      ]
+    }
+    
+    DYNAMIC CAMPAIGN GUIDANCE INTEGRATION:
+    This function dynamically incorporates campaign guidance from the frontend:
+    - creative_direction: Overall creative vision and brand aesthetic
+    - visual_style: Photography style, mood, lighting preferences  
+    - content_themes: Primary themes and target context
+    - imagen_prompts: Technical specifications for image generation
+    - veo_prompts: Technical specifications for video generation
+    
+    ❌ ANTI-PATTERNS PREVENTED:
+    - Legacy "text_url_posts", "text_image_posts", "text_video_posts" structure
+    - Inconsistent JSON formatting with control characters  
+    - Missing or incorrect post type specifications
+    - Non-canonical key names or structures
+    
+    ROBUST JSON PARSING STRATEGY:
+    1. CONTROL CHAR CLEANING: Remove JSON-breaking control characters
+    2. DIRECT PARSING: Parse cleaned JSON directly if properly formatted
+    3. MARKDOWN EXTRACTION: Handle ```json blocks if present
+    4. REGEX EXTRACTION: Find JSON objects in mixed content
+    5. FALLBACK PARSING: Try original text if cleaning fails
+    
+    Args:
+        business_analysis: Business context including company info and campaign guidance
+        context: Campaign parameters (objective, audience, post_count, etc.)
+        
+    Returns:
+        Dict containing "social_media_posts" array in ADR-020 format
+        Returns {"social_media_posts": []} on any parsing failure
+        
+    Raises:
+        Logs errors but does not raise exceptions (returns empty result on failure)
+    """
+    try:
+        import google.genai as genai
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+        
+        company_name = business_analysis.get('company_name', 'Your Company')
+        industry = business_analysis.get('industry', 'Professional Services')
+        objective = context['objective']
+        target_audience = context['target_audience']
+        campaign_type = context['campaign_type']
+        post_count = context.get('post_count', 9)
+        
+        # Calculate posts per type (divide evenly, with remainder distributed)
+        posts_per_type = post_count // 3
+        remainder = post_count % 3
+        text_url_count = posts_per_type + (1 if remainder > 0 else 0)
+        text_image_count = posts_per_type + (1 if remainder > 1 else 0)
+        text_video_count = posts_per_type
+        
+        # This prompt is architecturally significant and enforces ADR-020 with MAXIMUM STRICTNESS.
+        content_prompt = f"""=== STRICT JSON SCHEMA ENFORCEMENT (ADR-020) ===
+
+YOU ARE A JSON-ONLY CONTENT GENERATOR. YOUR RESPONSE MUST BE EXCLUSIVELY A SINGLE, VALID JSON OBJECT.
+
+FORBIDDEN ACTIONS:
+- NO markdown code blocks (```json)
+- NO explanatory text before or after the JSON
+- NO comments or annotations
+- NO variations from the specified schema
+
+REQUIRED RESPONSE FORMAT:
+You must respond with ONLY this exact JSON structure:
+
+{{
+  "social_media_posts": [
+    {{
+      "id": "post_001",
+      "type": "text_url",
+      "content": "Your engaging post content here...",
+      "hashtags": ["#hashtag1", "#hashtag2"],
+      "image_prompt": null,
+      "video_prompt": null
+    }},
+    {{
+      "id": "post_002", 
+      "type": "text_image",
+      "content": "Your visual post content here...",
+      "hashtags": ["#hashtag1", "#hashtag2"],
+      "image_prompt": "Detailed image generation prompt here",
+      "video_prompt": null
+    }},
+    {{
+      "id": "post_003",
+      "type": "text_video", 
+      "content": "Your video post content here...",
+      "hashtags": ["#hashtag1", "#hashtag2"],
+      "image_prompt": null,
+      "video_prompt": "Detailed video generation prompt here"
+    }}
+  ]
+}}
+
+BUSINESS CONTEXT FOR CONTENT GENERATION:
+- Company: {company_name}
+- Industry: {industry} 
+- Objective: {objective}
+- Target Audience: {target_audience}
+- Campaign Type: {campaign_type}
+- Brand Voice: {business_analysis.get('brand_voice', 'Professional')}
+
+MANDATORY REQUIREMENTS:
+1. Generate exactly {post_count} posts total
+2. Create {text_url_count} posts with type "text_url" (image_prompt: null, video_prompt: null)
+3. Create {text_image_count} posts with type "text_image" (image_prompt: detailed string, video_prompt: null)
+4. Create {text_video_count} posts with type "text_video" (image_prompt: null, video_prompt: detailed string)
+5. Each post must have unique id starting with "post_"
+6. Content must be 100-200 words, engaging and relevant
+7. Include 3-5 relevant hashtags per post
+8. Image prompts must be detailed descriptions for AI image generation
+9. Video prompts must be detailed descriptions for AI video generation
+
+YOUR RESPONSE MUST START WITH {{ AND END WITH }} - NOTHING ELSE."""
+        
+        logger.debug(f"Sending content generation request to Gemini with {post_count} posts")
+        response = client.models.generate_content(model=model, contents=content_prompt)
+        
+        import json
+        import re
+        response_text = response.text.strip()
+        
+        # Clean control characters that break JSON parsing
+        cleaned_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', response_text)
+        
+        # Log the raw response for debugging
+        logger.debug(f"Raw Gemini response: {response_text[:500]}...")
+        logger.debug(f"Cleaned response: {cleaned_text[:500]}...")
+        
+        # Try to extract JSON - be more aggressive about finding it
+        json_data = None
+        
+        # Method 1: Direct parse if it starts with { (use cleaned text)
+        if cleaned_text.startswith('{'):
+            try:
+                json_data = json.loads(cleaned_text)
+                logger.debug("✅ Successfully parsed JSON directly from cleaned response")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Direct JSON parse failed: {e}")
+        
+        # Method 2: Extract from markdown blocks (use cleaned text)
+        if not json_data:
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', cleaned_text, re.DOTALL)
+            if json_match:
+                try:
+                    json_data = json.loads(json_match.group(1))
+                    logger.debug("✅ Successfully extracted JSON from markdown block")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Markdown JSON parse failed: {e}")
+        
+        # Method 3: Find any JSON object in the response (use cleaned text)
+        if not json_data:
+            json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
+            if json_match:
+                try:
+                    json_data = json.loads(json_match.group(0))
+                    logger.debug("✅ Successfully extracted JSON object from cleaned response")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Generic JSON parse failed: {e}")
+                    
+        # Method 4: Fallback to original text if cleaned version fails
+        if not json_data:
+            logger.info("🔄 Trying fallback parsing with original response text...")
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    json_data = json.loads(json_match.group(0))
+                    logger.debug("✅ Fallback JSON parse successful with original text")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Fallback JSON parse failed: {e}")
+        
+        # Validate the JSON structure
+        if json_data:
+            if "social_media_posts" in json_data and isinstance(json_data["social_media_posts"], list):
+                posts_count = len(json_data["social_media_posts"])
+                logger.info(f"✅ Successfully generated {posts_count} social media posts")
+                return json_data
+            else:
+                logger.error(f"JSON response missing 'social_media_posts' key or invalid structure. Keys: {list(json_data.keys())}")
+        
+        # If all parsing failed, log and return empty result
+        logger.error(f"❌ All JSON parsing methods failed. Raw response: {response_text}")
+        return {"social_media_posts": []}
+        
+    except Exception as e:
+        logger.error(f"Real content generation failed: {e}", exc_info=True)
+        return {"social_media_posts": []}
+
+def _format_generated_content(content_data: Dict[str, Any], context: Dict[str, Any], business_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Formats the structured content from the LLM into the application's data models, conforming to ADR-020.
+    
+    ⚠️  CRITICAL: ADR-020 SCHEMA COMPLIANCE ⚠️
+    This function MUST parse the canonical ADR-020 schema format:
+    
+    EXPECTED INPUT SCHEMA (ADR-020 Canonical Format):
+    {
+      "social_media_posts": [
+        {
+          "id": "string - Unique identifier (e.g., 'post_001')",
+          "type": "string - MUST be 'text_url', 'text_image', or 'text_video'",
+          "content": "string - Main post content (100-200 words)",
+          "hashtags": ["string", "string", ...] - Array of hashtags,
+          "image_prompt": "string | null - Detailed AI image prompt if type='text_image'",
+          "video_prompt": "string | null - Detailed AI video prompt if type='text_video'"
+        }
+      ]
+    }
+    
+    ❌ FORBIDDEN FORMATS (will trigger fallback parsing):
+    - "text_url_posts", "text_image_posts", "text_video_posts" (legacy format)
+    - "generated_content" (nested format)
+    - Direct post arrays at root level
+    
+    PARSING STRATEGY:
+    1. PRIMARY: Parse ADR-020 compliant "social_media_posts" array
+    2. FALLBACK: Convert legacy formats to ADR-020 structure
+    3. FALLBACK: Handle nested "generated_content" structures
+    4. FALLBACK: Process direct post arrays
+    
+    This function implements comprehensive parsing with multiple fallback strategies
+    to maintain backward compatibility while enforcing the ADR-020 standard.
+    
+    Args:
+        content_data: Raw LLM response data (should contain "social_media_posts")
+        context: Campaign context (objective, audience, etc.)
+        business_analysis: Business context and campaign guidance
+        
+    Returns:
+        List of formatted post dictionaries ready for visual content generation
+        
+    Raises:
+        Logs errors but does not raise exceptions (returns empty list on failure)
+    """
+    logger.info("--- STARTING CONTENT FORMATTING (ADR-020 COMPLIANT) ---")
+    formatted_posts = []
+    
+    # Method 1: ADR-020 compliant format with "social_media_posts" key
+    if "social_media_posts" in content_data and isinstance(content_data["social_media_posts"], list):
+        posts_list = content_data["social_media_posts"]
+        logger.info(f"✅ Found ADR-020 compliant 'social_media_posts' key with {len(posts_list)} items.")
+        for post_data in posts_list:
+            if isinstance(post_data, dict):
+                post_type = post_data.get("type", "text_url")
+                formatted_post = _format_single_post(post_data, post_type, business_analysis)
+                formatted_posts.append(formatted_post)
+    
+    # Method 2: Legacy format with separate post type arrays (fallback)
+    elif any(key in content_data for key in ["text_url_posts", "text_image_posts", "text_video_posts"]):
+        logger.warning("⚠️ Found legacy format with separate post arrays. Converting to ADR-020 format.")
+        
+        # Process each post type array
+        for post_type_key in ["text_url_posts", "text_image_posts", "text_video_posts"]:
+            if post_type_key in content_data and isinstance(content_data[post_type_key], list):
+                post_type = post_type_key.replace("_posts", "")  # "text_url_posts" -> "text_url"
+                for post_data in content_data[post_type_key]:
+                    if isinstance(post_data, dict):
+                        # Ensure post has the type field for consistency
+                        post_data["type"] = post_type
+                        formatted_post = _format_single_post(post_data, post_type, business_analysis)
+                        formatted_posts.append(formatted_post)
+        
+        logger.info(f"✅ Successfully converted {len(formatted_posts)} posts from legacy format.")
+    
+    # Method 3: Check for "generated_content" key (another fallback)
+    elif "generated_content" in content_data:
+        logger.warning("⚠️ Found 'generated_content' key. Attempting to parse nested structure.")
+        generated_content = content_data["generated_content"]
+        
+        # Recursively parse the nested content
+        if isinstance(generated_content, dict):
+            formatted_posts = _format_generated_content(generated_content, context, business_analysis)
+        elif isinstance(generated_content, list):
+            # Assume it's a list of posts
+            for post_data in generated_content:
+                if isinstance(post_data, dict):
+                    post_type = post_data.get("type", "text_url")
+                    formatted_post = _format_single_post(post_data, post_type, business_analysis)
+                    formatted_posts.append(formatted_post)
+    
+    # Method 4: Direct post array at root level (final fallback)
+    elif isinstance(content_data, list):
+        logger.warning("⚠️ Found direct post list at root level. Processing as posts array.")
+        for post_data in content_data:
+            if isinstance(post_data, dict):
+                post_type = post_data.get("type", "text_url")
+                formatted_post = _format_single_post(post_data, post_type, business_analysis)
+                formatted_posts.append(formatted_post)
+    
+    else:
+        logger.error(f"❌ Could not parse content data. Keys found: {list(content_data.keys()) if isinstance(content_data, dict) else 'Not a dictionary'}")
+        logger.debug(f"Content data structure: {type(content_data)} - {str(content_data)[:200]}...")
+
+    logger.info(f"--- FINISHED CONTENT FORMATTING: Formatted {len(formatted_posts)} posts ---")
+    return formatted_posts
+
+def _format_single_post(post_data: Dict[str, Any], post_type: str, business_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Format a single post from agent response into the application's internal data model.
+    
+    ⚠️  CRITICAL: ADR-020 SCHEMA COMPLIANCE ⚠️
+    This function converts individual post data from the ADR-020 canonical format into
+    the application's internal post representation for visual content generation.
+    
+    EXPECTED INPUT (from ADR-020 "social_media_posts" array):
+    {
+      "id": "post_001",
+      "type": "text_url" | "text_image" | "text_video", 
+      "content": "100-200 word post content",
+      "hashtags": ["#hashtag1", "#hashtag2"],
+      "image_prompt": null | "detailed image prompt",
+      "video_prompt": null | "detailed video prompt"
+    }
+    
+    OUTPUT FORMAT (Application Internal Model):
+    {
+      "id": "string - Post identifier",
+      "type": "string - Normalized post type (text_url, text_image, text_video)",
+      "content": "string - Post content",
+      "url": "string | None - Associated URL if applicable",
+      "image_prompt": "string | None - Image generation prompt",
+      "image_url": "None - Placeholder for generated image URL",
+      "video_prompt": "string | None - Video generation prompt", 
+      "video_url": "None - Placeholder for generated video URL",
+      "hashtags": "List[str] - Array of hashtags",
+      "platform_optimized": "Dict - Platform-specific optimizations",
+      "engagement_score": "float - Predicted engagement score",
+      "selected": "bool - User selection status",
+      "business_context": "Dict - Business analysis context"
+    }
+    
+    TYPE NORMALIZATION:
+    - "text_url_posts" or "text_url" → "text_url"
+    - "text_image_posts" or "text_image" → "text_image" 
+    - "text_video_posts" or "text_video" → "text_video"
+    - Default fallback → "text_url"
+    
+    Args:
+        post_data: Individual post data from LLM response
+        post_type: Post type string (may be legacy format)
+        business_analysis: Business context for embedding in post
+        
+    Returns:
+        Formatted post dictionary ready for visual content generation
+    """
+    post_id = f"post_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(str(post_data))}"
+    
+    # Determine post type from source
+    if post_type == 'text_url_posts' or post_type == 'text_url':
+        type_value = "text_url"
+    elif post_type == 'text_image_posts' or post_type == 'text_image':
+        type_value = "text_image"
+    elif post_type == 'text_video_posts' or post_type == 'text_video':
+        type_value = "text_video"
+    else:
+        type_value = "text_url"
+    
+    # Safely parse platform_optimized content
+    platform_optimized_raw = post_data.get("platform_optimized", {})
+    platform_optimized_data = {}
+    if isinstance(platform_optimized_raw, str):
+        try:
+            platform_optimized_data = json.loads(platform_optimized_raw)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to decode platform_optimized JSON for post {post_id}")
+            platform_optimized_data = {}
+    elif isinstance(platform_optimized_raw, dict):
+        platform_optimized_data = platform_optimized_raw
+    
+    return {
+        "id": post_data.get("id", post_id),
+        "type": type_value,
+        "content": post_data.get("content", "No content generated."),
+        "url": post_data.get("url"),
+        "image_prompt": post_data.get("image_prompt"),
+        "image_url": None,  # Will be set when visual content is generated
+        "video_prompt": post_data.get("video_prompt"),
+        "video_url": None,  # Will be set when visual content is generated
+        "hashtags": post_data.get("hashtags", []),
+        "platform_optimized": platform_optimized_data,
+        "engagement_score": post_data.get("engagement_score", 0.8),
+        "selected": post_data.get("selected", False),
+        "business_context": business_analysis
     } 

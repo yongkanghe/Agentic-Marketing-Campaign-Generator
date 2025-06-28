@@ -305,8 +305,7 @@ class ImageGenerationAgent:
     """Agent for generating images using Google Imagen."""
     
     def __init__(self):
-        """Initialize image generation agent with Gemini client."""
-        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+        """Initialize image generation agent with Gemini client following ADK patterns."""
         self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         self.image_model = os.getenv('IMAGE_MODEL', 'imagen-3.0-generate-002')
         self.max_images = safe_int_env('MAX_TEXT_IMAGE_POSTS', '4')
@@ -314,17 +313,41 @@ class ImageGenerationAgent:
         
         logger.info(f"Initializing Image Generation Agent with max_images={self.max_images}, model={self.image_model}")
         
-        if self.gemini_api_key:
-            try:
-                self.client = genai.Client(api_key=self.gemini_api_key)
-                logger.info(f"✅ Image Generation Agent initialized successfully with Gemini client using {self.image_model}")
-            except Exception as e:
-                logger.error(f"❌ Failed to initialize Gemini client for image generation: {e}")
-                logger.warning("🔄 Image generation will fall back to placeholder mode")
+        # Initialize client following ADK agent patterns
+        use_vertexai = os.getenv('GOOGLE_GENAI_USE_VERTEXAI', 'False').lower() == 'true'
+        
+        if use_vertexai:
+            # Vertex AI pattern from logo_create_agent
+            project = os.getenv('GOOGLE_CLOUD_PROJECT')
+            location = os.getenv('GOOGLE_CLOUD_LOCATION', 'us-central1')
+            if project:
+                try:
+                    self.client = genai.Client(vertexai=True, project=project, location=location)
+                    self.gemini_api_key = f"vertexai-{project}"  # Set for compatibility check
+                    logger.info(f"✅ Image Generation Agent initialized with Vertex AI client using {self.image_model}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to initialize Vertex AI client: {e}")
+                    self.client = None
+                    self.gemini_api_key = None
+            else:
+                logger.warning("⚠️ GOOGLE_CLOUD_PROJECT not set for Vertex AI")
                 self.client = None
+                self.gemini_api_key = None
         else:
-            logger.warning("⚠️ GEMINI_API_KEY not found - image generation will use placeholder mode")
-            self.client = None
+            # AI Studio pattern
+            self.gemini_api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+            if self.gemini_api_key:
+                try:
+                    self.client = genai.Client(api_key=self.gemini_api_key)
+                    logger.info(f"✅ Image Generation Agent initialized with AI Studio client using {self.image_model}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to initialize AI Studio client: {e}")
+                    self.client = None
+                    self.gemini_api_key = None
+            else:
+                logger.warning("⚠️ GOOGLE_API_KEY not set for AI Studio - using placeholder mode")
+                self.client = None
+                self.gemini_api_key = None
     
     async def generate_images(self, prompts: List[str], business_context: Dict[str, Any], campaign_id: str = "default") -> List[Dict[str, Any]]:
         """
@@ -515,25 +538,40 @@ class ImageGenerationAgent:
             logger.info(f"🚀 IMAGEN_API_CALL_START: Calling {self.image_model} API")
             print(f"🚀 Calling Imagen API for campaign '{campaign_id}', image {index+1}")
             
+            # Use correct Imagen API configuration
             api_config = {
                 "number_of_images": 1,
                 "aspect_ratio": "16:9",
                 "person_generation": "ALLOW_ADULT",
-                "safety_filter_level": "BLOCK_LOW_AND_ABOVE"
+                "safety_filter_level": "block_low_and_above"  # Correct format for Gemini API
             }
             logger.info(f"⚙️ IMAGEN_CONFIG: {api_config}")
             
+            # Use dedicated IMAGEN API (per official documentation)
+            # Reference: https://ai.google.dev/gemini-api/docs/imagen
             response = await asyncio.to_thread(
                 self.client.models.generate_images,
                 model=self.image_model,
                 prompt=marketing_prompt,
-                config=types.GenerateImagesConfig(**api_config)
+                config=types.GenerateImagesConfig(
+                    number_of_images=api_config["number_of_images"],
+                    aspect_ratio=api_config["aspect_ratio"],
+                    person_generation=api_config["person_generation"]
+                )
             )
             
             logger.info(f"📨 IMAGEN_API_RESPONSE: Response received")
             print(f"📨 Imagen API response received for campaign '{campaign_id}'")
             
-            if not response.generated_images:
+            # DEBUG: Log actual response structure to understand format
+            logger.info(f"🔍 RESPONSE_DEBUG: Type: {type(response)}")
+            logger.info(f"🔍 RESPONSE_DEBUG: Has 'generated_images': {hasattr(response, 'generated_images')}")
+            logger.info(f"🔍 RESPONSE_DEBUG: Has 'images': {hasattr(response, 'images')}")
+            logger.info(f"🔍 RESPONSE_DEBUG: Has 'candidates': {hasattr(response, 'candidates')}")
+            logger.info(f"🔍 RESPONSE_DEBUG: Dir: {[attr for attr in dir(response) if not attr.startswith('_')]}")
+            
+            # Parse Imagen API response format
+            if not response or not hasattr(response, 'generated_images') or not response.generated_images:
                 error_msg = f"❌ IMAGEN_NO_IMAGES: API returned no generated images"
                 logger.error(f"{error_msg}: {debug_context}")
                 print(f"🚫 {error_msg} for campaign '{campaign_id}'")
@@ -545,21 +583,31 @@ class ImageGenerationAgent:
                 print(f"🚫 {error_msg} for campaign '{campaign_id}'")
                 raise Exception("Empty images array in API response")
             
+            # Get first generated image
             generated_image = response.generated_images[0]
-            
-            if not generated_image.image or not generated_image.image.image_bytes:
-                error_msg = f"❌ IMAGEN_NO_BYTES: Generated image has no image bytes"
+            if not hasattr(generated_image, 'image') or not generated_image.image:
+                error_msg = f"❌ IMAGEN_NO_IMAGE_DATA: Generated image has no image data"
                 logger.error(f"{error_msg}: {debug_context}")
                 print(f"🚫 {error_msg} for campaign '{campaign_id}'")
-                raise Exception("Generated image has no image bytes")
+                raise Exception("No image data in generated image")
             
-            image_size = len(generated_image.image.image_bytes)
+            # Get image bytes from Imagen response
+            if hasattr(generated_image.image, 'image_bytes'):
+                image_bytes = generated_image.image.image_bytes
+            elif hasattr(generated_image.image, 'data'):
+                image_bytes = base64.b64decode(generated_image.image.data)
+            else:
+                error_msg = f"❌ IMAGEN_INVALID_FORMAT: Cannot extract image bytes"
+                logger.error(f"{error_msg}: {debug_context}")
+                print(f"🚫 {error_msg} for campaign '{campaign_id}'")
+                raise Exception("Cannot extract image bytes from response")
+            image_size = len(image_bytes)
             logger.info(f"📦 IMAGEN_IMAGE_RECEIVED: Size: {image_size} bytes ({image_size/1024:.1f}KB)")
             print(f"📦 Generated image received: {image_size/1024:.1f}KB for campaign '{campaign_id}'")
             
             # Save image and get URL
             logger.info(f"💾 IMAGE_SAVE_START: Saving image to filesystem")
-            image_url = await self._save_generated_image_data(generated_image.image.image_bytes, index, campaign_id)
+            image_url = await self._save_generated_image_data(image_bytes, index, campaign_id)
             logger.info(f"💾 IMAGE_SAVED: URL: {image_url}")
             print(f"💾 Image saved successfully for campaign '{campaign_id}': {image_url}")
             
@@ -591,6 +639,7 @@ class ImageGenerationAgent:
             print(f"✅ Image generation completed successfully for campaign '{campaign_id}', image {index+1}")
             
             return success_result
+
                 
         except Exception as e:
             error_details = {
@@ -631,7 +680,7 @@ class ImageGenerationAgent:
             return f"https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Generated+Image+{index+1}"
     
     def _enhance_prompt_with_context(self, base_prompt: str, business_context: Dict[str, Any]) -> str:
-        """Enhance image prompt with business context for brand consistency."""
+        """Enhance image prompt with comprehensive business context and campaign guidance."""
         
         company_name = business_context.get('company_name', 'Company')
         industry = business_context.get('industry', 'business')
@@ -642,7 +691,34 @@ class ImageGenerationAgent:
         # Build enhanced prompt
         enhanced_prompt = f"{base_prompt}"
         
-        # Add brand context
+        # ENHANCED: Use campaign guidance if available in business context
+        campaign_guidance = business_context.get('campaign_guidance', {})
+        if campaign_guidance:
+            # Use creative direction from analysis
+            if campaign_guidance.get("creative_direction"):
+                creative_direction = campaign_guidance["creative_direction"]
+                enhanced_prompt += f", {creative_direction[:150]}"
+            
+            # Use detailed visual style guidance
+            visual_style = campaign_guidance.get("visual_style", {})
+            if isinstance(visual_style, dict):
+                if visual_style.get("photography_style"):
+                    enhanced_prompt += f", {visual_style['photography_style']}"
+                if visual_style.get("mood"):
+                    enhanced_prompt += f", {visual_style['mood']} mood"
+                if visual_style.get("lighting"):
+                    enhanced_prompt += f", {visual_style['lighting']}"
+            
+            # Use Imagen-specific guidance
+            imagen_prompts = campaign_guidance.get("imagen_prompts", {})
+            if imagen_prompts:
+                if imagen_prompts.get("environment"):
+                    enhanced_prompt += f", {imagen_prompts['environment']}"
+                if imagen_prompts.get("style_modifiers"):
+                    modifiers = ", ".join(imagen_prompts["style_modifiers"][:2])
+                    enhanced_prompt += f", {modifiers}"
+        
+        # Add brand context (fallback/additional)
         if 'professional' in brand_voice.lower():
             enhanced_prompt += ", professional and polished style"
         if 'innovative' in brand_voice.lower():
@@ -669,34 +745,38 @@ class ImageGenerationAgent:
         # Add general quality modifiers
         enhanced_prompt += ", high quality, professional photography style, well-lit, sharp focus"
         
+        # Add text avoidance instructions
+        enhanced_prompt += ", no text overlays, no written words, purely visual content"
+        
         return enhanced_prompt
     
     def _create_marketing_prompt(self, base_prompt: str, index: int) -> str:
         """
         Create marketing-optimized prompt based on Imagen best practices.
         
-        Based on Google's creative content generation examples:
+        Based on geminibyexample.com and Google's content generation guidelines:
+        - Simple, clear descriptions
         - Professional photography style keywords
-        - Lighting and composition specifications
-        - Brand-safe aesthetic choices
+        - Avoid complex or potentially problematic content
         """
         
-        # Core marketing prompt structure
+        # Simplify the base prompt to avoid content policy issues
+        simplified_prompt = base_prompt.replace("family", "people").replace("personal", "professional")
+        
+        # Core marketing prompt structure - keep it simple and safe
         marketing_elements = [
-            "professional commercial photography",
-            "high-end marketing campaign style",
-            "studio lighting, bright and inviting",
-            "clean composition, modern aesthetic",
-            "vibrant colors, engaging visual appeal",
-            "brand-safe, family-friendly content"
+            "professional product photography",
+            "clean modern style",
+            "bright lighting",
+            "high quality commercial image",
+            "business marketing photo"
         ]
         
         # Platform-specific optimizations
         platform_specs = [
-            "16:9 aspect ratio for social media",
-            "high resolution, crisp details",
-            "suitable for Instagram, LinkedIn, Facebook",
-            "professional business context"
+            "social media optimized",
+            "professional appearance",
+            "brand marketing style"
         ]
         
         # Quality and style modifiers from Imagen guide
@@ -708,8 +788,17 @@ class ImageGenerationAgent:
             "marketing campaign ready"
         ]
         
+        # Critical instruction to avoid text in images
+        text_avoidance_instructions = [
+            "no text overlays",
+            "no written words",
+            "no labels or captions",
+            "avoid text elements",
+            "purely visual content"
+        ]
+        
         # Combine all elements
-        enhanced_prompt = f"{base_prompt}, {', '.join(marketing_elements[:3])}, {', '.join(platform_specs[:2])}, {', '.join(quality_modifiers[:2])}"
+        enhanced_prompt = f"{base_prompt}, {', '.join(marketing_elements[:3])}, {', '.join(platform_specs[:2])}, {', '.join(quality_modifiers[:2])}, {', '.join(text_avoidance_instructions[:3])}"
         
         # Add variation for different images
         variation_elements = {
@@ -938,7 +1027,7 @@ class VideoGenerationAgent:
             return f"{base_prompt}, professional business video for {business_context.get('company_name', 'company')}"
 
     async def _generate_real_video_with_file_storage(self, prompt: str, index: int, campaign_id: str, business_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate real video files with curr_ prefix (mirroring image pattern)."""
+        """Generate real video files using Google Veo API."""
         try:
             import time
             import random
@@ -946,409 +1035,224 @@ class VideoGenerationAgent:
             company_name = business_context.get('company_name', 'Company')
             
             # Generate unique video with curr_ prefix (mirroring image pattern)
-            # Include index and timestamp to ensure unique videos
             unique_seed = f"{campaign_id}_{prompt}_{company_name}_{index}_{time.time()}_{random.randint(1000, 9999)}"
             video_hash = hashlib.md5(unique_seed.encode()).hexdigest()[:8]
             video_filename = f"curr_{video_hash}_{index}.mp4"
             video_path = self.video_storage_dir / campaign_id / video_filename
             video_path.parent.mkdir(parents=True, exist_ok=True)
             
-            logger.info(f"🎬 Generating REAL MP4 video: {video_filename}")
+            logger.info(f"🎬 Generating REAL Veo 2.0 video: {video_filename}")
             
-            # REAL Veo 2.0 video generation following the reference sample
+            # REAL Veo 2.0 video generation using Google Genai library
             try:
-                logger.info(f"🎬 Generating REAL Veo 2.0 video: {prompt[:100]}...")
+                logger.info(f"🎬 Starting Veo 2.0 video generation: {prompt[:100]}...")
                 logger.info(f"🎬 Target path: {video_path}")
                 
-                # Create Veo 2.0 optimized marketing prompt following ADR specifications
+                # Create Veo 2.0 optimized marketing prompt
                 veo_prompt = self._create_veo_marketing_prompt(prompt, business_context, index)
                 logger.info(f"🎬 Enhanced marketing prompt created ({len(veo_prompt)} chars)")
                 
-                # REAL Veo 2.0 API call following official documentation
-                try:
-                    from google import genai
-                    from google.genai import types
-                    import time
+                # Initialize Google Genai client for video generation
+                from google import genai
+                from google.genai import types
+                
+                if not self.gemini_api_key:
+                    raise ValueError("GEMINI_API_KEY not configured for video generation")
+                
+                client = genai.Client(api_key=self.gemini_api_key)
+                logger.info("✅ Veo client initialized successfully")
+                
+                # Generate video using Veo 2.0 API following official documentation
+                logger.info(f"🎬 Starting Veo 2.0 operation: '{veo_prompt[:50]}...'")
+                
+                operation = client.models.generate_videos(
+                    model="veo-2.0-generate-001",
+                    prompt=veo_prompt,
+                    config=types.GenerateVideosConfig(
+                        person_generation="allow_adult",  # Allow adults for marketing content
+                        aspect_ratio="16:9",  # Marketing standard
+                        duration_seconds=5,   # Quick marketing videos
+                        number_of_videos=1,   # Single video per request
+                        enhance_prompt=True   # Use built-in prompt enhancement
+                    ),
+                )
+                
+                logger.info(f"✅ Veo operation started: {operation.name}")
+                
+                # Poll for completion (video generation takes 2-3+ minutes)
+                max_wait_time = 300  # 5 minutes maximum
+                poll_interval = 15   # Check every 15 seconds
+                elapsed = 0
+                
+                logger.info(f"⏳ Polling Veo operation (max {max_wait_time}s, interval {poll_interval}s)")
+                
+                while not operation.done and elapsed < max_wait_time:
+                    await asyncio.sleep(poll_interval)
+                    elapsed += poll_interval
                     
-                    # Initialize Veo 2.0 client with API key
-                    client = genai.Client(api_key=self.gemini_api_key)
-                    veo_model_name = "veo-2.0-generate-001"
-                    
-                    # Configure Veo 2.0 generation following official documentation
-                    veo_config = types.GenerateVideosConfig(
-                        person_generation="dont_allow",  # Business-safe content
-                        aspect_ratio="16:9",
-                    )
-                    
-                    logger.info(f"🎬 Initiating Veo 2.0 generation with model: {veo_model_name}")
-                    logger.info(f"🎬 Enhanced prompt: {veo_prompt[:200]}...")
-                    
-                    # Generate video using real Veo 2.0 API (official pattern)
-                    operation = client.models.generate_videos(
-                        model=veo_model_name,
-                        prompt=veo_prompt,
-                        config=veo_config,
-                    )
-                    
-                    logger.info(f"🎬 Veo 2.0 operation initiated: {operation.name}")
-                    
-                    # Wait for generation to complete (official pattern)
-                    while not operation.done:
-                        logger.info(f"🎬 Waiting for Veo 2.0 generation to complete...")
-                        time.sleep(20)
+                    try:
                         operation = client.operations.get(operation)
+                        logger.info(f"📊 Veo operation status check: {elapsed}s elapsed, done={operation.done}")
+                    except Exception as poll_error:
+                        logger.warning(f"⚠️ Error polling operation: {poll_error}")
+                        continue
+                
+                if not operation.done:
+                    logger.error(f"❌ Veo operation timed out after {elapsed}s")
+                    return self._generate_fallback_video(prompt, index)
+                
+                # Download and save generated video
+                if operation.response and operation.response.generated_videos:
+                    generated_video = operation.response.generated_videos[0]
                     
-                    logger.info(f"🎬 Veo 2.0 generation completed, processing response...")
+                    logger.info(f"✅ Veo video generated successfully")
                     
-                    # Process response following official documentation pattern
-                    if hasattr(operation.response, 'generated_videos') and operation.response.generated_videos:
-                        generated_videos = operation.response.generated_videos
+                    # Download video file
+                    client.files.download(file=generated_video.video)
+                    generated_video.video.save(str(video_path))
+                    
+                    # Verify file was saved
+                    if video_path.exists():
+                        file_size = video_path.stat().st_size
+                        logger.info(f"✅ Video saved: {video_path} ({file_size:,} bytes)")
                         
-                        if len(generated_videos) > 0:
-                            generated_video = generated_videos[0]  # Get first video
-                            
-                            logger.info(f"🎬 Downloading Veo 2.0 generated video...")
-                            
-                            # Download video using official pattern
-                            client.files.download(file=generated_video.video)
-                            generated_video.video.save(str(video_path))
-                            
-                            actual_size = video_path.stat().st_size
-                            logger.info(f"✅ REAL Veo 2.0 video saved: {actual_size} bytes ({actual_size/1024/1024:.1f}MB)")
-                            
-                            # Return real file URL
-                            file_url = f"http://localhost:8000/api/v1/content/videos/{campaign_id}/{video_filename}"
-                            
-                            return {
-                                "id": f"veo_2_0_{index+1}",
-                                "prompt": prompt,
-                                "video_url": file_url,
-                                "thumbnail_url": f"http://localhost:8000/api/v1/content/videos/{campaign_id}/{video_filename}?thumbnail=true",
-                                "generation_method": "veo_2.0_real",
-                                "status": "success",
-                                "metadata": {
-                                    "model": veo_model_name,
-                                    "duration": "5s",
-                                    "format": "mp4",
-                                    "resolution": "720p",
-                                    "aspect_ratio": "16:9",
-                                    "generation_time": 60.0,  # Veo 2.0 takes time
-                                    "marketing_optimized": True,
-                                    "file_type": "veo_2_0_mp4",
-                                    "file_path": str(video_path),
-                                    "file_size_mb": actual_size / (1024 * 1024),
-                                    "veo_2_0_generated": True
-                                }
+                        # Return successful video data
+                        return {
+                            "id": f"veo_video_{video_hash}_{index}",
+                            "prompt": veo_prompt,
+                            "video_url": f"/api/v1/content/videos/{campaign_id}/{video_filename}",
+                            "video_path": str(video_path),
+                            "generation_method": "veo_2.0_api",
+                            "status": "success",
+                            "metadata": {
+                                "model": "veo-2.0-generate-001",
+                                "duration": "5s",
+                                "format": "mp4",
+                                "resolution": "720p",
+                                "aspect_ratio": "16:9",
+                                "generation_time": elapsed,
+                                "file_size": file_size,
+                                "operation_id": operation.name,
+                                "company": company_name,
+                                "prompt_enhanced": True,
+                                "api_version": "google.genai"
                             }
-                        else:
-                            logger.error(f"❌ No generated videos in Veo 2.0 response")
-                            raise Exception("No generated videos in response")
-                    else:
-                        logger.error(f"❌ No generated_videos attribute in Veo 2.0 response")
-                        raise Exception("No generated_videos in response")
-                        
-                except Exception as veo_error:
-                    logger.error(f"❌ Veo 2.0 generation failed: {veo_error}")
-                    # Fallback to sample video for development
-                    logger.info(f"🎬 Falling back to sample video generation...")
-                    video_content = self._create_real_mp4_with_context(veo_prompt, business_context, index)
-                    
-                    # Save the fallback video
-                    with open(video_path, 'wb') as f:
-                        f.write(video_content)
-                    
-                    actual_size = video_path.stat().st_size
-                    logger.info(f"✅ Fallback video created: {actual_size} bytes ({actual_size/1024/1024:.1f}MB)")
-                    
-                    file_url = f"http://localhost:8000/api/v1/content/videos/{campaign_id}/{video_filename}"
-                    
-                    return {
-                        "id": f"fallback_mp4_{index+1}",
-                        "prompt": prompt,
-                        "video_url": file_url,
-                        "thumbnail_url": f"http://localhost:8000/api/v1/content/videos/{campaign_id}/{video_filename}?thumbnail=true",
-                        "generation_method": "fallback_with_campaign_context",
-                        "status": "success",
-                        "metadata": {
-                            "model": "fallback_enhanced",
-                            "duration": "5s",
-                            "format": "mp4",
-                            "resolution": "720p",
-                            "aspect_ratio": "16:9",
-                            "generation_time": 2.0,
-                            "marketing_optimized": True,
-                            "file_type": "fallback_mp4",
-                            "file_path": str(video_path),
-                            "file_size_mb": actual_size / (1024 * 1024),
-                            "veo_fallback": True,
-                            "veo_error": str(veo_error)
                         }
-                    }
+                    else:
+                        logger.error(f"❌ Video file not saved: {video_path}")
+                        return self._generate_fallback_video(prompt, index)
+                        
+                else:
+                    logger.error("❌ No videos in Veo operation response")
+                    return self._generate_fallback_video(prompt, index)
                     
-            except Exception as e:
-                logger.error(f"Failed to generate video file: {e}")
+            except ImportError as e:
+                logger.error(f"❌ Google Genai library not available: {e}")
+                return self._generate_fallback_video(prompt, index)
+                
+            except Exception as api_error:
+                logger.error(f"❌ Veo API error: {api_error}", exc_info=True)
                 return self._generate_fallback_video(prompt, index)
                 
         except Exception as e:
-            logger.error(f"Video file generation failed: {e}")
+            logger.error(f"❌ Video generation failed: {e}", exc_info=True)
             return self._generate_fallback_video(prompt, index)
 
     def _create_veo_marketing_prompt(self, base_prompt: str, business_context: Dict[str, Any], index: int) -> str:
-        """
-        Create comprehensive Veo 2.0 marketing prompt following official documentation guidelines.
-        
-        Based on Google's Veo documentation: https://ai.google.dev/gemini-api/docs/video#generate-from-text
-        Incorporates: camera movements, lighting, composition, cinematic techniques, and marketing context.
-        """
+        """Create Veo 2.0 optimized marketing prompt following best practices from documentation."""
         try:
-            # Extract comprehensive business context
-            company_name = business_context.get('company_name', 'Company')
+            company_name = business_context.get('company_name', 'Professional Business')
             industry = business_context.get('industry', 'business')
             business_description = business_context.get('business_description', '')
             
-            # Enhanced context from campaign generation
+            # ENHANCEMENT: Extract comprehensive AI guidance context
             product_context = business_context.get('product_context', {})
             campaign_guidance = business_context.get('campaign_guidance', {})
-            campaign_media_tuning = business_context.get('campaign_media_tuning', '')
             creative_direction = business_context.get('creative_direction', '')
             visual_style = business_context.get('visual_style', {})
             
-            # Product-specific context (highest priority)
+            # Extract Veo-specific guidance
+            veo_prompts = campaign_guidance.get('veo_prompts', {}) if campaign_guidance else {}
+            content_themes = campaign_guidance.get('content_themes', {}) if campaign_guidance else {}
+            
+            logger.info(f"Creating Veo marketing prompt - Company: {company_name}, Industry: {industry}")
+            logger.info(f"Veo prompts available: {bool(veo_prompts)}, Content themes: {bool(content_themes)}")
+            
+            # Start with base prompt and enhance with marketing context
+            veo_prompt = base_prompt
+            
+            # PRIORITY 1: Product-specific enhancement
             has_specific_product = product_context.get('has_specific_product', False)
             product_name = product_context.get('product_name', '')
-            product_themes = product_context.get('product_themes', [])
-            product_visual_elements = product_context.get('product_visual_elements', '')
-            
-            logger.info(f"🎬 Creating Veo 2.0 marketing prompt - Product: {product_name if has_specific_product else 'general'}, "
-                       f"Company: {company_name}, Industry: {industry}")
-            
-            # BUILD COMPREHENSIVE VEO PROMPT FOLLOWING OFFICIAL GUIDELINES
-            
-            # 1. CORE SCENE DESCRIPTION (based on base_prompt)
-            scene_description = base_prompt
-            
-            # 2. PRODUCT/BUSINESS INTEGRATION (highest priority)
             if has_specific_product and product_name:
-                scene_description += f" featuring {product_name}"
-                if product_visual_elements:
-                    scene_description += f", {product_visual_elements}"
-                if product_themes:
-                    scene_description += f", emphasizing {', '.join(product_themes)}"
+                veo_prompt += f", featuring {product_name}"
             
-            # 3. INDUSTRY-SPECIFIC VISUAL CONTEXT
-            industry_context = ""
-            if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
-                industry_context = "outdoor furniture lifestyle setting, comfortable patio living spaces, modern home design aesthetics"
-            elif 'technology' in industry.lower():
-                industry_context = "modern professional office environment, clean technology workspace, digital innovation showcase"
-            elif 'healthcare' in industry.lower():
-                industry_context = "professional healthcare facility, modern medical environment, caring professional atmosphere"
-            elif 'finance' in industry.lower():
-                industry_context = "professional business office, modern corporate environment, trust and reliability focus"
-            else:
-                industry_context = f"professional {industry} business environment, modern commercial setting"
+            # PRIORITY 2: Veo-specific AI guidance (from campaign analysis)
+            if veo_prompts:
+                movement_style = veo_prompts.get('movement_style', '')
+                scene_composition = veo_prompts.get('scene_composition', '')
+                storytelling = veo_prompts.get('storytelling', '')
+                
+                if movement_style:
+                    veo_prompt += f", {movement_style}"
+                if scene_composition:
+                    veo_prompt += f", {scene_composition}"
+                if storytelling:
+                    veo_prompt += f", {storytelling}"
             
-            # 4. CAMERA WORK & CINEMATOGRAPHY (Veo documentation emphasis)
-            camera_work = "cinematic camera movement"
-            if index == 0:
-                camera_work = "smooth panning shot, establishing wide view"
-            elif index == 1:
-                camera_work = "gentle tracking movement, medium shot focus"
-            elif index == 2:
-                camera_work = "cinematic close-up with shallow depth of field"
-            else:
-                camera_work = "dynamic cinematic movement, professional framing"
+            # PRIORITY 3: Content themes and emotional direction
+            if content_themes:
+                emotional_triggers = content_themes.get('emotional_triggers', [])
+                visual_metaphors = content_themes.get('visual_metaphors', [])
+                if emotional_triggers:
+                    veo_prompt += f", conveying {', '.join(emotional_triggers)}"
+                if visual_metaphors:
+                    veo_prompt += f", incorporating {', '.join(visual_metaphors)}"
             
-            # 5. LIGHTING & VISUAL QUALITY (Veo best practices)
-            lighting = "professional lighting setup, warm natural illumination, soft shadows, cinematic quality"
-            
-            # 6. COMPOSITION & STYLE (marketing-optimized)
-            composition = "professional composition, rule of thirds, visually engaging framing"
-            
-            # 7. MOOD & ATMOSPHERE (campaign guidance integration)
-            mood = "professional, engaging, trustworthy atmosphere"
-            if campaign_guidance:
-                guidance_tone = campaign_guidance.get('tone', '')
-                if guidance_tone:
-                    mood = f"{guidance_tone}, {mood}"
-            
-            # 8. COLOR PALETTE & AESTHETICS
-            color_palette = "modern professional color scheme"
+            # PRIORITY 4: Visual style adaptation for video
             if visual_style:
-                style_colors = visual_style.get('color_scheme', '')
-                style_aesthetic = visual_style.get('aesthetic', '')
-                if style_colors:
-                    color_palette = f"{style_colors} color palette"
-                if style_aesthetic:
-                    color_palette += f", {style_aesthetic} aesthetic"
+                photography_style = visual_style.get('photography_style', '')
+                mood = visual_style.get('mood', '')
+                lighting = visual_style.get('lighting', '')
+                
+                if photography_style:
+                    # Adapt photography styles for video movement
+                    video_adapted_style = photography_style.replace('portrait', 'cinematic close-up').replace('still life', 'product showcase').replace('landscape', 'wide establishing shot')
+                    veo_prompt += f", {video_adapted_style} video style"
+                if mood:
+                    veo_prompt += f", {mood} mood"
+                if lighting:
+                    veo_prompt += f", {lighting}"
             
-            # 9. TECHNICAL SPECIFICATIONS (Veo requirements)
-            technical_specs = "high-quality video, smooth motion, professional grade footage, 5-second duration"
+            # PRIORITY 5: Industry-specific video enhancements
+            if 'furniture' in industry.lower() or 'outdoor' in business_description.lower():
+                veo_prompt += ", lifestyle marketing video, comfortable living spaces, warm inviting atmosphere"
+            elif 'technology' in industry.lower():
+                veo_prompt += ", modern tech demonstration, sleek interfaces, professional environment"
+            elif 'photography' in industry.lower():
+                veo_prompt += ", artistic photography showcase, creative studio setting, professional equipment"
             
-            # 10. MARKETING CONTEXT INTEGRATION
-            marketing_context = f"representing {company_name} brand values, professional marketing content"
-            if campaign_media_tuning:
-                marketing_context += f", {campaign_media_tuning}"
+            # PRIORITY 6: Veo 2.0 technical specifications for marketing videos
+            veo_prompt += f", cinematic quality, smooth camera movement"
+            veo_prompt += f", professional lighting, marketing video style"
+            veo_prompt += f", representing {company_name} brand"
+            
+            # CRITICAL: Text avoidance for cleaner videos
+            veo_prompt += f", no text overlays, no written words, no on-screen text, purely visual content"
+            
+            # PRIORITY 7: Creative direction integration
             if creative_direction:
-                marketing_context += f", {creative_direction}"
+                veo_prompt += f", {creative_direction}"
             
-            # ASSEMBLE COMPREHENSIVE VEO PROMPT
-            veo_prompt_parts = [
-                scene_description,
-                industry_context,
-                camera_work,
-                lighting,
-                composition,
-                mood,
-                color_palette,
-                technical_specs,
-                marketing_context
-            ]
-            
-            # Join with proper punctuation for Veo understanding
-            veo_prompt = ". ".join([part.strip() for part in veo_prompt_parts if part.strip()])
-            
-            # Add final Veo-specific enhancements
-            veo_prompt += ". Cinematic quality, professional marketing video, engaging visual storytelling, brand-consistent presentation."
-            
-            logger.info(f"🎬 Enhanced Veo 2.0 marketing prompt created: {len(veo_prompt)} characters")
-            logger.debug(f"🎬 Full prompt: {veo_prompt[:200]}...")
+            logger.info(f"✅ Veo marketing prompt created: {len(veo_prompt)} chars")
+            logger.debug(f"Final prompt: {veo_prompt[:200]}...")
             
             return veo_prompt
             
         except Exception as e:
-            logger.error(f"Error creating comprehensive Veo marketing prompt: {e}")
-            # Fallback to enhanced base prompt with Veo best practices
-            fallback = f"{base_prompt}. Professional marketing video for {business_context.get('company_name', 'company')}. "
-            fallback += "Cinematic camera movement, professional lighting, high-quality footage, 5-second duration, "
-            fallback += "modern business environment, engaging visual storytelling, brand-consistent presentation."
-            return fallback
-
-    def _create_real_mp4_with_context(self, veo_prompt: str, business_context: Dict[str, Any], index: int) -> bytes:
-        """Create a real MP4 file with comprehensive campaign context following ADR-015."""
-        try:
-            import requests
-            import tempfile
-            import shutil
-            
-            company_name = business_context.get('company_name', 'Company')
-            industry = business_context.get('industry', 'business')
-            
-            logger.info(f"🎬 Creating real MP4 for {company_name} in {industry} industry")
-            logger.info(f"🎬 Campaign context: {veo_prompt[:100]}...")
-            
-            # Create real MP4 files locally following ADR-015 pattern
-            # This avoids downloading large files and ensures fast generation
-            # In production, this would be replaced with actual Veo 2.0 generation
-            
-            # Fallback: Create a structured MP4 file with campaign context
-            logger.info("🎬 Creating structured MP4 with campaign context metadata")
-            
-            # Create a more substantial MP4 file structure
-            mp4_header = b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
-            
-            # Add campaign context metadata
-            campaign_metadata = {
-                'company': company_name,
-                'industry': industry,
-                'prompt': veo_prompt[:200],
-                'index': index,
-                'generated_at': time.time()
-            }
-            
-            metadata_bytes = str(campaign_metadata).encode('utf-8')
-            
-            # Create a proper MP4 file that browsers can play
-            # Generate a small but valid video file with actual content
-            return self._create_playable_mp4(campaign_metadata, company_name, industry)
-            
-        except Exception as e:
-            logger.error(f"Error creating real MP4: {e}")
-            # Absolute fallback
-            return self._create_minimal_mp4(veo_prompt, business_context.get('company_name', 'Company'))
-    
-    def _create_playable_mp4(self, campaign_metadata: dict, company_name: str, industry: str) -> bytes:
-        """Create a small but playable MP4 file using ffmpeg or sample content."""
-        try:
-            import subprocess
-            import tempfile
-            import os
-            
-            logger.info(f"🎬 Creating playable MP4 for {company_name} in {industry}")
-            
-            # Try to create a simple solid color video using ffmpeg if available
-            try:
-                # Create a 5-second solid color video with text overlay
-                with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
-                    temp_path = temp_file.name
-                
-                # Use ffmpeg to create a simple 5-second video
-                # This creates a small but playable MP4 file
-                cmd = [
-                    'ffmpeg', '-y', '-f', 'lavfi', 
-                    '-i', f'color=c=blue:size=640x360:duration=5:rate=1',
-                    '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30',
-                    temp_path
-                ]
-                
-                result = subprocess.run(cmd, capture_output=True, timeout=10)
-                
-                if result.returncode == 0 and os.path.exists(temp_path):
-                    with open(temp_path, 'rb') as f:
-                        video_content = f.read()
-                    os.unlink(temp_path)  # Clean up temp file
-                    logger.info(f"✅ Created playable MP4 using ffmpeg: {len(video_content)} bytes")
-                    return video_content
-                else:
-                    logger.warning(f"ffmpeg failed: {result.stderr}")
-                    
-            except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-                logger.warning(f"ffmpeg not available or failed: {e}")
-            
-            # Fallback: Download a small sample video
-            try:
-                import requests
-                
-                # Use a small, reliable sample video
-                sample_urls = [
-                    "https://sample-videos.com/zip/10/mp4/SampleVideo_128kb_mp4.mp4",
-                    "https://file-examples.com/storage/fe68a1c87b66405bb86c0a9/2017/10/file_example_MP4_480_1_5MG.mp4"
-                ]
-                
-                for url in sample_urls:
-                    try:
-                        logger.info(f"🎬 Downloading small sample video: {url}")
-                        response = requests.get(url, timeout=15, stream=True)
-                        if response.status_code == 200:
-                            content = response.content
-                            if len(content) < 5 * 1024 * 1024:  # Less than 5MB
-                                logger.info(f"✅ Downloaded playable video: {len(content)} bytes")
-                                return content
-                    except Exception as e:
-                        logger.warning(f"Failed to download from {url}: {e}")
-                        continue
-                        
-            except Exception as e:
-                logger.warning(f"Sample video download failed: {e}")
-            
-            # Final fallback: Create a minimal but structured MP4
-            logger.info("🎬 Creating minimal structured MP4")
-            return self._create_minimal_mp4(str(campaign_metadata), company_name)
-            
-        except Exception as e:
-            logger.error(f"Error creating playable MP4: {e}")
-            return self._create_minimal_mp4(str(campaign_metadata), company_name)
-
-    def _create_minimal_mp4(self, prompt: str, company_name: str) -> bytes:
-        """Create a minimal valid MP4 file with content-specific metadata."""
-        # This creates a very basic MP4 file structure
-        # In a real implementation, this would use proper video encoding
-        mp4_header = b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
-        mp4_metadata = f"Generated for {company_name}: {prompt[:50]}".encode('utf-8')
-        
-        # Create a minimal but valid MP4 structure
-        # This is a simplified approach - real implementation would use proper encoding
-        return mp4_header + mp4_metadata + b'\x00' * 1000  # Minimal file size
+            logger.error(f"Error creating Veo marketing prompt: {e}")
+            # Fallback prompt
+            return f"{base_prompt}, professional marketing video for {company_name}, cinematic quality, no text overlays"
 
     def cleanup_old_videos(self):
         """Clean up old video files while keeping current (curr_) prefixed videos."""
@@ -1374,17 +1278,17 @@ class VideoGenerationAgent:
         return {
             "id": f"fallback_video_{index+1}",
             "prompt": prompt,
-            "video_url": f"https://via.placeholder.com/400x300/DC2626/FFFFFF?text=Video+{index+1}",
-            "thumbnail_url": f"https://via.placeholder.com/400x300/DC2626/FFFFFF?text=Thumb+{index+1}",
+            "video_url": None,  # No misleading placeholder URL
             "generation_method": "fallback",
-            "status": "fallback",
+            "status": "error",
+            "error": "Video generation failed - requires Veo API configuration",
             "metadata": {
                 "model": "fallback_generator",
                 "duration": "5s",
                 "format": "placeholder",
-                "resolution": "400x300",
+                "resolution": "720p",
                 "generation_time": 0.1,
-                "note": "Fallback placeholder video"
+                "note": "CRITICAL: Real video generation requires Veo API access and proper configuration"
             }
         }
 

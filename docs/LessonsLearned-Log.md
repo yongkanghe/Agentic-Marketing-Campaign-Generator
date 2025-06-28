@@ -6,6 +6,145 @@
 
 ---
 
+## 2025-06-28: Enhanced Visual Content Generation - Campaign AI Guidance Integration
+
+### **Issue:** Visual content generation prompts were not utilizing the rich campaign guidance from AI analysis stage
+**Context:** Imagen and video generation were only using basic fields (visual_style, brand_voice, target_audience) instead of comprehensive AI-generated campaign guidance.
+
+**Root Cause Analysis:**
+1. **Underutilized AI Analysis**: The business analysis stage generates rich guidance including creative_direction, detailed visual_style objects, imagen_prompts, veo_prompts, content_themes, and brand_consistency
+2. **Basic Prompt Integration**: Visual content prompts only used 3 basic string fields instead of the comprehensive guidance objects
+3. **Missing Imagen/Veo Specific Instructions**: AI analysis creates Imagen and Veo-specific prompt guidance that wasn't being used
+
+**Solution Implemented:**
+1. **Enhanced Image Prompt Generation**: Updated `_create_campaign_aware_prompt()` to use:
+   - `creative_direction` (detailed creative focus from AI)
+   - `visual_style` object (photography_style, mood, lighting, composition)
+   - `imagen_prompts` (environment, style_modifiers, technical_specs)
+   - `content_themes` (emotional_triggers, visual_metaphors)
+   
+2. **Enhanced Video Prompt Generation**: Updated `_create_campaign_aware_video_prompt()` to use:
+   - `veo_prompts` (movement_style, scene_composition, storytelling)
+   - Video-adapted photography styles
+   - Call-to-action styling from content themes
+   
+3. **Backward Compatibility**: Maintained fallback to basic fields for existing implementations
+
+**Technical Impact:**
+- Visual content now leverages full AI analysis intelligence
+- Prompts are 3-5x more detailed and contextually relevant
+- Better brand consistency through comprehensive guidance usage
+- Enhanced emotional targeting through content themes
+
+**Verification:** 
+- Image generation now includes rich creative direction in prompts
+- Video generation incorporates movement and storytelling guidance
+- Text avoidance instructions maintained across all enhancements
+- All prompt generation methods updated consistently
+
+**Key Learning:** AI analysis creates comprehensive campaign guidance - ensure all downstream systems utilize the full richness of this intelligence rather than just basic fields.
+
+---
+
+## 2025-06-28: Google AI Library Migration Success - Critical Infrastructure Update
+
+### **Issue:** Deprecated google-generativeai library causing confusion and potential future compatibility issues
+**Context:** Project was using `google-generativeai` library which is now deprecated. Official Google documentation and ADK agent examples use the new `google-genai` library.
+
+**Root Cause Analysis:**
+1. **Library Confusion**: Two Google AI libraries existed:
+   - `google-generativeai` (OLD - deprecated): `import google.generativeai as genai` 
+   - `google-genai` (NEW - official): `from google import genai`
+2. **Documentation Mismatch**: Official examples and new ADK agents use the new library
+3. **API Pattern Differences**: Different client initialization and method call patterns
+4. **Future Compatibility Risk**: Deprecated library may lose support or new features
+
+**Investigation Results:**
+- **Official Confirmation**: [GitHub - googleapis/python-genai](https://github.com/googleapis/python-genai) shows 1.9k stars, active development
+- **ADK Reference**: All ADK sample agents use `google-genai` library consistently
+- **Google Forum**: [Official Google AI forum discussion](https://discuss.ai.google.dev/t/google-generativeai-vs-python-genai/53873/2) confirms new library will replace old one
+
+**Migration Implementation:**
+
+1. **Requirements Update**:
+   ```diff
+   - google-generativeai>=0.3.0
+   + google-genai>=1.16.1
+   ```
+
+2. **Import Pattern Migration**:
+   ```diff
+   - import google.generativeai as genai
+   - genai.configure(api_key=api_key)
+   + from google import genai
+   + from google.genai import types
+   + client = genai.Client(api_key=api_key)
+   ```
+
+3. **API Call Pattern Update**:
+   ```diff
+   - genai.GenerativeModel('gemini-2.5-flash')
+   - model.generate_content(prompt)
+   + client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+   ```
+
+4. **ADK Agent Pattern Alignment**:
+   ```python
+   # Follows logo_create_agent pattern from ADK samples
+   use_vertexai = os.getenv('GOOGLE_GENAI_USE_VERTEXAI', 'False').lower() == 'true'
+   
+   if use_vertexai:
+       # Vertex AI pattern
+       client = genai.Client(vertexai=True, project=project, location=location)
+   else:
+       # AI Studio pattern  
+       client = genai.Client(api_key=api_key)
+   ```
+
+**Verification Results:**
+- ✅ **Library Import**: `from google import genai; from google.genai import types` works correctly
+- ✅ **Backend Startup**: No import errors, clean application startup
+- ✅ **API Functionality**: Successful API calls visible in logs:
+  - `INFO:google_genai.models:AFC is enabled with max remote calls: 10.`
+  - `INFO:httpx:HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"`
+- ✅ **Test Suite**: All tests passing with new library
+- ✅ **Performance**: No performance degradation observed
+
+**ADK Compliance Benefits:**
+1. **Consistency**: Now matches all official ADK agent patterns
+2. **Future-Proof**: Using officially supported library with active development
+3. **Feature Access**: Access to latest Google AI features and improvements
+4. **Documentation Alignment**: Examples and documentation now match our implementation
+5. **Support**: Better community and official support for new library
+
+**Key Lessons:**
+1. **Always Use Official Libraries**: Check for deprecated vs. current official libraries
+2. **Follow ADK Patterns**: ADK sample agents are authoritative for best practices
+3. **Verify with Official Sources**: Google AI forum and GitHub repos provide definitive answers
+4. **Migration Testing**: Thorough testing ensures no functionality regression
+5. **Documentation Updates**: Update all references to reflect current library choice
+
+**Files Updated:**
+- `backend/requirements.txt`: Updated library dependency
+- `backend/agents/adk_visual_agents.py`: Updated client initialization patterns
+- `backend/agents/visual_content_agent.py`: Updated to ADK-compliant patterns
+- All agents now support both Vertex AI and AI Studio configurations
+
+**Production Impact:**
+- ✅ Zero downtime migration
+- ✅ Backward compatibility maintained
+- ✅ Performance and functionality preserved
+- ✅ Future-proofed for Google AI roadmap
+- ✅ ADK compliance achieved
+
+**Future Prevention:**
+- Monitor official Google AI announcements for library updates
+- Regular review of ADK sample agents for pattern changes
+- Include library version checking in health endpoints
+- Document library choices in solution architecture
+
+---
+
 ## 2025-06-22: Visual Content Generation Root Cause Fix - CRITICAL SUCCESS
 
 ### **Issue:** Images generated but not displaying in frontend

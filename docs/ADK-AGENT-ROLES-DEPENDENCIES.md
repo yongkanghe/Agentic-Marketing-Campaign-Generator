@@ -287,7 +287,7 @@ class ImageGenerationAgent(LlmAgent):
             enhanced_prompt = self._create_campaign_aware_prompt(
                 post_content, campaign_guidance, business_context
             )
-            
+    
             # Step 2: Generate image using Imagen API
             image_result = await self._generate_imagen_content(enhanced_prompt, campaign_id)
             

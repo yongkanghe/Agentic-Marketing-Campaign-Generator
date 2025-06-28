@@ -8,7 +8,7 @@ the frontend and backend, ensuring type safety and validation.
 """
 
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from datetime import datetime
 from enum import Enum
 # Base model without camelCase aliasing to maintain working API compatibility
@@ -35,6 +35,18 @@ class PostType(str, Enum):
     TEXT_URL = "text_url"
     TEXT_IMAGE = "text_image"
     TEXT_VIDEO = "text_video"
+
+# Add new enums and models for async processing
+class VisualJobStatus(str, Enum):
+    QUEUED = "queued"
+    PROCESSING = "processing" 
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class VisualContentType(str, Enum):
+    IMAGE = "image"
+    VIDEO = "video"
 
 # Base Models
 class BusinessAnalysis(Base):
@@ -95,8 +107,8 @@ class SocialMediaPost(Base):
 # Request Models
 class CampaignRequest(Base):
     """Enhanced campaign creation request."""
-    # Basic campaign info
-    business_description: str = Field(..., min_length=10, max_length=2000)
+    # Basic campaign info - EITHER business_description OR URLs must be provided
+    business_description: Optional[str] = Field(None, min_length=10, max_length=2000)
     objective: str = Field(..., min_length=5, max_length=500)
     target_audience: str = Field(..., min_length=5, max_length=500)
     
@@ -105,7 +117,7 @@ class CampaignRequest(Base):
     creativity_level: int = Field(..., ge=1, le=10)
     post_count: int = Field(default=9, ge=3, le=15)
     
-    # URL analysis
+    # URL analysis - Alternative to business_description
     business_website: Optional[HttpUrl] = None
     about_page_url: Optional[HttpUrl] = None
     product_service_url: Optional[HttpUrl] = None
@@ -115,6 +127,23 @@ class CampaignRequest(Base):
     
     # Campaign template
     template_data: Optional[Dict[str, Any]] = None
+    
+    @field_validator('business_description')
+    @classmethod
+    def validate_business_context(cls, v, info):
+        """Ensure either business_description OR URLs are provided."""
+        if info.data:
+            urls = [
+                info.data.get('business_website'),
+                info.data.get('about_page_url'), 
+                info.data.get('product_service_url')
+            ]
+            has_urls = any(url is not None for url in urls)
+            
+            if not v and not has_urls:
+                raise ValueError('Either business_description or at least one business URL must be provided')
+        
+        return v
 
 class URLAnalysisRequest(Base):
     """URL analysis request."""
@@ -215,4 +244,53 @@ class AgentStatusResponse(BaseModel):
     sub_agents: List[str]
     description: str
     status: str
-    last_execution: Optional[datetime] = None 
+    last_execution: Optional[datetime] = None
+
+class VisualGenerationJob(BaseModel):
+    """Model for tracking individual visual content generation jobs"""
+    job_id: str
+    campaign_id: str
+    post_id: str
+    content_type: VisualContentType
+    prompt: str
+    status: VisualJobStatus = VisualJobStatus.QUEUED
+    progress: float = 0.0  # 0.0 to 1.0
+    estimated_completion_seconds: Optional[int] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    result_url: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    metadata: Dict[str, Any] = {}
+
+class AsyncVisualResponse(BaseModel):
+    """Response model for async visual content generation requests"""
+    success: bool
+    jobs: List[VisualGenerationJob]
+    total_jobs: int
+    estimated_total_time_seconds: int
+    polling_endpoint: str
+    websocket_endpoint: Optional[str] = None
+    message: str
+
+class VisualJobUpdate(BaseModel):
+    """Model for job status updates"""
+    job_id: str
+    status: VisualJobStatus
+    progress: float
+    estimated_completion_seconds: Optional[int] = None
+    result_url: Optional[str] = None
+    error_message: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+
+class BatchVisualStatus(BaseModel):
+    """Model for batch job status responses"""
+    campaign_id: str
+    total_jobs: int
+    completed_jobs: int
+    failed_jobs: int
+    overall_progress: float
+    jobs: List[VisualGenerationJob]
+    posts_with_visuals: List[Dict[str, Any]]  # Posts with completed visuals
+    is_complete: bool
+    estimated_completion_seconds: Optional[int] = None 
