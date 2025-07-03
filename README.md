@@ -90,7 +90,7 @@ A comprehensive deep-dive into the technical architecture, development challenge
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          AI Marketing Campaign Post Generator - AGENTIC AI ARCHITECTURE         │
+│          AI Marketing Campaign Post Generator - AGENTIC AI ARCHITECTURE         │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────────┐
